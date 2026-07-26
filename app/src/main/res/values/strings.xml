@@ -645,6 +645,9 @@
     <string name="about_source_code_title">查看源代码</string>
     <string name="about_source_code_desc">在 GitHub 上查看 MaaMeow 的源代码</string>
     <string name="about_debug_section">调试</string>
+    <string name="home_learn_more_title">了解更多</string>
+    <string name="home_announcement_title">查看 MaaMeow 公告</string>
+    <string name="home_announcement_desc">查看重要通知、使用说明和近期变更</string>
 
     <!-- common: additional -->
     <string name="common_tab_general">常规设置</string>

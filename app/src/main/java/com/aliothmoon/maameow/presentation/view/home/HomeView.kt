@@ -73,6 +73,7 @@ import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
+import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.state.StatusColorType
@@ -96,6 +97,7 @@ import timber.log.Timber
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 fun HomeView(
     navController: NavController,
+    onViewAnnouncement: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     permissionManager: PermissionManager = koinInject(),
@@ -320,6 +322,22 @@ fun HomeView(
                                 }
                             }
                         )
+                    }
+                }
+
+                item {
+                    Column {
+                        SectionHeader(stringResource(R.string.home_learn_more_title))
+                        SegmentedSettingsGroup {
+                            item {
+                                SettingRow(
+                                    title = stringResource(R.string.home_announcement_title),
+                                    description = stringResource(R.string.home_announcement_desc),
+                                    icon = null,
+                                    onClick = onViewAnnouncement,
+                                )
+                            }
+                        }
                     }
                 }
 

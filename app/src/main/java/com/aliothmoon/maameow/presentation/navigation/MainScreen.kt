@@ -98,7 +98,10 @@ fun MainScreen(
                 userScrollEnabled = visible && !fullscreen,
             ) { page ->
                 when (BottomNavTab.all[page]) {
-                    BottomNavTab.HOME -> HomeView(navController = navController)
+                    BottomNavTab.HOME -> HomeView(
+                        navController = navController,
+                        onViewAnnouncement = onViewAnnouncement,
+                    )
                     BottomNavTab.BACKGROUND -> BackgroundTaskView(
                         viewModel = backgroundTaskViewModel,
                     )
