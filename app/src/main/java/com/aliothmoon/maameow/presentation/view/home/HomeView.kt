@@ -534,8 +534,9 @@ private fun RunModeCard(
                 options = RunMode.entries,
                 optionLabel = { context.runModeDisplayName(it) },
                 onSelected = onRunModeSelected,
-                icon = Icons.Rounded.PlayCircle,
+                icon = null,
                 enabled = changeEnabled,
+                singleLine = true,
             )
         }
     }
@@ -561,7 +562,7 @@ private fun PermissionRow(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleMedium,
             color = contentColor
         )
         TextButton(

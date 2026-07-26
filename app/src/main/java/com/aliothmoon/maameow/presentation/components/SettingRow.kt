@@ -151,34 +151,54 @@ fun <T> SettingDropdown(
     modifier: Modifier = Modifier,
     icon: ImageVector? = Icons.Rounded.Settings,
     enabled: Boolean = true,
+    singleLine: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val menu: @Composable () -> Unit = {
+        DropdownMenuPopup(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
+                options.forEachIndexed { index, option ->
+                    DropdownMenuItem(
+                        selected = option == selected,
+                        onClick = {
+                            onSelected(option)
+                            expanded = false
+                        },
+                        text = { Text(optionLabel(option)) },
+                        shapes = MenuDefaults.itemShape(index, options.size),
+                    )
+                }
+            }
+        }
+    }
     SettingRow(
         title = title,
-        description = optionLabel(selected),
+        description = if (singleLine) null else optionLabel(selected),
         modifier = modifier,
         icon = icon,
         enabled = enabled,
         onClick = { expanded = !expanded },
+        trailing = if (singleLine) {
+            {
+                Box(contentAlignment = Alignment.CenterEnd) {
+                    Text(
+                        text = optionLabel(selected),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    menu()
+                }
+            }
+        } else {
+            null
+        },
         headlineOverlay = {
-            Box(modifier = Modifier.align(Alignment.CenterStart)) {
-                DropdownMenuPopup(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                ) {
-                    DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
-                        options.forEachIndexed { index, option ->
-                            DropdownMenuItem(
-                                selected = option == selected,
-                                onClick = {
-                                    onSelected(option)
-                                    expanded = false
-                                },
-                                text = { Text(optionLabel(option)) },
-                                shapes = MenuDefaults.itemShape(index, options.size),
-                            )
-                        }
-                    }
+            if (!singleLine) {
+                Box(modifier = Modifier.align(Alignment.CenterStart)) {
+                    menu()
                 }
             }
         },
