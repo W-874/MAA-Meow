@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.calculateBottomPadding
-import androidx.compose.foundation.layout.calculateTopPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -87,7 +85,9 @@ import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
+import com.aliothmoon.maameow.presentation.components.UpdateSourceSettings
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
@@ -106,6 +106,7 @@ fun SettingsView(
     navController: NavController,
     onViewAnnouncement: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
+    updateViewModel: UpdateViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     achievementReporter: AchievementReporter = koinInject(),
 ) {
@@ -428,6 +429,8 @@ fun SettingsView(
                         selectedChannel = updateChannel,
                         onChannelSelected = { viewModel.setUpdateChannel(it) }
                     )
+                    ListItemDivider()
+                    UpdateSourceSettings(viewModel = updateViewModel)
                 }
             }
 

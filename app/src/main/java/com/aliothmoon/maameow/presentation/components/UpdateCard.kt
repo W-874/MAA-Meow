@@ -73,8 +73,8 @@ import com.aliothmoon.maameow.utils.i18n.resolve
 import dev.jeziellago.compose.markdowntext.MarkdownText
 
 /**
- * 更新管理卡片
- * 整合应用更新和资源更新功能
+ * 首页版本状态卡片
+ * 展示应用与资源版本，并提供手动检查和更新进度。
  */
 
 @Composable
@@ -87,8 +87,7 @@ fun UpdateCard(
     val appIsChecking by viewModel.appChecking.collectAsStateWithLifecycle()
     val resourceCheckResult by viewModel.resourceCheckResult.collectAsStateWithLifecycle()
     val appCheckResult by viewModel.appCheckResult.collectAsStateWithLifecycle()
-    val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
-    val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsStateWithLifecycle()
+    val currentResourceVersion by viewModel.currentResourceVersion.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
     val resourceUpToDateMessage = stringResource(R.string.update_toast_resource_up_to_date)
@@ -250,8 +249,6 @@ fun UpdateCard(
     val appIsInstalling = appUpdateState is UpdateProcessState.Installing
     val appIsUpdating = appIsDownloading || appIsInstalling
 
-    val anyUpdating = resIsUpdating || appIsUpdating
-
     // ==================== UI ====================
 
     ElevatedCard(
@@ -290,6 +287,12 @@ fun UpdateCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text = viewModel.currentAppVersion,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
 
                     if (!appIsUpdating) {
@@ -338,6 +341,18 @@ fun UpdateCard(
                         modifier = Modifier.weight(1f)
                     )
 
+                    Text(
+                        text = currentResourceVersion.ifBlank {
+                            stringResource(R.string.home_resource_not_installed)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (currentResourceVersion.isBlank()) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+
                     if (!resIsUpdating) {
                         TextButton(
                             onClick = { viewModel.checkResourceUpdate() },
@@ -370,99 +385,99 @@ fun UpdateCard(
                 }
             }
 
-            // ========== 更新源选择（非更新中时显示） ==========
-            if (!anyUpdating) {
-
-                var showInfoSource by remember { mutableStateOf<UpdateSource?>(null) }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.update_card_source_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-
-                    UpdateSourceButtonGroup(
-                        selectedSource = updateSource,
-                        onSourceSelected = { viewModel.setUpdateSource(it) },
-                        onInfoClick = { showInfoSource = it }
-                    )
-                }
-
-                // 更新源说明弹窗
-                showInfoSource?.let { source ->
-                    val sourceName = stringResource(source.resId)
-                    AdaptiveTaskPromptDialog(
-                        visible = true,
-                        title = stringResource(R.string.update_card_about_title, sourceName),
-                        onConfirm = {
-                            Misc.openUriSafely(
-                                context = context,
-                                uriString = when (source) {
-                                    UpdateSource.GITHUB -> "https://github.com/MaaAssistantArknights/MaaResource"
-                                    UpdateSource.MIRROR_CHYAN -> "https://mirrorchyan.com/zh/projects?rid=MAA&os=android&channel=stable&source=maameow"
-                                }
-                            )
-                            showInfoSource = null
-                        },
-                        onDismissRequest = { showInfoSource = null },
-                        confirmText = stringResource(R.string.update_card_visit_site),
-                        dismissText = stringResource(R.string.common_close),
-                        icon = Icons.Rounded.Info,
-                        landscapeAdaptive = true,
-                        content = {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                when (source) {
-                                    UpdateSource.GITHUB -> Text(
-                                        text = stringResource(R.string.update_card_github_desc),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        textAlign = TextAlign.Center
-                                    )
-
-                                    UpdateSource.MIRROR_CHYAN -> {
-                                        val mirrorBrand = stringResource(R.string.update_card_mirror_brand)
-                                        val mirrorDesc = stringResource(R.string.update_card_mirror_desc)
-                                        val primary = MaterialTheme.colorScheme.primary
-                                        Text(
-                                            text = buildAnnotatedString {
-                                                withStyle(
-                                                    SpanStyle(
-                                                        color = primary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                ) {
-                                                    append(mirrorBrand)
-                                                }
-                                                append(" ")
-                                                append(mirrorDesc)
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    )
-                }
-
-                // CDK 输入框（仅 Mirror酱 时显示）
-                AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
-                    CdkInputField(
-                        cdk = mirrorChyanCdk,
-                        onCdkChange = { viewModel.setMirrorChyanCdk(it) }
-                    )
-                }
-            }
         }
+    }
+}
+
+@Composable
+fun UpdateSourceSettings(viewModel: UpdateViewModel) {
+    val updateSource by viewModel.updateSource.collectAsStateWithLifecycle()
+    val mirrorChyanCdk by viewModel.mirrorChyanCdk.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showInfoSource by remember { mutableStateOf<UpdateSource?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.update_card_source_label),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        UpdateSourceButtonGroup(
+            selectedSource = updateSource,
+            onSourceSelected = viewModel::setUpdateSource,
+            onInfoClick = { showInfoSource = it },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
+            CdkInputField(
+                cdk = mirrorChyanCdk,
+                onCdkChange = viewModel::setMirrorChyanCdk,
+            )
+        }
+    }
+
+    showInfoSource?.let { source ->
+        val sourceName = stringResource(source.resId)
+        AdaptiveTaskPromptDialog(
+            visible = true,
+            title = stringResource(R.string.update_card_about_title, sourceName),
+            onConfirm = {
+                Misc.openUriSafely(
+                    context = context,
+                    uriString = when (source) {
+                        UpdateSource.GITHUB -> "https://github.com/MaaAssistantArknights/MaaResource"
+                        UpdateSource.MIRROR_CHYAN -> "https://mirrorchyan.com/zh/projects?rid=MAA&os=android&channel=stable&source=maameow"
+                    },
+                )
+                showInfoSource = null
+            },
+            onDismissRequest = { showInfoSource = null },
+            confirmText = stringResource(R.string.update_card_visit_site),
+            dismissText = stringResource(R.string.common_close),
+            icon = Icons.Rounded.Info,
+            landscapeAdaptive = true,
+            content = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    when (source) {
+                        UpdateSource.GITHUB -> Text(
+                            text = stringResource(R.string.update_card_github_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                        UpdateSource.MIRROR_CHYAN -> {
+                            val mirrorBrand = stringResource(R.string.update_card_mirror_brand)
+                            val mirrorDesc = stringResource(R.string.update_card_mirror_desc)
+                            val primary = MaterialTheme.colorScheme.primary
+                            Text(
+                                text = buildAnnotatedString {
+                                    withStyle(
+                                        SpanStyle(
+                                            color = primary,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    ) {
+                                        append(mirrorBrand)
+                                    }
+                                    append(" ")
+                                    append(mirrorDesc)
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            },
+        )
     }
 }
 

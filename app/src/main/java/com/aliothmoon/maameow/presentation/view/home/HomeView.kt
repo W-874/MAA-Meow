@@ -103,9 +103,6 @@ fun HomeView(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-    val resourceVersion by updateViewModel.currentResourceVersion.collectAsStateWithLifecycle()
-    val appVersion = updateViewModel.currentAppVersion
-
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
     val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
@@ -260,8 +257,6 @@ fun HomeView(
                     ScreenInfoCard(
                         screenWidth = width,
                         screenHeight = height,
-                        resourceVersion = resourceVersion,
-                        appVersion = appVersion,
                         serviceStatusColor = uiState.serviceStatusColor,
                         serviceStatusText = uiState.serviceStatusText,
                         serviceStatusLoading = uiState.serviceStatusLoading
@@ -338,8 +333,6 @@ fun HomeView(
 private fun ScreenInfoCard(
     screenWidth: Int,
     screenHeight: Int,
-    resourceVersion: String,
-    appVersion: String,
     serviceStatusColor: StatusColorType,
     serviceStatusText: UiText,
     serviceStatusLoading: Boolean
@@ -384,44 +377,6 @@ private fun ScreenInfoCard(
                 Text(
                     text = "$screenWidth × $screenHeight",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor.copy(alpha = 0.78f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.home_resource_version_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = contentColor
-                )
-                val notInstalled = stringResource(R.string.home_resource_not_installed)
-                Text(
-                    text = resourceVersion.ifBlank { notInstalled },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (resourceVersion.isBlank())
-                        MaterialTheme.colorScheme.error
-                    else
-                        contentColor.copy(alpha = 0.78f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.home_app_version_label),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = contentColor
-                )
-                Text(
-                    text = appVersion,
-                    style = MaterialTheme.typography.bodyMedium,
                     color = contentColor.copy(alpha = 0.78f)
                 )
             }
