@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,6 +79,7 @@ fun ScheduleTriggerLogView(
 
     // 列表模式
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.schedule_trigger_log_title),
@@ -207,6 +209,9 @@ private fun SummaryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright,
+        ),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -279,6 +284,7 @@ private fun DetailView(
     val header = entries.firstOrNull() as? TriggerLogEntry.Header
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = header?.strategyName ?: stringResource(R.string.schedule_log_detail_title),

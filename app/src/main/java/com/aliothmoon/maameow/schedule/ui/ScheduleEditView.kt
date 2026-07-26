@@ -118,6 +118,7 @@ fun ScheduleEditView(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = if (state.isNew) {

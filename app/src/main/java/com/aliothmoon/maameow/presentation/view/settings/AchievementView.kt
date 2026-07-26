@@ -59,6 +59,7 @@ fun AchievementView(
 
     Scaffold(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.achievement_title),

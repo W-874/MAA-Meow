@@ -71,6 +71,7 @@ fun NotificationSettingsView(
     val testMessage = stringResource(R.string.notification_test_message)
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.notification_settings_title),

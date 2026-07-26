@@ -136,6 +136,7 @@ fun TaskOverrideEditorView(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.settings_tasks_override_edit_title),

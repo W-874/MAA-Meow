@@ -129,6 +129,7 @@ private fun LogFileListView(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.settings_log_history_title),
@@ -198,7 +199,7 @@ private fun LogFileItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         )
     ) {
         Row(
@@ -243,6 +244,7 @@ private fun LogDetailView(
     onBack: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.log_detail_title),

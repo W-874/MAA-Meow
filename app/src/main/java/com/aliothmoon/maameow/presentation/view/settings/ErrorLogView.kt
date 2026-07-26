@@ -137,6 +137,7 @@ private fun ErrorLogFileListView(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.settings_log_error_title),
@@ -204,7 +205,7 @@ private fun ErrorLogFileItem(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceBright
         )
     ) {
         Row(
@@ -252,6 +253,7 @@ private fun ErrorLogDetailView(
     onBack: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = stringResource(R.string.log_detail_title),
