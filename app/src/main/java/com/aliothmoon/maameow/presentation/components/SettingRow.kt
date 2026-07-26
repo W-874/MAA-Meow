@@ -122,6 +122,7 @@ fun SettingRow(
             enabled = enabled,
             colors = colors,
             shapes = shapes,
+            verticalAlignment = Alignment.CenterVertically,
             leadingContent = leadingContent,
             supportingContent = supportingContent,
             trailingContent = trailingContent,

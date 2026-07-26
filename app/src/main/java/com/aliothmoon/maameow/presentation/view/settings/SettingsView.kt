@@ -767,92 +767,77 @@ private fun FontSizeSetting(
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = MaaDesignTokens.Spacing.listItemVertical)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Tune,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
+        SettingRow(
+            title = stringResource(R.string.settings_font_size_title),
+            description = stringResource(R.string.settings_font_size_summary),
+            titleColor = contentColor,
+            descriptionColor = contentColor.copy(alpha = 0.7f),
+            icon = Icons.Rounded.Tune,
+            trailing = {
                 Text(
-                    text = stringResource(R.string.settings_font_size_title),
+                    text = current.toString(),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor
-                )
-                Text(
-                    text = stringResource(R.string.settings_font_size_summary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.6f)
-                )
-            }
-            Text(
-                text = current.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = contentColor
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Slider(
-            value = sliderValue,
-            onValueChange = { sliderValue = it },
-            onValueChangeFinished = {
-                onFontSizeScaleChanged(
-                    sliderValue.roundToInt().coerceIn(
-                        AppSettingsManager.FONT_SIZE_SCALE_MIN,
-                        AppSettingsManager.FONT_SIZE_SCALE_MAX
-                    )
+                    color = contentColor.copy(alpha = 0.7f),
                 )
             },
-            valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
-            steps = 0,
-            modifier = Modifier.fillMaxWidth()
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            listOf(
-                AppSettingsManager.FONT_SIZE_SCALE_MIN,
-                90,
-                100,
-                AppSettingsManager.FONT_SIZE_SCALE_MAX
-            ).forEach { kp ->
-                Text(
-                    text = kp.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = contentColor.copy(alpha = 0.5f)
-                )
-            }
-        }
-        // 实时预览框：previewDensity 已被全局缩放（D0 * value/100），
-        // 故按 current/value 还原到 D0 * current/100，避免与全局缩放叠加造成重复缩放。
-        val previewDensity = LocalDensity.current
-        CompositionLocalProvider(
-            LocalDensity provides Density(
-                density = previewDensity.density * current / fontSizeScale.toFloat(),
-                fontScale = previewDensity.fontScale
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                onValueChangeFinished = {
+                    onFontSizeScaleChanged(
+                        sliderValue.roundToInt().coerceIn(
+                            AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                            AppSettingsManager.FONT_SIZE_SCALE_MAX
+                        )
+                    )
+                },
+                valueRange = AppSettingsManager.FONT_SIZE_SCALE_MIN.toFloat()..AppSettingsManager.FONT_SIZE_SCALE_MAX.toFloat(),
+                steps = 0,
+                modifier = Modifier.fillMaxWidth()
             )
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = MaaDesignTokens.Spacing.sm),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = stringResource(R.string.settings_font_size_preview_text),
-                    modifier = Modifier.padding(16.dp),
-                    color = contentColor
+                listOf(
+                    AppSettingsManager.FONT_SIZE_SCALE_MIN,
+                    90,
+                    100,
+                    AppSettingsManager.FONT_SIZE_SCALE_MAX
+                ).forEach { kp ->
+                    Text(
+                        text = kp.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            // 实时预览框：previewDensity 已被全局缩放（D0 * value/100），
+            // 故按 current/value 还原到 D0 * current/100，避免与全局缩放叠加造成重复缩放。
+            val previewDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(
+                    density = previewDensity.density * current / fontSizeScale.toFloat(),
+                    fontScale = previewDensity.fontScale
                 )
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = MaaDesignTokens.Spacing.sm),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_font_size_preview_text),
+                        modifier = Modifier.padding(16.dp),
+                        color = contentColor
+                    )
+                }
             }
         }
     }
