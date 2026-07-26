@@ -16,9 +16,12 @@ fun SectionHeader(
 ) {
     Text(
         text = title,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(
+            start = MaaDesignTokens.Spacing.md,
+            bottom = MaaDesignTokens.Spacing.sm,
+        ),
     )
 }
 

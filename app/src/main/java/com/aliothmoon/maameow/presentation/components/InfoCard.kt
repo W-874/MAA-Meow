@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,16 +65,25 @@ fun InfoCard(
 @Composable
 fun SettingsGroupCard(
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceBright,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    BaseCard(
-        modifier = modifier,
-        contentPadding = PaddingValues(
-            horizontal = MaaDesignTokens.Card.innerPadding,
-            vertical = MaaDesignTokens.Spacing.xs,
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = MaaDesignTokens.Card.elevation,
         ),
-        containerColor = containerColor,
-        content = content,
-    )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = MaaDesignTokens.Card.innerPadding,
+                    vertical = MaaDesignTokens.Spacing.xs,
+                ),
+            content = content,
+        )
+    }
 }

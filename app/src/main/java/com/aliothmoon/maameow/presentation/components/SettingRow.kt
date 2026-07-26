@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.theme.MaaDesignTokens
-import com.aliothmoon.maameow.theme.MaaDesignSystem
 
 @Composable
 fun SettingRow(
@@ -30,7 +30,7 @@ fun SettingRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = MaaDesignSystem.components.prominentControlHeight)
+            .heightIn(min = 64.dp)
             .then(
                 if (onClick != null) Modifier.clickable(
                     enabled = enabled, onClick = onClick
