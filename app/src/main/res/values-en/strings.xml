@@ -1329,6 +1329,8 @@
     <string name="schedule_create_strategy">New schedule</string>
     <string name="schedule_empty_state">No schedules yet</string>
     <string name="schedule_empty_hint_add">Tap the button in the lower-right corner to add one</string>
+    <string name="schedule_status_enabled">Enabled</string>
+    <string name="schedule_status_disabled">Disabled</string>
     <string name="schedule_delete_strategy_title">Delete schedule</string>
     <string name="schedule_delete_strategy_message">Delete this schedule?</string>
     <string name="schedule_auto_start_permission_title">Auto-start permission</string>

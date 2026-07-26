@@ -1385,6 +1385,8 @@
     <string name="schedule_create_strategy">新建策略</string>
     <string name="schedule_empty_state">暂无定时策略</string>
     <string name="schedule_empty_hint_add">点击右下角添加</string>
+    <string name="schedule_status_enabled">已启用</string>
+    <string name="schedule_status_disabled">已停用</string>
     <string name="schedule_delete_strategy_title">删除策略</string>
     <string name="schedule_delete_strategy_message">确定要删除该定时策略吗？</string>
     <string name="schedule_auto_start_permission_title">自启动权限</string>

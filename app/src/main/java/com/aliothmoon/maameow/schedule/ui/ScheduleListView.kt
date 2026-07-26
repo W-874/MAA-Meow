@@ -1,7 +1,6 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import android.content.Context
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,23 +14,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -49,13 +58,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
-import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
-import com.aliothmoon.maameow.theme.MaaDesignTokens
 import org.koin.androidx.compose.koinViewModel
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ScheduleListView(
     navController: NavController,
@@ -80,10 +88,25 @@ fun ScheduleListView(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
-            TopAppBar(
-                title = stringResource(R.string.schedule_title),
+            LargeFlexibleTopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.schedule_title),
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
                 actions = {
                     IconButton(onClick = { navController.navigate(Routes.SCHEDULE_TRIGGER_LOG) }) {
                         Icon(
@@ -133,12 +156,17 @@ fun ScheduleListView(
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            LazyVerticalGrid(
+                modifier = Modifier.fillMaxSize(),
+                columns = GridCells.Adaptive(minSize = 320.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 16.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 items(state.strategies, key = { it.id }) { strategy ->
                     val profileName = state.profiles.find { it.id == strategy.profileId }?.name
@@ -192,6 +220,7 @@ fun ScheduleListView(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StrategyCard(
     strategy: ScheduleStrategy,
@@ -202,70 +231,102 @@ private fun StrategyCard(
     onDelete: () -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp)
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright,
+        ),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(strategy.name, style = MaterialTheme.typography.titleMedium)
-
-                Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = localizedScheduleStrategySummary(strategy),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = strategy.name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
-                if (profileName != null) {
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = if (strategy.enabled) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = if (strategy.enabled) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
                     Text(
-                        text = profileName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (strategy.enabled && nextTrigger != null) {
-                    Text(
-                        text = stringResource(R.string.schedule_next_trigger, nextTrigger),
-                        modifier = Modifier.padding(top = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                val lastResultText = strategy.lastResult?.let {
-                    formatExecutionResult(it, strategy.lastResultMessage)
-                }
-                if (lastResultText != null) {
-                    Text(
-                        text = lastResultText,
-                        modifier = Modifier.padding(top = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = executionResultColor(
-                            strategy.lastResult,
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.error,
-                            MaterialTheme.colorScheme.tertiary,
+                        text = stringResource(
+                            if (strategy.enabled) R.string.schedule_status_enabled
+                            else R.string.schedule_status_disabled,
                         ),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
+            Text(
+                text = localizedScheduleStrategySummary(strategy),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (profileName != null) {
+                Text(
+                    text = profileName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
+            if (strategy.enabled && nextTrigger != null) {
+                Text(
+                    text = stringResource(R.string.schedule_next_trigger, nextTrigger),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            val lastResultText = strategy.lastResult?.let {
+                formatExecutionResult(it, strategy.lastResultMessage)
+            }
+            if (lastResultText != null) {
+                Text(
+                    text = lastResultText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = executionResultColor(
+                        strategy.lastResult,
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.error,
+                        MaterialTheme.colorScheme.tertiary,
+                    ),
+                )
+            }
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.schedule_edit_title_edit),
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Outlined.Delete,
                     contentDescription = stringResource(R.string.common_delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
+            Spacer(Modifier.weight(1f))
             Switch(
                 checked = strategy.enabled,
-                onCheckedChange = onToggleEnabled
+                onCheckedChange = onToggleEnabled,
             )
         }
     }
