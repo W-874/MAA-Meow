@@ -19,8 +19,8 @@ fun SectionHeader(
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(
-            start = MaaDesignTokens.Spacing.md,
-            bottom = MaaDesignTokens.Spacing.sm,
+            start = MaaDesignTokens.Spacing.lg,
+            bottom = MaaDesignTokens.Spacing.lg,
         ),
     )
 }

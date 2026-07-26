@@ -1,7 +1,5 @@
 package com.aliothmoon.maameow.presentation.view.notification
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +13,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,10 +27,11 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager.EventNotificationLevel
 import com.aliothmoon.maameow.domain.service.MaaEventNotifier
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ListItemDivider
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
-import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
 import com.aliothmoon.maameow.presentation.components.TopAppBar
 import com.aliothmoon.maameow.presentation.viewmodel.NotificationSettingsViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -92,25 +90,26 @@ fun NotificationSettingsView(
             item {
                 val isEnabled = eventNotificationLevel != EventNotificationLevel.OFF
                 SectionHeader(stringResource(R.string.notification_section_internal))
-                SettingsGroupCard {
-                    SwitchItem(
-                        title = stringResource(R.string.notification_enable),
-                        checked = isEnabled,
-                        contentColor = contentColor
-                    ) { enabled ->
-                        coroutineScope.launch {
-                            appSettingsManager.setEventNotificationLevel(
-                                if (enabled) EventNotificationLevel.DEFAULT else EventNotificationLevel.OFF
-                            )
+                SegmentedSettingsGroup {
+                    item {
+                        SwitchItem(
+                            title = stringResource(R.string.notification_enable),
+                            checked = isEnabled,
+                            contentColor = contentColor,
+                        ) { enabled ->
+                            coroutineScope.launch {
+                                appSettingsManager.setEventNotificationLevel(
+                                    if (enabled) EventNotificationLevel.DEFAULT else EventNotificationLevel.OFF
+                                )
+                            }
                         }
                     }
-                    AnimatedVisibility(visible = isEnabled) {
-                        Column {
-                            ListItemDivider()
+                    if (isEnabled) {
+                        item {
                             SwitchItem(
                                 title = stringResource(R.string.notification_popup),
                                 checked = eventNotificationLevel == EventNotificationLevel.HIGH,
-                                contentColor = contentColor
+                                contentColor = contentColor,
                             ) { popup ->
                                 coroutineScope.launch {
                                     appSettingsManager.setEventNotificationLevel(
@@ -118,17 +117,16 @@ fun NotificationSettingsView(
                                     )
                                 }
                             }
-                            ListItemDivider()
+                        }
+                        item {
                             val eventNotifier: MaaEventNotifier = koinInject()
                             Button(
-                                onClick = {
-                                    eventNotifier.notifyAllTasksCompleted(testMessage)
-                                },
+                                onClick = { eventNotifier.notifyAllTasksCompleted(testMessage) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                                shape = MaterialTheme.shapes.small,
-                                contentPadding = ButtonDefaults.ContentPadding
+                                shape = MaterialTheme.shapes.large,
+                                contentPadding = ButtonDefaults.ContentPadding,
                             ) {
                                 Text(stringResource(R.string.notification_send_test))
                             }
@@ -141,38 +139,35 @@ fun NotificationSettingsView(
             item {
                 Spacer(Modifier.height(MaaDesignTokens.Spacing.sectionGap))
                 SectionHeader(stringResource(R.string.notification_section_external))
-                SettingsGroupCard {
-                    SwitchItem(
+                SegmentedSettingsGroup {
+                    item { SwitchItem(
                         stringResource(R.string.notification_send_on_complete),
                         sendOnComplete,
                         contentColor
                     ) {
                         viewModel.updateSettings { copy(sendOnComplete = it.toString()) }
-                    }
-                    ListItemDivider()
-                    SwitchItem(
+                    } }
+                    item { SwitchItem(
                         stringResource(R.string.notification_send_on_error),
                         sendOnError,
                         contentColor
                     ) {
                         viewModel.updateSettings { copy(sendOnError = it.toString()) }
-                    }
-                    ListItemDivider()
-                    SwitchItem(
+                    } }
+                    item { SwitchItem(
                         stringResource(R.string.notification_send_on_service_died),
                         sendOnServiceDied,
                         contentColor
                     ) {
                         viewModel.updateSettings { copy(sendOnServiceDied = it.toString()) }
-                    }
-                    ListItemDivider()
-                    SwitchItem(
+                    } }
+                    item { SwitchItem(
                         stringResource(R.string.notification_include_log_details),
                         includeLogDetails,
                         contentColor
                     ) {
                         viewModel.updateSettings { copy(includeLogDetails = it.toString()) }
-                    }
+                    } }
                 }
             }
 
@@ -186,23 +181,20 @@ fun NotificationSettingsView(
                 item(key = id) {
                     val enabled = id in enabledProviders
                     Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
-                    SettingsGroupCard {
-                        SettingRow(
+                    SegmentedSettingsGroup {
+                        item { SettingRow(
                             title = stringResource(displayNameRes),
                             titleColor = contentColor,
                             trailing = {
-                                Switch(
+                                ExpressiveSwitch(
                                     checked = enabled,
-                                    onCheckedChange = { viewModel.toggleProvider(id, it) },
+                                    onCheckedChange = null,
                                 )
                             },
-                        )
-                        AnimatedVisibility(visible = enabled) {
-                            Column(modifier = Modifier.padding(top = MaaDesignTokens.Spacing.sm)) {
-                                ListItemDivider()
-                                Spacer(Modifier.height(MaaDesignTokens.Spacing.sm))
-                                ProviderConfig(id, settings, viewModel)
-                            }
+                            onClick = { viewModel.toggleProvider(id, !enabled) },
+                        ) }
+                        if (enabled) {
+                            item { ProviderConfig(id, settings, viewModel) }
                         }
                     }
                 }
@@ -214,16 +206,16 @@ fun NotificationSettingsView(
                 SectionHeader(stringResource(R.string.notification_section_test))
                 val testTitle = stringResource(R.string.notification_test_title)
                 val testContent = stringResource(R.string.notification_test_message_full)
-                SettingsGroupCard {
-                    Button(
+                SegmentedSettingsGroup {
+                    item { Button(
                         onClick = { viewModel.sendTest(testTitle, testContent) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = enabledProviders.isNotEmpty(),
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.large,
                         contentPadding = ButtonDefaults.ContentPadding
                     ) {
                         Text(stringResource(R.string.notification_send_test))
-                    }
+                    } }
                 }
             }
 
@@ -465,8 +457,8 @@ private fun SwitchItem(
         title = title,
         titleColor = contentColor,
         trailing = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            ExpressiveSwitch(checked = checked, onCheckedChange = null)
         },
+        onClick = { onCheckedChange(!checked) },
     )
 }
-

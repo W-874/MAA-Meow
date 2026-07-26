@@ -5,9 +5,6 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,20 +20,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -57,7 +60,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
@@ -77,14 +79,15 @@ import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.ListItemDivider
 import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
-import com.aliothmoon.maameow.presentation.components.SettingsGroupCard
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateSourceSettings
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
@@ -398,71 +401,64 @@ fun SettingsView(
             // 更新管理
             item {
                 SectionHeader(stringResource(R.string.settings_section_update))
-                SettingsGroupCard {
-                    SettingClickItem(
+                SegmentedSettingsGroup {
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_reinit_resource_title),
                         description = stringResource(R.string.settings_reinit_resource_desc),
                         contentColor = contentColor
                     ) {
                         showReInitConfirm = true
-                    }
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    } }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_check_update_title),
                         description = stringResource(R.string.settings_auto_check_update_desc),
                         contentColor = contentColor,
                         checked = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_download_update_title),
                         description = stringResource(R.string.settings_auto_download_update_desc),
                         contentColor = contentColor,
                         checked = autoDownloadUpdate,
                         enabled = autoCheckUpdate,
                         onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
-                    )
-                    ListItemDivider()
-                    SettingChannelItem(
+                    ) }
+                    item { SettingChannelItem(
                         contentColor = contentColor,
                         selectedChannel = updateChannel,
                         onChannelSelected = { viewModel.setUpdateChannel(it) }
-                    )
-                    ListItemDivider()
-                    UpdateSourceSettings(viewModel = updateViewModel)
+                    ) }
+                    item { UpdateSourceSettings(viewModel = updateViewModel) }
                 }
             }
 
             // 日志
             item {
                 SectionHeader(stringResource(R.string.settings_section_log))
-                SettingsGroupCard {
-                    SettingClickItem(
+                SegmentedSettingsGroup {
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_log_history_title),
                         description = stringResource(R.string.settings_log_history_desc),
                         contentColor = contentColor
                     ) {
                         navController.navigate("log_history")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
+                    } }
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_log_error_title),
                         description = stringResource(R.string.settings_log_error_desc),
                         contentColor = contentColor
                     ) {
                         navController.navigate("error_log")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
+                    } }
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_log_export_title),
                         description = stringResource(R.string.settings_log_export_desc),
                         contentColor = contentColor
                     ) {
                         showExportSheet = true
-                    }
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    } }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_debug_mode_title),
                         description = stringResource(R.string.settings_debug_mode_desc),
                         contentColor = contentColor,
@@ -474,128 +470,107 @@ fun SettingsView(
                                 viewModel.setDebugMode(false)
                             }
                         }
-                    )
+                    ) }
                 }
             }
 
             // 显示设置
             item {
                 SectionHeader(stringResource(R.string.settings_section_display))
-                SettingsGroupCard {
-                    SettingLanguageItem(
+                SegmentedSettingsGroup {
+                    item { SettingLanguageItem(
                         contentColor = contentColor,
                         selectedLanguage = language,
                         onLanguageSelected = { viewModel.setLanguage(it) }
-                    )
-                    ListItemDivider()
-                    SettingThemeSection(
-                        contentColor = contentColor,
+                    ) }
+                    item { SettingThemeModeItem(
                         selectedMode = themeMode,
                         onModeSelected = { viewModel.setThemeMode(it) },
+                    ) }
+                    item { FontSizeSetting(
+                        contentColor = contentColor,
                         fontSizeScale = fontSizeScale,
-                        onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) }
-                    )
+                        onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) },
+                    ) }
                 }
             }
 
             // 其他设置
             item {
                 SectionHeader(stringResource(R.string.settings_section_other))
-                SettingsGroupCard {
-                    SettingRemoteBackendItem(
+                SegmentedSettingsGroup {
+                    item { SettingRemoteBackendItem(
                         contentColor = contentColor,
                         selectedBackend = startupBackend,
                         onBackendSelected = { viewModel.setStartupBackend(it) }
-                    )
-                    ListItemDivider()
+                    ) }
                     if (startupBackend == RemoteBackend.SHIZUKU) {
-                        SettingSwitchItem(
+                        item { SettingSwitchItem(
                             title = stringResource(R.string.settings_shizuku_launch_mode_title),
                             description = stringResource(R.string.settings_shizuku_launch_mode_desc),
                             contentColor = contentColor,
                             checked = shizukuShortcutEnabled,
                             onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
-                        )
-                        ListItemDivider()
-                        AnimatedVisibility(
-                            visible = shizukuShortcutEnabled,
-                            enter = expandVertically(),
-                            exit = shrinkVertically()
-                        ) {
-                            Column {
-                                val shizukuLaunchAppName = ShizukuInstallHelper.getLaunchAppLabel(
-                                    context,
-                                    shizukuLaunchPackage
-                                )
-                                val shizukuLaunchAppDescription =
-                                    if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
-                                        stringResource(R.string.settings_shizuku_launch_app_default_desc)
-                                    } else {
-                                        stringResource(
-                                            R.string.settings_shizuku_launch_app_selected_desc,
-                                            shizukuLaunchAppName ?: shizukuLaunchPackage
-                                        )
-                                    }
+                        ) }
+                        if (shizukuShortcutEnabled) {
+                            item {
+                                val appName = ShizukuInstallHelper.getLaunchAppLabel(context, shizukuLaunchPackage)
+                                val description = if (shizukuLaunchPackage == OFFICIAL_SHIZUKU_PACKAGE) {
+                                    stringResource(R.string.settings_shizuku_launch_app_default_desc)
+                                } else {
+                                    stringResource(R.string.settings_shizuku_launch_app_selected_desc, appName ?: shizukuLaunchPackage)
+                                }
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_title),
-                                    description = shizukuLaunchAppDescription,
+                                    description = description,
                                     contentColor = contentColor
                                 ) {
-                                    // 先展示弹窗，再异步查询应用列表，避免点击后长时间无反馈。
                                     shizukuAppSearch = ""
                                     shizukuAppPickerLoadKey += 1
                                     showShizukuAppPicker = true
                                 }
-                                ListItemDivider()
-                                SettingClickItem(
+                            }
+                            item { SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
                                     description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
                                     contentColor = contentColor
                                 ) {
                                     viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
-                                }
-                                ListItemDivider()
-                            }
+                                } }
                         }
                     }
-                    ListItemDivider()
-                    SettingBackgroundResolutionItem(
+                    item { SettingBackgroundResolutionItem(
                         contentColor = contentColor,
                         selectedPreference = backgroundResolution,
                         onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_skip_shizuku_check),
                         contentColor = contentColor,
                         checked = skipShizukuCheck,
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_deployment_with_pause),
                         description = stringResource(R.string.settings_deployment_with_pause_tip),
                         contentColor = contentColor,
                         checked = deploymentWithPause,
                         onCheckedChange = { viewModel.setDeploymentWithPause(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_run_schedule_when_locked),
                         contentColor = contentColor,
                         checked = runScheduleWhenLocked,
@@ -606,29 +581,21 @@ fun SettingsView(
                                 viewModel.setRunScheduleWhenLocked(false)
                             }
                         }
-                    )
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    ) }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_tasks_override_title),
                         description = stringResource(R.string.settings_tasks_override_desc),
                         contentColor = contentColor,
                         checked = tasksOverrideEnabled,
                         onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
-                    )
-                    AnimatedVisibility(
-                        visible = tasksOverrideEnabled,
-                        enter = expandVertically(),
-                        exit = shrinkVertically()
-                    ) {
-                        Column {
-                            ListItemDivider()
-                            SettingClickItem(
+                    ) }
+                    if (tasksOverrideEnabled) {
+                        item { SettingClickItem(
                                 title = stringResource(R.string.settings_tasks_override_edit_title),
                                 contentColor = contentColor
                             ) {
                                 navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
-                            }
-                        }
+                            } }
                     }
                 }
             }
@@ -636,67 +603,64 @@ fun SettingsView(
             // 数据管理
             item {
                 SectionHeader(stringResource(R.string.settings_section_data))
-                SettingsGroupCard {
-                    SettingClickItem(
+                SegmentedSettingsGroup {
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_export_config_title),
                         description = stringResource(R.string.settings_export_config_desc),
                         contentColor = contentColor
                     ) {
                         exportLauncher.launch("maameow_config.json")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
+                    } }
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_import_config_title),
                         description = stringResource(R.string.settings_import_config_desc),
                         contentColor = contentColor
                     ) {
                         importLauncher.launch(arrayOf("application/json"))
-                    }
+                    } }
                 }
             }
 
             // 通知
             item {
                 SectionHeader(stringResource(R.string.settings_section_notification))
-                SettingsGroupCard {
-                    SettingClickItem(
+                SegmentedSettingsGroup {
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_notification_title),
                         description = stringResource(R.string.settings_notification_desc),
                         contentColor = contentColor
                     ) {
                         navController.navigate(Routes.NOTIFICATION)
-                    }
+                    } }
                 }
             }
 
             // 成就
             item {
                 SectionHeader(stringResource(R.string.settings_section_achievement))
-                SettingsGroupCard {
-                    SettingClickItem(
+                SegmentedSettingsGroup {
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
                         contentColor = contentColor
                     ) {
                         navController.navigate(Routes.ACHIEVEMENT)
-                    }
-                    ListItemDivider()
-                    SettingSwitchItem(
+                    } }
+                    item { SettingSwitchItem(
                         title = stringResource(R.string.settings_achievement_snackbar_title),
                         description = stringResource(R.string.settings_achievement_snackbar_desc),
                         contentColor = contentColor,
                         checked = showAchievementSnackbar,
                         onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
-                    )
+                    ) }
                     if (BuildConfig.DEBUG) {
-                        ListItemDivider()
-                        SettingClickItem(
+                        item { SettingClickItem(
                             title = stringResource(R.string.settings_achievement_debug_title),
                             description = stringResource(R.string.settings_achievement_debug_desc),
                             contentColor = contentColor
                         ) {
                             navController.navigate(Routes.ACHIEVEMENT_DEBUG)
-                        }
+                        } }
                     }
                 }
             }
@@ -704,51 +668,40 @@ fun SettingsView(
             // 关于
             item {
                 SectionHeader(stringResource(R.string.settings_section_about))
-                SettingsGroupCard {
-                    SettingInfoRow(
+                SegmentedSettingsGroup {
+                    item { SettingInfoRow(
                         label = stringResource(R.string.settings_about_version),
                         value = BuildConfig.VERSION_NAME,
                         contentColor = contentColor,
-                    )
-                    ListItemDivider()
-                    SettingInfoRow(
+                    ) }
+                    item { SettingInfoRow(
                         label = stringResource(R.string.settings_about_developer),
                         value = "Aliothmoon",
                         contentColor = contentColor
-                    )
-                    ListItemDivider()
-                    SettingClickItem(
+                    ) }
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_about_qq_group_title),
                         description = stringResource(R.string.settings_about_qq_group_desc),
                         contentColor = contentColor
                     ) {
                         achievementReporter.reportFeedbackGroupOpened()
                         Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
-                    }
-                    ListItemDivider()
-                    SettingClickItem(
+                    } }
+                    item { SettingClickItem(
                         title = stringResource(R.string.settings_about_announcement),
                         contentColor = contentColor
                     ) {
                         onViewAnnouncement()
-                    }
-                    ListItemDivider()
-                    Text(
-                        text = stringResource(R.string.settings_about_star),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                Misc.openUriSafely(
-                                    context,
-                                    "https://github.com/Aliothmoon/MAA-Meow"
-                                )
-                            }
-                            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-                        textAlign = TextAlign.Center
-                    )
+                    } }
+                    item { SettingClickItem(
+                        title = stringResource(R.string.settings_about_star),
+                        contentColor = contentColor,
+                    ) {
+                        Misc.openUriSafely(
+                            context,
+                            "https://github.com/Aliothmoon/MAA-Meow",
+                        )
+                    } }
                 }
             }
 
@@ -760,67 +713,27 @@ fun SettingsView(
 }
 
 @Composable
-private fun SettingThemeSection(
-    contentColor: Color,
+private fun SettingThemeModeItem(
     selectedMode: AppSettingsManager.ThemeMode,
     onModeSelected: (AppSettingsManager.ThemeMode) -> Unit,
-    fontSizeScale: Int,
-    onFontSizeScaleChanged: (Int) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 标题
-        Text(
-            text = stringResource(R.string.settings_theme_title),
-            style = MaterialTheme.typography.bodyLarge,
-            color = contentColor
-        )
-        // 主题模式选择
-        Row(modifier = Modifier.fillMaxWidth()) {
-            val modes = listOf(
-                AppSettingsManager.ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                AppSettingsManager.ThemeMode.WHITE to stringResource(R.string.settings_theme_white),
-                AppSettingsManager.ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-                AppSettingsManager.ThemeMode.PURE_DARK to stringResource(R.string.settings_theme_pure_dark)
-            )
-            modes.forEach { (mode, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = mode == selectedMode,
-                            onClick = { onModeSelected(mode) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = mode == selectedMode,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor,
-                        maxLines = 1
-                    )
+    SettingDropdown(
+        title = stringResource(R.string.settings_theme_title),
+        selected = selectedMode,
+        options = AppSettingsManager.ThemeMode.entries,
+        optionLabel = {
+            stringResource(
+                when (it) {
+                    AppSettingsManager.ThemeMode.SYSTEM -> R.string.settings_theme_system
+                    AppSettingsManager.ThemeMode.WHITE -> R.string.settings_theme_white
+                    AppSettingsManager.ThemeMode.DARK -> R.string.settings_theme_dark
+                    AppSettingsManager.ThemeMode.PURE_DARK -> R.string.settings_theme_pure_dark
                 }
-            }
-        }
-        // 页面缩放
-        FontSizeSetting(
-            contentColor = contentColor,
-            value = fontSizeScale,
-            onValueChange = onFontSizeScaleChanged
-        )
-    }
+            )
+        },
+        onSelected = onModeSelected,
+        icon = Icons.Rounded.Palette,
+    )
 }
 
 @Composable
@@ -835,6 +748,7 @@ private fun SettingClickItem(
         description = description.ifEmpty { null },
         titleColor = contentColor,
         descriptionColor = contentColor.copy(alpha = 0.7f),
+        icon = Icons.Rounded.TouchApp,
         onClick = onClick,
     )
 }
@@ -846,12 +760,12 @@ private fun SettingClickItem(
 @Composable
 private fun FontSizeSetting(
     contentColor: Color,
-    value: Int,
-    onValueChange: (Int) -> Unit
+    fontSizeScale: Int,
+    onFontSizeScaleChanged: (Int) -> Unit,
 ) {
-    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
-    LaunchedEffect(value) {
-        sliderValue = value.toFloat()
+    var sliderValue by remember { mutableFloatStateOf(fontSizeScale.toFloat()) }
+    LaunchedEffect(fontSizeScale) {
+        sliderValue = fontSizeScale.toFloat()
     }
     val current = sliderValue.roundToInt()
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
@@ -865,6 +779,12 @@ private fun FontSizeSetting(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = Icons.Rounded.Tune,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.settings_font_size_title),
@@ -888,7 +808,7 @@ private fun FontSizeSetting(
             value = sliderValue,
             onValueChange = { sliderValue = it },
             onValueChangeFinished = {
-                onValueChange(
+                onFontSizeScaleChanged(
                     sliderValue.roundToInt().coerceIn(
                         AppSettingsManager.FONT_SIZE_SCALE_MIN,
                         AppSettingsManager.FONT_SIZE_SCALE_MAX
@@ -921,7 +841,7 @@ private fun FontSizeSetting(
         val previewDensity = LocalDensity.current
         CompositionLocalProvider(
             LocalDensity provides Density(
-                density = previewDensity.density * current / value.toFloat(),
+                density = previewDensity.density * current / fontSizeScale.toFloat(),
                 fontScale = previewDensity.fontScale
             )
         ) {
@@ -956,14 +876,16 @@ private fun SettingSwitchItem(
         description = description,
         titleColor = contentColor,
         descriptionColor = contentColor.copy(alpha = 0.7f),
+        icon = Icons.Rounded.Tune,
         enabled = enabled,
         trailing = {
-            Switch(
+            ExpressiveSwitch(
                 checked = checked,
                 enabled = enabled,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = null,
             )
         },
+        onClick = { onCheckedChange(!checked) },
     )
 }
 
@@ -977,6 +899,7 @@ private fun SettingInfoRow(
     SettingRow(
         title = label,
         titleColor = contentColor,
+        icon = Icons.Rounded.Info,
         trailing = {
             Text(
                 text = value,
@@ -994,58 +917,14 @@ private fun SettingChannelItem(
     selectedChannel: UpdateChannel,
     onChannelSelected: (UpdateChannel) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_update_channel_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-            Text(
-                text = stringResource(R.string.settings_update_channel_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f)
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            UpdateChannel.entries.forEach { channel ->
-                val channelName = stringResource(channel.resId)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = channel == selectedChannel,
-                            onClick = { onChannelSelected(channel) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = channel == selectedChannel,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = channelName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.settings_update_channel_title),
+        selected = selectedChannel,
+        options = UpdateChannel.entries,
+        optionLabel = { stringResource(it.resId) },
+        onSelected = onChannelSelected,
+        icon = Icons.Rounded.Update,
+    )
 }
 
 @Composable
@@ -1054,56 +933,14 @@ private fun SettingBackgroundResolutionItem(
     selectedPreference: DefaultDisplayConfig.ResolutionPreference,
     onPreferenceSelected: (DefaultDisplayConfig.ResolutionPreference) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_background_resolution_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val options = listOf(
-                DefaultDisplayConfig.ResolutionPreference.P720 to "720p",
-                DefaultDisplayConfig.ResolutionPreference.P1080 to "1080p"
-            )
-            options.forEach { (pref, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = pref == selectedPreference,
-                            onClick = { onPreferenceSelected(pref) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = pref == selectedPreference,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.settings_background_resolution_title),
+        selected = selectedPreference,
+        options = DefaultDisplayConfig.ResolutionPreference.entries,
+        optionLabel = { if (it == DefaultDisplayConfig.ResolutionPreference.P720) "720p" else "1080p" },
+        onSelected = onPreferenceSelected,
+        icon = Icons.Rounded.AspectRatio,
+    )
 }
 
 @Composable
@@ -1114,53 +951,16 @@ private fun SettingLanguageItem(
 ) {
     val effectiveSelectedLanguage = resolveSelectedLanguage(selectedLanguage)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_language_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val options = listOf(
-                AppSettingsManager.AppLanguage.ZH to stringResource(R.string.settings_language_zh),
-                AppSettingsManager.AppLanguage.EN to stringResource(R.string.settings_language_en)
-            )
-            options.forEach { (lang, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = lang == effectiveSelectedLanguage,
-                            onClick = { onLanguageSelected(lang) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = lang == effectiveSelectedLanguage,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.settings_language_title),
+        selected = effectiveSelectedLanguage,
+        options = listOf(AppSettingsManager.AppLanguage.ZH, AppSettingsManager.AppLanguage.EN),
+        optionLabel = {
+            stringResource(if (it == AppSettingsManager.AppLanguage.ZH) R.string.settings_language_zh else R.string.settings_language_en)
+        },
+        onSelected = onLanguageSelected,
+        icon = Icons.Rounded.Language,
+    )
 }
 
 @Composable
@@ -1169,52 +969,14 @@ private fun SettingRemoteBackendItem(
     selectedBackend: RemoteBackend,
     onBackendSelected: (RemoteBackend) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_startup_backend_title),
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RemoteBackend.entries.forEach { backend ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .selectable(
-                            selected = backend == selectedBackend,
-                            onClick = { onBackendSelected(backend) },
-                            role = Role.RadioButton
-                        )
-                ) {
-                    RadioButton(
-                        selected = backend == selectedBackend,
-                        onClick = null
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = backend.display,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentColor
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.settings_startup_backend_title),
+        selected = selectedBackend,
+        options = RemoteBackend.entries,
+        optionLabel = { it.display },
+        onSelected = onBackendSelected,
+        icon = Icons.Rounded.Security,
+    )
 }
 
 
