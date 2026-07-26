@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,8 @@ import com.aliothmoon.maameow.R
 fun PanelHeader(
     selectedTab: PanelTab = PanelTab.TASKS,
     onTabSelected: (PanelTab) -> Unit = {},
+    tabs: List<PanelTab> = PanelTab.entries,
+    onLogClick: (() -> Unit)? = null,
     showActions: Boolean = true,
     isLocked: Boolean = false,
     onLockToggle: (Boolean) -> Unit = {},
@@ -44,7 +47,7 @@ fun PanelHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tabContent = @Composable {
-            PanelTab.entries.forEach { tab ->
+            tabs.forEach { tab ->
                 Text(
                     text = stringResource(tab.labelRes),
                     style = MaterialTheme.typography.bodyMedium,
@@ -100,7 +103,30 @@ fun PanelHeader(
                 }
             }
         } else {
-            tabContent()
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabContent()
+            }
+            onLogClick?.let { onClick ->
+                IconButton(
+                    onClick = onClick,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ReceiptLong,
+                        contentDescription = stringResource(R.string.panel_tab_log),
+                        tint = if (selectedTab == PanelTab.LOG) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
     }
 }

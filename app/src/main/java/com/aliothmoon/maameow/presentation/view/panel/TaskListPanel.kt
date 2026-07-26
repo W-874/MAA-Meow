@@ -64,9 +64,11 @@ fun TaskListPanel(
     onToggleEditMode: () -> Unit,
     onToggleAddingTask: () -> Unit,
     onToggleProfileMode: () -> Unit,
+    showManagementActions: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.width(IntrinsicSize.Max)) {
+        if (showManagementActions) {
         // 配置选择按钮 - 在编辑任务按钮上方
         Card(
             modifier = Modifier
@@ -179,6 +181,7 @@ fun TaskListPanel(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+        }
 
         ReorderableColumn(
             list = nodes,

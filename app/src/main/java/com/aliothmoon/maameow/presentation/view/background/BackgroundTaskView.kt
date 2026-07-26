@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,11 +34,15 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -326,8 +331,18 @@ fun BackgroundTaskView(
                 PanelHeader(
                     selectedTab = state.current,
                     onTabSelected = { tab -> viewModel.onTabChange(tab) },
+                    tabs = PanelTab.entries.filterNot { it == PanelTab.LOG },
+                    onLogClick = {
+                        viewModel.onTabChange(
+                            if (state.current == PanelTab.LOG) PanelTab.TASKS else PanelTab.LOG
+                        )
+                    },
                     showActions = false
                 )
+
+                BackHandler(enabled = state.current == PanelTab.LOG) {
+                    viewModel.onTabChange(PanelTab.TASKS)
+                }
 
                 if (isInitialized) {
                     Column(
@@ -340,84 +355,234 @@ fun BackgroundTaskView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
-                            userScrollEnabled = true,
+                            userScrollEnabled = false,
                             beyondViewportPageCount = 0
                         ) { page ->
                             when (page) {
                                 0 -> {
-                                    Row(modifier = Modifier.fillMaxSize()) {
-                                        TaskListPanel(
-                                            nodes = nodes,
-                                            selectedNodeId = state.selectedNodeId,
-                                            isEditMode = state.isEditMode,
-                                            isAddingTask = state.isAddingTask,
-                                            isProfileMode = state.isProfileMode,
-                                            onNodeEnabledChange = viewModel::onNodeEnabledChange,
-                                            onNodeSelected = viewModel::onNodeSelected,
-                                            onNodeMove = viewModel::onNodeMove,
-                                            onToggleEditMode = viewModel::onToggleEditMode,
-                                            onToggleAddingTask = viewModel::onToggleAddingTask,
-                                            onToggleProfileMode = viewModel::onToggleProfileMode,
-                                            modifier = Modifier.fillMaxHeight(),
-                                        )
+                                    var showCompactTaskDetail by rememberSaveable {
+                                        mutableStateOf(false)
+                                    }
+                                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                        val compactLayout = maxWidth < 700.dp
+                                        val showDetail = compactLayout && (
+                                                showCompactTaskDetail ||
+                                                        state.isProfileMode ||
+                                                        state.isAddingTask
+                                                )
 
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Card(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight(),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                        val taskList: @Composable (Modifier) -> Unit = { paneModifier ->
+                                            TaskListPanel(
+                                                nodes = nodes,
+                                                selectedNodeId = state.selectedNodeId,
+                                                isEditMode = state.isEditMode,
+                                                isAddingTask = state.isAddingTask,
+                                                isProfileMode = state.isProfileMode,
+                                                onNodeEnabledChange = viewModel::onNodeEnabledChange,
+                                                onNodeSelected = { nodeId ->
+                                                    viewModel.onNodeSelected(nodeId)
+                                                    if (compactLayout) showCompactTaskDetail = true
+                                                },
+                                                onNodeMove = viewModel::onNodeMove,
+                                                onToggleEditMode = {
+                                                    if (state.isEditMode) showCompactTaskDetail = false
+                                                    viewModel.onToggleEditMode()
+                                                },
+                                                onToggleAddingTask = {
+                                                    if (!state.isAddingTask) showCompactTaskDetail = true
+                                                    viewModel.onToggleAddingTask()
+                                                },
+                                                onToggleProfileMode = {
+                                                    if (!state.isProfileMode) showCompactTaskDetail = true
+                                                    viewModel.onToggleProfileMode()
+                                                },
+                                                showManagementActions = false,
+                                                modifier = paneModifier,
                                             )
-                                        ) {
-                                            Column(modifier = Modifier.padding(top = 10.dp)) {
-                                                TaskConfigPanel(
-                                                    selectedNode = selectedNode,
-                                                    isEditMode = state.isEditMode,
-                                                    isAddingTask = state.isAddingTask,
-                                                    isProfileMode = state.isProfileMode,
-                                                    profiles = profiles,
-                                                    activeProfileId = activeProfileId,
-                                                    onConfigChange = { config ->
-                                                        val nodeId = selectedNode?.id
-                                                            ?: return@TaskConfigPanel
-                                                        viewModel.onNodeConfigChange(
-                                                            nodeId, config
+                                        }
+
+                                        val taskConfig: @Composable (Modifier) -> Unit = { paneModifier ->
+                                            Card(
+                                                modifier = paneModifier,
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = MaterialTheme.colorScheme.surfaceBright
+                                                )
+                                            ) {
+                                                Column(modifier = Modifier.padding(top = 10.dp)) {
+                                                    TaskConfigPanel(
+                                                        selectedNode = selectedNode,
+                                                        isEditMode = state.isEditMode,
+                                                        isAddingTask = state.isAddingTask,
+                                                        isProfileMode = state.isProfileMode,
+                                                        profiles = profiles,
+                                                        activeProfileId = activeProfileId,
+                                                        onConfigChange = { config ->
+                                                            val nodeId = selectedNode?.id
+                                                                ?: return@TaskConfigPanel
+                                                            viewModel.onNodeConfigChange(nodeId, config)
+                                                        },
+                                                        onAddNode = viewModel::onAddNode,
+                                                        onRemoveNode = viewModel::onRemoveNode,
+                                                        onDuplicateNode = viewModel::onDuplicateNode,
+                                                        onRenameNode = viewModel::onRenameNode,
+                                                        onSwitchProfile = viewModel::onSwitchProfile,
+                                                        onRenameProfile = viewModel::onRenameProfile,
+                                                        onDuplicateProfile = viewModel::onDuplicateProfile,
+                                                        onDeleteProfile = viewModel::onDeleteProfile,
+                                                        onCreateProfile = viewModel::onCreateProfile,
+                                                        onReorderProfile = viewModel::onReorderProfile,
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        val taskActions: @Composable () -> Unit = {
+                                            Surface(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = MaterialTheme.shapes.large,
+                                                color = MaterialTheme.colorScheme.surfaceBright,
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Text(
+                                                        text = profiles.firstOrNull { it.id == activeProfileId }?.name
+                                                            ?: stringResource(R.string.panel_tab_tasks),
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        maxLines = 1,
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .padding(start = 8.dp),
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            if (!state.isProfileMode) showCompactTaskDetail = true
+                                                            viewModel.onToggleProfileMode()
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.AutoMirrored.Filled.List,
+                                                            contentDescription = stringResource(R.string.panel_task_list_edit_config),
+                                                            tint = if (state.isProfileMode) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                            },
                                                         )
-                                                    },
-                                                    onAddNode = { viewModel.onAddNode(it) },
-                                                    onRemoveNode = { viewModel.onRemoveNode(it) },
-                                                    onDuplicateNode = { viewModel.onDuplicateNode(it) },
-                                                    onRenameNode = { id, name ->
-                                                        viewModel.onRenameNode(
-                                                            id, name
+                                                    }
+                                                    IconButton(
+                                                        onClick = {
+                                                            if (state.isEditMode) showCompactTaskDetail = false
+                                                            viewModel.onToggleEditMode()
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (state.isEditMode) Icons.Filled.CheckCircle else Icons.Filled.Edit,
+                                                            contentDescription = if (state.isEditMode) {
+                                                                stringResource(R.string.common_done)
+                                                            } else {
+                                                                stringResource(R.string.panel_task_list_edit_tasks)
+                                                            },
+                                                            tint = if (state.isEditMode) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                            },
                                                         )
-                                                    },
-                                                    onSwitchProfile = {
-                                                        viewModel.onSwitchProfile(
-                                                            it
+                                                    }
+                                                    if (state.isEditMode) {
+                                                        IconButton(
+                                                            onClick = {
+                                                                showCompactTaskDetail = true
+                                                                viewModel.onToggleAddingTask()
+                                                            },
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.Add,
+                                                                contentDescription = stringResource(R.string.panel_task_list_add),
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (showDetail) {
+                                            BackHandler {
+                                                when {
+                                                    state.isProfileMode -> viewModel.onToggleProfileMode()
+                                                    state.isAddingTask -> viewModel.onToggleAddingTask()
+                                                }
+                                                showCompactTaskDetail = false
+                                            }
+                                            Column(modifier = Modifier.fillMaxSize()) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(bottom = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            when {
+                                                                state.isProfileMode -> viewModel.onToggleProfileMode()
+                                                                state.isAddingTask -> viewModel.onToggleAddingTask()
+                                                            }
+                                                            showCompactTaskDetail = false
+                                                        },
+                                                        modifier = Modifier.size(36.dp),
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                            contentDescription = stringResource(R.string.accessibility_navigation),
                                                         )
-                                                    },
-                                                    onRenameProfile = { id, name ->
-                                                        viewModel.onRenameProfile(
-                                                            id, name
-                                                        )
-                                                    },
-                                                    onDuplicateProfile = {
-                                                        viewModel.onDuplicateProfile(
-                                                            it
-                                                        )
-                                                    },
-                                                    onDeleteProfile = {
-                                                        viewModel.onDeleteProfile(
-                                                            it
-                                                        )
-                                                    },
-                                                    onCreateProfile = { viewModel.onCreateProfile() },
-                                                    onReorderProfile = { from, to ->
-                                                        viewModel.onReorderProfile(from, to)
-                                                    })
+                                                    }
+                                                    Text(
+                                                        text = when {
+                                                            state.isProfileMode -> stringResource(R.string.panel_profile_title)
+                                                            state.isAddingTask -> stringResource(R.string.panel_config_select_type)
+                                                            selectedNode != null -> selectedNode.name
+                                                            else -> stringResource(R.string.panel_config_empty_view_title)
+                                                        },
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        modifier = Modifier.padding(start = 8.dp),
+                                                    )
+                                                }
+                                                taskConfig(
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(1f)
+                                                )
+                                            }
+                                        } else if (compactLayout) {
+                                            Column(modifier = Modifier.fillMaxSize()) {
+                                                taskActions()
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                taskList(
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(1f)
+                                                )
+                                            }
+                                        } else {
+                                            Column(modifier = Modifier.fillMaxSize()) {
+                                                taskActions()
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(1f)
+                                                ) {
+                                                    taskList(Modifier.fillMaxHeight())
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    taskConfig(
+                                                        Modifier
+                                                            .weight(1f)
+                                                            .fillMaxHeight()
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -456,11 +621,17 @@ fun BackgroundTaskView(
                                 R.string.home_toast_backend_unavailable,
                                 permissionState.startupBackend.display
                             )
-                            Row(
+                            Surface(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surfaceBright,
+                                tonalElevation = 1.dp,
                             ) {
+                                Row(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                 Button(
                                     onClick = {
                                         focusManager.clearFocus()
@@ -501,7 +672,7 @@ fun BackgroundTaskView(
                                         ButtonDefaults.buttonColors()
                                     },
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = MaterialTheme.shapes.medium,
                                 ) {
                                     if (maaState == MaaExecutionState.STARTING) {
                                         CircularProgressIndicator(
@@ -514,7 +685,7 @@ fun BackgroundTaskView(
                                     }
                                 }
 
-                                OutlinedButton(
+                                Button(
                                     onClick = {
                                         when (state.current) {
                                             PanelTab.TASKS -> viewModel.onStopTasks()
@@ -525,15 +696,16 @@ fun BackgroundTaskView(
                                     },
                                     enabled = maaState == MaaExecutionState.RUNNING,
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
-                                    )
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError,
+                                    ),
                                 ) {
                                     if (maaState == MaaExecutionState.STOPPING) {
                                         CircularProgressIndicator(
                                             modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.error,
+                                            color = MaterialTheme.colorScheme.onError,
                                             strokeWidth = 2.dp
                                         )
                                     } else {
@@ -550,6 +722,7 @@ fun BackgroundTaskView(
                                         contentDescription = stringResource(R.string.task_more_actions_cd)
                                     )
                                 }
+                            }
                             }
                         }
                     }
