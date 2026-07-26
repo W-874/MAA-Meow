@@ -124,7 +124,10 @@ fun NotificationSettingsView(
                                 onClick = { eventNotifier.notifyAllTasksCompleted(testMessage) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+                                    .padding(
+                                        horizontal = 16.dp,
+                                        vertical = MaaDesignTokens.Spacing.listItemVertical,
+                                    ),
                                 shape = MaterialTheme.shapes.large,
                                 contentPadding = ButtonDefaults.ContentPadding,
                             ) {
@@ -194,7 +197,11 @@ fun NotificationSettingsView(
                             onClick = { viewModel.toggleProvider(id, !enabled) },
                         ) }
                         if (enabled) {
-                            item { ProviderConfig(id, settings, viewModel) }
+                            item {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    ProviderConfig(id, settings, viewModel)
+                                }
+                            }
                         }
                     }
                 }
@@ -209,7 +216,7 @@ fun NotificationSettingsView(
                 SegmentedSettingsGroup {
                     item { Button(
                         onClick = { viewModel.sendTest(testTitle, testContent) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         enabled = enabledProviders.isNotEmpty(),
                         shape = MaterialTheme.shapes.large,
                         contentPadding = ButtonDefaults.ContentPadding

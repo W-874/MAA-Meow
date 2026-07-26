@@ -512,7 +512,7 @@ private fun RunModeCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -554,7 +554,8 @@ private fun PermissionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 64.dp),
+            .heightIn(min = 64.dp)
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -610,7 +611,7 @@ private fun PermissionCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expandedPermissions = !expandedPermissions }
-                    .padding(vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {

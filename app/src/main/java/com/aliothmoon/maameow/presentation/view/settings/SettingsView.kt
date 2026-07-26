@@ -22,12 +22,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
@@ -56,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -405,7 +422,8 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_reinit_resource_title),
                         description = stringResource(R.string.settings_reinit_resource_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.RestartAlt,
                     ) {
                         showReInitConfirm = true
                     } }
@@ -414,6 +432,7 @@ fun SettingsView(
                         description = stringResource(R.string.settings_auto_check_update_desc),
                         contentColor = contentColor,
                         checked = autoCheckUpdate,
+                        icon = Icons.Rounded.Update,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                     ) }
                     item { SettingSwitchItem(
@@ -422,6 +441,7 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = autoDownloadUpdate,
                         enabled = autoCheckUpdate,
+                        icon = Icons.Rounded.Download,
                         onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
                     ) }
                     item { SettingChannelItem(
@@ -440,21 +460,24 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_log_history_title),
                         description = stringResource(R.string.settings_log_history_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.History,
                     ) {
                         navController.navigate("log_history")
                     } }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_log_error_title),
                         description = stringResource(R.string.settings_log_error_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.BugReport,
                     ) {
                         navController.navigate("error_log")
                     } }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_log_export_title),
                         description = stringResource(R.string.settings_log_export_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.FileUpload,
                     ) {
                         showExportSheet = true
                     } }
@@ -463,6 +486,7 @@ fun SettingsView(
                         description = stringResource(R.string.settings_debug_mode_desc),
                         contentColor = contentColor,
                         checked = debugMode,
+                        icon = Icons.Rounded.Code,
                         onCheckedChange = { enabled ->
                             if (enabled) {
                                 showDebugModeConfirm = true
@@ -510,6 +534,7 @@ fun SettingsView(
                             description = stringResource(R.string.settings_shizuku_launch_mode_desc),
                             contentColor = contentColor,
                             checked = shizukuShortcutEnabled,
+                            icon = Icons.Rounded.PhoneAndroid,
                             onCheckedChange = { viewModel.setShizukuShortcutEnabled(it) }
                         ) }
                         if (shizukuShortcutEnabled) {
@@ -523,7 +548,8 @@ fun SettingsView(
                                 SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_title),
                                     description = description,
-                                    contentColor = contentColor
+                                    contentColor = contentColor,
+                                    icon = Icons.Rounded.PhoneAndroid,
                                 ) {
                                     shizukuAppSearch = ""
                                     shizukuAppPickerLoadKey += 1
@@ -533,7 +559,8 @@ fun SettingsView(
                             item { SettingClickItem(
                                     title = stringResource(R.string.settings_shizuku_launch_app_reset_title),
                                     description = stringResource(R.string.settings_shizuku_launch_app_reset_desc),
-                                    contentColor = contentColor
+                                    contentColor = contentColor,
+                                    icon = Icons.Rounded.RestartAlt,
                                 ) {
                                     viewModel.setShizukuLaunchPackage(OFFICIAL_SHIZUKU_PACKAGE)
                                 } }
@@ -549,6 +576,7 @@ fun SettingsView(
                         contentColor = contentColor,
                         checked = skipShizukuCheck,
                         enabled = startupBackend == RemoteBackend.SHIZUKU,
+                        icon = Icons.Rounded.Security,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                     ) }
                     item { SettingSwitchItem(
@@ -556,24 +584,28 @@ fun SettingsView(
                         description = stringResource(R.string.settings_deployment_with_pause_tip),
                         contentColor = contentColor,
                         checked = deploymentWithPause,
+                        icon = Icons.Rounded.Build,
                         onCheckedChange = { viewModel.setDeploymentWithPause(it) }
                     ) }
                     item { SettingSwitchItem(
                         title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
+                        icon = Icons.Rounded.AspectRatio,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
                     ) }
                     item { SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
+                        icon = Icons.Rounded.Schedule,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     ) }
                     item { SettingSwitchItem(
                         title = stringResource(R.string.settings_run_schedule_when_locked),
                         contentColor = contentColor,
                         checked = runScheduleWhenLocked,
+                        icon = Icons.Rounded.Lock,
                         onCheckedChange = { enabled ->
                             if (enabled) {
                                 showRunScheduleWhenLockedConfirm = true
@@ -587,12 +619,14 @@ fun SettingsView(
                         description = stringResource(R.string.settings_tasks_override_desc),
                         contentColor = contentColor,
                         checked = tasksOverrideEnabled,
+                        icon = Icons.Rounded.Tune,
                         onCheckedChange = { viewModel.setTasksOverrideEnabled(it) }
                     ) }
                     if (tasksOverrideEnabled) {
                         item { SettingClickItem(
                                 title = stringResource(R.string.settings_tasks_override_edit_title),
-                                contentColor = contentColor
+                                contentColor = contentColor,
+                                icon = Icons.Rounded.Tune,
                             ) {
                                 navController.navigate(Routes.TASK_OVERRIDE_EDITOR)
                             } }
@@ -607,14 +641,16 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_export_config_title),
                         description = stringResource(R.string.settings_export_config_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.Backup,
                     ) {
                         exportLauncher.launch("maameow_config.json")
                     } }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_import_config_title),
                         description = stringResource(R.string.settings_import_config_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.CloudDownload,
                     ) {
                         importLauncher.launch(arrayOf("application/json"))
                     } }
@@ -628,7 +664,8 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_notification_title),
                         description = stringResource(R.string.settings_notification_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.Notifications,
                     ) {
                         navController.navigate(Routes.NOTIFICATION)
                     } }
@@ -642,7 +679,8 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.EmojiEvents,
                     ) {
                         navController.navigate(Routes.ACHIEVEMENT)
                     } }
@@ -651,13 +689,15 @@ fun SettingsView(
                         description = stringResource(R.string.settings_achievement_snackbar_desc),
                         contentColor = contentColor,
                         checked = showAchievementSnackbar,
+                        icon = Icons.Rounded.Campaign,
                         onCheckedChange = { viewModel.setShowAchievementSnackbar(it) }
                     ) }
                     if (BuildConfig.DEBUG) {
                         item { SettingClickItem(
                             title = stringResource(R.string.settings_achievement_debug_title),
                             description = stringResource(R.string.settings_achievement_debug_desc),
-                            contentColor = contentColor
+                            contentColor = contentColor,
+                            icon = Icons.Rounded.BugReport,
                         ) {
                             navController.navigate(Routes.ACHIEVEMENT_DEBUG)
                         } }
@@ -682,20 +722,23 @@ fun SettingsView(
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_about_qq_group_title),
                         description = stringResource(R.string.settings_about_qq_group_desc),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.Campaign,
                     ) {
                         achievementReporter.reportFeedbackGroupOpened()
                         Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
                     } }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_about_announcement),
-                        contentColor = contentColor
+                        contentColor = contentColor,
+                        icon = Icons.Rounded.Campaign,
                     ) {
                         onViewAnnouncement()
                     } }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_about_star),
                         contentColor = contentColor,
+                        icon = Icons.Rounded.Star,
                     ) {
                         Misc.openUriSafely(
                             context,
@@ -741,6 +784,7 @@ private fun SettingClickItem(
     title: String,
     description: String = "",
     contentColor: Color,
+    icon: ImageVector = Icons.Rounded.TouchApp,
     onClick: () -> Unit
 ) {
     SettingRow(
@@ -748,7 +792,13 @@ private fun SettingClickItem(
         description = description.ifEmpty { null },
         titleColor = contentColor,
         descriptionColor = contentColor.copy(alpha = 0.7f),
-        icon = Icons.Rounded.TouchApp,
+        icon = icon,
+        trailing = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+            )
+        },
         onClick = onClick,
     )
 }
@@ -773,7 +823,7 @@ private fun FontSizeSetting(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical)
+            .padding(horizontal = 16.dp, vertical = MaaDesignTokens.Spacing.listItemVertical)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -869,6 +919,7 @@ private fun SettingSwitchItem(
     contentColor: Color,
     checked: Boolean,
     enabled: Boolean = true,
+    icon: ImageVector = Icons.Rounded.Tune,
     onCheckedChange: (Boolean) -> Unit
 ) {
     SettingRow(
@@ -876,7 +927,7 @@ private fun SettingSwitchItem(
         description = description,
         titleColor = contentColor,
         descriptionColor = contentColor.copy(alpha = 0.7f),
-        icon = Icons.Rounded.Tune,
+        icon = icon,
         enabled = enabled,
         trailing = {
             ExpressiveSwitch(

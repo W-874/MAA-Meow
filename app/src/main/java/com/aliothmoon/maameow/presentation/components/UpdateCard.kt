@@ -328,7 +328,6 @@ fun UpdateSourceSettings(viewModel: UpdateViewModel) {
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SettingDropdown(
             title = stringResource(R.string.update_card_source_label),
@@ -338,20 +337,22 @@ fun UpdateSourceSettings(viewModel: UpdateViewModel) {
             onSelected = viewModel::setUpdateSource,
             icon = Icons.Rounded.CloudDownload,
         )
-        TextButton(onClick = { showInfoSource = updateSource }) {
-            Icon(
-                imageVector = Icons.Rounded.Info,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(stringResource(R.string.update_card_about_source_cd, stringResource(updateSource.resId)))
-        }
-        AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
-            CdkInputField(
-                cdk = mirrorChyanCdk,
-                onCdkChange = viewModel::setMirrorChyanCdk,
-            )
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            TextButton(onClick = { showInfoSource = updateSource }) {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.update_card_about_source_cd, stringResource(updateSource.resId)))
+            }
+            AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
+                CdkInputField(
+                    cdk = mirrorChyanCdk,
+                    onCdkChange = viewModel::setMirrorChyanCdk,
+                )
+            }
         }
     }
 
