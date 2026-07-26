@@ -195,7 +195,10 @@ fun ScheduleListView(
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteConfirmId = null }) { Text(stringResource(R.string.common_cancel)) }
-                }
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
             )
         }
 
@@ -214,7 +217,10 @@ fun ScheduleListView(
                 },
                 dismissButton = {
                     TextButton(onClick = { showAutoStartGuide = false }) { Text(stringResource(R.string.schedule_later)) }
-                }
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
             )
         }
     }

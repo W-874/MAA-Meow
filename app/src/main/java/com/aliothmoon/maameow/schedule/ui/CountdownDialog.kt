@@ -71,6 +71,9 @@ fun CountdownDialog(
             OutlinedButton(onClick = onCancel) {
                 Text(stringResource(R.string.common_cancel))
             }
-        }
+        },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp,
     )
 }

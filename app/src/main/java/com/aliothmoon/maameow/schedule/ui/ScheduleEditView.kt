@@ -25,6 +25,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -342,7 +343,12 @@ fun ScheduleEditView(
                                             stringResource(R.string.common_cancel)
                                         )
                                     }
-                                }
+                                },
+                                shape = MaterialTheme.shapes.extraLarge,
+                                tonalElevation = 6.dp,
+                                colors = DatePickerDefaults.colors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                ),
                             ) {
                                 DatePicker(state = datePickerState)
                             }
@@ -564,7 +570,10 @@ fun ScheduleEditView(
                     showPermissionDialog = false
                     navController.popBackStack()
                 }) { Text(stringResource(R.string.schedule_later)) }
-            }
+            },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
         )
     }
 }
@@ -586,6 +595,8 @@ private fun TimePickerDialog(
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             tonalElevation = 6.dp
         ) {
             Column(

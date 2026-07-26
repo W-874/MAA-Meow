@@ -24,6 +24,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.theme.OpaqueTheme
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 
 /**
@@ -49,7 +50,7 @@ fun ResourceInitDialog(
                     )
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog),
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         tonalElevation = 6.dp
                     ) {

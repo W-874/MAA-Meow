@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.snapshotFlow
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
@@ -151,7 +152,7 @@ fun AnnouncementDialog(
                         horizontal = maxHorizontalInset + 16.dp,
                         vertical = maxVerticalInset,
                     ),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,

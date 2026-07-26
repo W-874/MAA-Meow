@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.theme.OpaqueTheme
@@ -312,7 +313,7 @@ private fun TaskPromptCard(
             .fillMaxWidth()
             .wrapContentHeight()
             .heightIn(max = screenHeight * 0.85f),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 6.dp,

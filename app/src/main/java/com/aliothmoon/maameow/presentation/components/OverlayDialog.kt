@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.R
 
 /**
@@ -90,12 +91,12 @@ fun OverlayDialog(
                     modifier = Modifier
                         .widthIn(max = 280.dp)
                         .wrapContentHeight()
-                        .shadow(8.dp, RoundedCornerShape(8.dp))
+                        .shadow(8.dp, RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog))
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) { /* 消费点击事件，防止穿透到遮罩层 */ },
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )

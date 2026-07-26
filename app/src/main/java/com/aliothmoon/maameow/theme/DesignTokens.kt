@@ -26,6 +26,7 @@ object MaaDesignTokens {
         val card: Dp = 24.dp
         val button: Dp = 20.dp
         val pill: Dp = 28.dp
+        val dialog: Dp = 28.dp
         val inner: Dp = 12.dp
     }
 

@@ -161,7 +161,10 @@ fun ScheduleTriggerLogView(
                 },
                 dismissButton = {
                     TextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
-                }
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
             )
         }
 
@@ -178,7 +181,10 @@ fun ScheduleTriggerLogView(
                 },
                 dismissButton = {
                     TextButton(onClick = { deleteConfirmFileName = null }) { Text(stringResource(R.string.common_cancel)) }
-                }
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
             )
         }
     }
