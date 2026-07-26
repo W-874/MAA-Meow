@@ -287,7 +287,7 @@ private fun VersionStatCard(
     ElevatedCard(
         onClick = onClick,
         enabled = !checking && !updating,
-        modifier = modifier.height(112.dp),
+        modifier = modifier.height(88.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceBright,
         ),
@@ -295,8 +295,8 @@ private fun VersionStatCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
@@ -304,7 +304,7 @@ private fun VersionStatCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
             )
             Spacer(modifier = Modifier.height(4.dp))
             if (checking) {
@@ -315,7 +315,7 @@ private fun VersionStatCard(
             } else {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = if (isError) {
                         MaterialTheme.colorScheme.error
                     } else {
@@ -323,7 +323,7 @@ private fun VersionStatCard(
                     },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Start,
                 )
             }
         }
