@@ -348,8 +348,8 @@ fun UpdateSourceSettings(viewModel: UpdateViewModel) {
             onSelected = viewModel::setUpdateSource,
             icon = Icons.Rounded.CloudDownload,
         )
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            if (updateSource != UpdateSource.GITHUB) {
+        AnimatedVisibility(visible = updateSource != UpdateSource.GITHUB) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 TextButton(onClick = { showInfoSource = updateSource }) {
                     Icon(
                         imageVector = Icons.Rounded.Info,
@@ -359,12 +359,12 @@ fun UpdateSourceSettings(viewModel: UpdateViewModel) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.update_card_about_source_cd, stringResource(updateSource.resId)))
                 }
-            }
-            AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
-                CdkInputField(
-                    cdk = mirrorChyanCdk,
-                    onCdkChange = viewModel::setMirrorChyanCdk,
-                )
+                if (updateSource == UpdateSource.MIRROR_CHYAN) {
+                    CdkInputField(
+                        cdk = mirrorChyanCdk,
+                        onCdkChange = viewModel::setMirrorChyanCdk,
+                    )
+                }
             }
         }
     }
