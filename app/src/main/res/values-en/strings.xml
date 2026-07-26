@@ -162,7 +162,7 @@
     <string name="achievement_debug_clear_all">Delete All Achievement Records</string>
     <string name="achievement_debug_clear_done">All achievement records deleted</string>
     <!-- home: top bar & app title -->
-    <string name="home_app_title">MAA</string>
+    <string name="home_app_title">MaaMeow</string>
 
     <!-- home: screen info card -->
     <string name="home_screen_resolution">Screen Resolution</string>

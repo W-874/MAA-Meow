@@ -366,7 +366,7 @@
     <string name="achievement_debug_clear_done">已删除所有成就记录</string>
 
     <!-- home: top bar & app title -->
-    <string name="home_app_title">MAA</string>
+    <string name="home_app_title">MaaMeow</string>
 
     <!-- home: screen info card -->
     <string name="home_screen_resolution">屏幕分辨率</string>
