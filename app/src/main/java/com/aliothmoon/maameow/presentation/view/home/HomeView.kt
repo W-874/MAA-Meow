@@ -28,17 +28,19 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,7 +92,7 @@ import timber.log.Timber
 
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 fun HomeView(
     navController: NavController,
     viewModel: HomeViewModel = koinViewModel(),
@@ -216,34 +219,42 @@ fun HomeView(
         )
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.home_app_title),
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.headlineMedium
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            topBar = {
+                LargeFlexibleTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.home_app_title),
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
+                    },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.primary
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.primary
                 )
-            )
+            },
+        ) { paddingValues ->
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
+                    .fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
-                    top = 8.dp,
-                    bottom = 8.dp
+                    top = paddingValues.calculateTopPadding() + 8.dp,
+                    bottom = paddingValues.calculateBottomPadding() + 16.dp,
                 ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
                     ScreenInfoCard(
@@ -334,19 +345,30 @@ private fun ScreenInfoCard(
     serviceStatusLoading: Boolean
 ) {
     val serviceStatusLabel = serviceStatusText.asString()
-    Card(
+    val containerColor = when (serviceStatusColor) {
+        StatusColorType.PRIMARY -> MaterialTheme.colorScheme.primaryContainer
+        StatusColorType.WARNING -> MaterialTheme.colorScheme.tertiaryContainer
+        StatusColorType.ERROR -> MaterialTheme.colorScheme.errorContainer
+        StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.surfaceBright
+    }
+    val contentColor = when (serviceStatusColor) {
+        StatusColorType.PRIMARY -> MaterialTheme.colorScheme.onPrimaryContainer
+        StatusColorType.WARNING -> MaterialTheme.colorScheme.onTertiaryContainer
+        StatusColorType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
+        StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.onSurface
+    }
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -357,12 +379,12 @@ private fun ScreenInfoCard(
                     text = stringResource(R.string.home_screen_resolution),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = contentColor
                 )
                 Text(
                     text = "$screenWidth × $screenHeight",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.78f)
                 )
             }
             Row(
@@ -374,7 +396,7 @@ private fun ScreenInfoCard(
                     text = stringResource(R.string.home_resource_version_label),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = contentColor
                 )
                 val notInstalled = stringResource(R.string.home_resource_not_installed)
                 Text(
@@ -383,7 +405,7 @@ private fun ScreenInfoCard(
                     color = if (resourceVersion.isBlank())
                         MaterialTheme.colorScheme.error
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        contentColor.copy(alpha = 0.78f)
                 )
             }
             Row(
@@ -395,12 +417,12 @@ private fun ScreenInfoCard(
                     text = stringResource(R.string.home_app_version_label),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = contentColor
                 )
                 Text(
                     text = appVersion,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = contentColor.copy(alpha = 0.78f)
                 )
             }
             Row(
@@ -412,15 +434,10 @@ private fun ScreenInfoCard(
                     text = stringResource(R.string.home_service_status),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = contentColor
                 )
 
-                val statusColor = when (serviceStatusColor) {
-                    StatusColorType.PRIMARY -> MaterialTheme.colorScheme.primary
-                    StatusColorType.WARNING -> Color(0xFFFF9800)
-                    StatusColorType.ERROR -> MaterialTheme.colorScheme.error
-                    StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                val statusColor = contentColor
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -499,19 +516,12 @@ private fun HomeServiceActionButtons(
                 content = serviceButtonContent
             )
         } else {
-            OutlinedButton(
+            Button(
                 onClick = onToggleRemoteService,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(56.dp),
                 shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                ),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 enabled = !isLoading,
                 content = serviceButtonContent
@@ -559,18 +569,16 @@ private fun RunModeCard(
     changeEnabled: Boolean
 ) {
     val context = LocalContext.current
-    Card(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -614,7 +622,7 @@ private fun PermissionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(32.dp),
+            .height(48.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -656,18 +664,16 @@ private fun PermissionCard(
     var expandedPermissions by remember { mutableStateOf(false) }
     val contentColor = MaterialTheme.colorScheme.onSurface
 
-    Card(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        ),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             Text(
@@ -675,7 +681,7 @@ private fun PermissionCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
                 color = contentColor,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             PermissionRow(
@@ -769,15 +775,13 @@ private fun ForegroundModeSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceBright
+            ),
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     text = stringResource(R.string.home_resolution_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -829,18 +833,16 @@ private fun ForegroundModeSection(
                 }
             }
         }
-        Card(
+        ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceBright
+            ),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
