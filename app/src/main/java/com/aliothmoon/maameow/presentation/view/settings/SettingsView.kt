@@ -91,14 +91,12 @@ import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.model.update.UpdateChannel
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
-import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.LogExportController
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
@@ -124,11 +122,9 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 fun SettingsView(
     navController: NavController,
-    onViewAnnouncement: () -> Unit = {},
     viewModel: SettingsViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
-    achievementReporter: AchievementReporter = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
@@ -198,12 +194,6 @@ fun SettingsView(
 
     var showReInitConfirm by remember { mutableStateOf(false) }
     var showDebugModeConfirm by remember { mutableStateOf(false) }
-    var showExportSheet by remember { mutableStateOf(false) }
-
-    LogExportController(
-        sheetVisible = showExportSheet,
-        onSheetDismiss = { showExportSheet = false },
-    )
     var showRunScheduleWhenLockedConfirm by remember { mutableStateOf(false) }
 
     if (showRestartDialog) {
@@ -465,22 +455,6 @@ fun SettingsView(
                     ) {
                         navController.navigate("log_history")
                     } }
-                    item { SettingClickItem(
-                        title = stringResource(R.string.settings_log_error_title),
-                        description = stringResource(R.string.settings_log_error_desc),
-                        contentColor = contentColor,
-                        icon = Icons.Rounded.BugReport,
-                    ) {
-                        navController.navigate("error_log")
-                    } }
-                    item { SettingClickItem(
-                        title = stringResource(R.string.settings_log_export_title),
-                        description = stringResource(R.string.settings_log_export_desc),
-                        contentColor = contentColor,
-                        icon = Icons.Rounded.FileUpload,
-                    ) {
-                        showExportSheet = true
-                    } }
                     item { SettingSwitchItem(
                         title = stringResource(R.string.settings_debug_mode_title),
                         description = stringResource(R.string.settings_debug_mode_desc),
@@ -709,41 +683,13 @@ fun SettingsView(
             item {
                 SectionHeader(stringResource(R.string.settings_section_about))
                 SegmentedSettingsGroup {
-                    item { SettingInfoRow(
-                        label = stringResource(R.string.settings_about_version),
-                        value = BuildConfig.VERSION_NAME,
-                        contentColor = contentColor,
-                    ) }
-                    item { SettingInfoRow(
-                        label = stringResource(R.string.settings_about_developer),
-                        value = "Aliothmoon",
-                        contentColor = contentColor
-                    ) }
                     item { SettingClickItem(
-                        title = stringResource(R.string.settings_about_qq_group_title),
-                        description = stringResource(R.string.settings_about_qq_group_desc),
+                        title = stringResource(R.string.settings_about_page_title),
+                        description = stringResource(R.string.settings_about_page_desc, BuildConfig.VERSION_NAME),
                         contentColor = contentColor,
-                        icon = Icons.Rounded.Campaign,
+                        icon = Icons.Rounded.Info,
                     ) {
-                        achievementReporter.reportFeedbackGroupOpened()
-                        Misc.openUriSafely(context, "https://qm.qq.com/q/j4CFbeDQXu")
-                    } }
-                    item { SettingClickItem(
-                        title = stringResource(R.string.settings_about_announcement),
-                        contentColor = contentColor,
-                        icon = Icons.Rounded.Campaign,
-                    ) {
-                        onViewAnnouncement()
-                    } }
-                    item { SettingClickItem(
-                        title = stringResource(R.string.settings_about_star),
-                        contentColor = contentColor,
-                        icon = Icons.Rounded.Star,
-                    ) {
-                        Misc.openUriSafely(
-                            context,
-                            "https://github.com/Aliothmoon/MAA-Meow",
-                        )
+                        navController.navigate(Routes.ABOUT)
                     } }
                 }
             }

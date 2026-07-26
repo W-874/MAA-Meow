@@ -104,10 +104,7 @@ fun MainScreen(
                     )
 
                     BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
-                    BottomNavTab.SETTINGS -> SettingsView(
-                        navController = navController,
-                        onViewAnnouncement = onViewAnnouncement,
-                    )
+                    BottomNavTab.SETTINGS -> SettingsView(navController = navController)
                 }
             }
 

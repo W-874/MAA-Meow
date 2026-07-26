@@ -638,12 +638,13 @@
 
     <!-- settings: about section -->
     <string name="settings_section_about">关于</string>
-    <string name="settings_about_version">版本</string>
-    <string name="settings_about_developer">开发者</string>
     <string name="settings_about_qq_group_title">问题反馈 QQ 群</string>
     <string name="settings_about_qq_group_desc">遇到问题或有建议？欢迎加群交流反馈</string>
-    <string name="settings_about_announcement">查看公告</string>
-    <string name="settings_about_star">⭐ 喜欢就给个 Star 吧</string>
+    <string name="settings_about_page_title">关于 MaaMeow</string>
+    <string name="settings_about_page_desc">版本 %1$s、源代码与日志工具</string>
+    <string name="about_source_code_title">查看源代码</string>
+    <string name="about_source_code_desc">在 GitHub 上查看 MaaMeow 的源代码</string>
+    <string name="about_debug_section">调试</string>
 
     <!-- common: additional -->
     <string name="common_tab_general">常规设置</string>
