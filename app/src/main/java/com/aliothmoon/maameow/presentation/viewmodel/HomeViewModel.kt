@@ -8,6 +8,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.DisplayMode
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
+import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
@@ -216,6 +217,28 @@ class HomeViewModel(
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_backend_auth_failed, backend.display
+                    )
+                )
+            }
+        }
+    }
+
+    fun onRequestShizukuAccess() {
+        viewModelScope.launch {
+            if (!permissionManager.permissions.shizukuAvailable) {
+                _effects.send(
+                    UiEffect.toast(
+                        R.string.home_toast_backend_unavailable,
+                        RemoteBackend.SHIZUKU.display,
+                    )
+                )
+                return@launch
+            }
+            if (!permissionManager.requestShizuku()) {
+                _effects.send(
+                    UiEffect.toast(
+                        R.string.home_toast_backend_auth_failed,
+                        RemoteBackend.SHIZUKU.display,
                     )
                 )
             }

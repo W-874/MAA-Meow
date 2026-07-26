@@ -1,30 +1,22 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
@@ -37,18 +29,13 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,13 +50,12 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.permission.PermissionState
-import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
-import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.PermissionStatusRow
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
@@ -86,7 +72,6 @@ import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.overlayControlModeDisplayName
-import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.runModeDisplayName
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -103,14 +88,12 @@ fun HomeView(
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     permissionManager: PermissionManager = koinInject(),
-    appSettingsManager: AppSettingsManager = koinInject()
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
-    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
 
     val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
 
@@ -273,37 +256,18 @@ fun HomeView(
                 }
 
                 item {
-                    RunModeCard(
+                    RuntimeInfoSection(
                         runMode = uiState.runMode,
                         onRunModeSelected = {
                             viewModel.onRunModeChange(it == RunMode.BACKGROUND)
                         },
-                        changeEnabled = viewModel.checkRunModeChangeEnabled()
-                    )
-                }
-
-                item {
-                    PermissionCard(
+                        changeEnabled = viewModel.checkRunModeChangeEnabled(),
                         permissionState = permissionState,
-                        isShowAccessibility = uiState.runMode == RunMode.FOREGROUND && uiState.overlayControlMode == OverlayControlMode.ACCESSIBILITY,
                         isGranting = uiState.isGranting,
-                        onRequestRemoteAccess = { viewModel.onRequestRemoteAccess() },
-                        onRequestOverlay = { viewModel.onRequestOverlay(context) },
-                        onRequestStorage = { viewModel.onRequestStorage(context) },
-                        onRequestBatteryWhitelist = { viewModel.onRequestBatteryWhitelist(context) },
-                        onRequestAccessibility = { viewModel.onRequestAccessibility(context) },
-                        onRequestNotification = { viewModel.onRequestNotification(context) }
-                    )
-                }
-
-                item {
-                    HomeServiceActionButtons(
+                        onRequestShizukuAccess = { viewModel.onRequestShizukuAccess() },
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
-                        showShizukuShortcut = permissionState.startupBackend == RemoteBackend.SHIZUKU &&
-                                shizukuShortcutEnabled,
-                        onOpenShizuku = { viewModel.onOpenShizuku() },
-                        onToggleRemoteService = { viewModel.onToggleRemoteService() }
+                        onCloseRemoteService = { viewModel.onToggleRemoteService() },
                     )
                 }
 
@@ -428,248 +392,51 @@ private fun ScreenInfoCard(
 }
 
 @Composable
-private fun HomeServiceActionButtons(
-    remoteServiceActive: Boolean,
-    isLoading: Boolean,
-    showShizukuShortcut: Boolean,
-    onOpenShizuku: () -> Unit,
-    onToggleRemoteService: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        val serviceButtonContent: @Composable RowScope.() -> Unit = {
-            Icon(
-                imageVector = Icons.Rounded.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.size(6.dp))
-            Text(
-                text = stringResource(
-                    if (remoteServiceActive) R.string.home_btn_close_service
-                    else R.string.home_btn_open_service
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                maxLines = 2,
-                textAlign = TextAlign.Center
-            )
-        }
-        if (remoteServiceActive) {
-            Button(
-                onClick = onToggleRemoteService,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                enabled = !isLoading,
-                content = serviceButtonContent
-            )
-        } else {
-            Button(
-                onClick = onToggleRemoteService,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                enabled = !isLoading,
-                content = serviceButtonContent
-            )
-        }
-        if (showShizukuShortcut) {
-            OutlinedButton(
-                onClick = onOpenShizuku,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.secondary
-                ),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.55f)
-                ),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                enabled = !isLoading
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Build,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.size(6.dp))
-                Text(
-                    text = stringResource(R.string.home_btn_open_shizuku),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RunModeCard(
+private fun RuntimeInfoSection(
     runMode: RunMode,
     onRunModeSelected: (RunMode) -> Unit,
-    changeEnabled: Boolean
-) {
-    val context = LocalContext.current
-    SegmentedSettingsGroup {
-        item {
-            SettingDropdown(
-                title = stringResource(R.string.home_run_mode_title),
-                selected = runMode,
-                options = RunMode.entries,
-                optionLabel = { context.runModeDisplayName(it) },
-                onSelected = onRunModeSelected,
-                icon = null,
-                enabled = changeEnabled,
-                singleLine = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionRow(
-    title: String,
-    granted: Boolean,
-    onClick: () -> Unit,
-    isLoading: Boolean = false,
-    grantedText: String = stringResource(R.string.home_permission_granted),
-    ungrantedText: String = stringResource(R.string.home_permission_request),
-    contentColor: Color
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = contentColor
-        )
-        TextButton(
-            onClick = onClick,
-            enabled = !granted && !isLoading,
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Text(text = if (granted) grantedText else ungrantedText)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PermissionCard(
+    changeEnabled: Boolean,
     permissionState: PermissionState,
-    isShowAccessibility: Boolean,
     isGranting: Boolean,
-    onRequestRemoteAccess: () -> Unit,
-    onRequestOverlay: () -> Unit,
-    onRequestStorage: () -> Unit,
-    onRequestBatteryWhitelist: () -> Unit,
-    onRequestAccessibility: () -> Unit,
-    onRequestNotification: () -> Unit
+    onRequestShizukuAccess: () -> Unit,
+    remoteServiceActive: Boolean,
+    isLoading: Boolean,
+    onCloseRemoteService: () -> Unit,
 ) {
     val context = LocalContext.current
-    var expandedPermissions by remember { mutableStateOf(false) }
-    val contentColor = MaterialTheme.colorScheme.onSurface
-
     Column {
-        SectionHeader(stringResource(R.string.home_permission_section))
+        SectionHeader(stringResource(R.string.home_runtime_info_section))
         SegmentedSettingsGroup {
-            item { PermissionRow(
-                title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
-                granted = permissionState.remoteAccessGranted,
-                onClick = onRequestRemoteAccess,
-                isLoading = isGranting,
-                contentColor = contentColor,
-            ) }
-            item { Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expandedPermissions = !expandedPermissions }
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (expandedPermissions)
-                        stringResource(R.string.home_permission_collapse)
-                    else
-                        stringResource(R.string.home_permission_expand),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f)
+            item {
+                SettingDropdown(
+                    title = stringResource(R.string.home_run_mode_title),
+                    selected = runMode,
+                    options = RunMode.entries,
+                    optionLabel = { context.runModeDisplayName(it) },
+                    onSelected = onRunModeSelected,
+                    icon = null,
+                    enabled = changeEnabled,
+                    singleLine = true,
                 )
-                Icon(
-                    imageVector = if (expandedPermissions) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = contentColor.copy(alpha = 0.7f)
+            }
+            item {
+                PermissionStatusRow(
+                    title = stringResource(R.string.home_shizuku_status_title),
+                    granted = permissionState.shizuku,
+                    onClick = onRequestShizukuAccess,
+                    isLoading = isGranting,
                 )
-            } }
-
-            if (expandedPermissions) {
-                item { PermissionRow(
-                        title = stringResource(R.string.home_permission_overlay),
-                        granted = permissionState.overlay,
-                        onClick = onRequestOverlay,
-                        contentColor = contentColor,
-                    ) }
-                item { PermissionRow(
-                        title = stringResource(R.string.home_permission_storage),
-                        granted = permissionState.storage,
-                        onClick = onRequestStorage,
-                        contentColor = contentColor,
-                    ) }
-                item { PermissionRow(
-                        title = stringResource(R.string.home_permission_battery),
-                        granted = permissionState.batteryWhitelist,
-                        onClick = onRequestBatteryWhitelist,
-                        grantedText = stringResource(R.string.home_permission_battery_added),
-                        contentColor = contentColor,
-                    ) }
-                if (isShowAccessibility) {
-                    item { PermissionRow(
-                            title = stringResource(R.string.home_permission_accessibility),
-                            granted = permissionState.accessibility,
-                            onClick = onRequestAccessibility,
-                            ungrantedText = if (permissionState.remoteAccessGranted)
-                                stringResource(R.string.home_permission_quick_grant)
-                            else
-                                stringResource(R.string.home_permission_request),
-                            contentColor = contentColor,
-                        ) }
-                }
-                item { PermissionRow(
-                        title = stringResource(R.string.home_permission_notification),
-                        granted = permissionState.notification,
-                        onClick = onRequestNotification,
-                        contentColor = contentColor,
-                    ) }
+            }
+            item {
+                SettingRow(
+                    title = stringResource(R.string.home_btn_close_service),
+                    titleColor = MaterialTheme.colorScheme.onError,
+                    containerColor = MaterialTheme.colorScheme.error,
+                    leadingColor = MaterialTheme.colorScheme.onError,
+                    icon = Icons.Rounded.Refresh,
+                    enabled = remoteServiceActive && !isLoading,
+                    onClick = onCloseRemoteService,
+                )
             }
         }
     }

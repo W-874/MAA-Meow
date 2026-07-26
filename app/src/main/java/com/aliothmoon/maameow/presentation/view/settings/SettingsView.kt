@@ -24,7 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Campaign
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -94,9 +97,11 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
+import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.PermissionStatusRow
 import com.aliothmoon.maameow.presentation.components.ReInitializeConfirmDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
@@ -110,6 +115,7 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import com.aliothmoon.maameow.utils.i18n.resolve
+import com.aliothmoon.maameow.utils.i18n.remoteBackendPermissionLabel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -125,8 +131,11 @@ fun SettingsView(
     viewModel: SettingsViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
+    permissionManager: PermissionManager = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
+    val permissionState by permissionManager.state.collectAsStateWithLifecycle()
+    val isGrantingPermission by permissionManager.isGranting.collectAsStateWithLifecycle()
     val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
     val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
     val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
@@ -490,6 +499,104 @@ fun SettingsView(
                         fontSizeScale = fontSizeScale,
                         onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) },
                     ) }
+                }
+            }
+
+            // 权限管理
+            item {
+                SectionHeader(stringResource(R.string.home_permission_section))
+                SegmentedSettingsGroup {
+                    item {
+                        PermissionStatusRow(
+                            title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
+                            granted = permissionState.remoteAccessGranted,
+                            isLoading = isGrantingPermission,
+                            icon = Icons.Rounded.Security,
+                            onClick = {
+                                coroutineScope.launch {
+                                    val backend = permissionState.startupBackend
+                                    if (!permissionState.isStartupBackendAvailable(backend)) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.home_toast_backend_unavailable, backend.display),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                        return@launch
+                                    }
+                                    if (!permissionManager.requestRemoteAccess()) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.home_toast_backend_auth_failed, backend.display),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    item {
+                        PermissionStatusRow(
+                            title = stringResource(R.string.home_permission_overlay),
+                            granted = permissionState.overlay,
+                            icon = Icons.Rounded.TouchApp,
+                            onClick = {
+                                coroutineScope.launch { permissionManager.requestOverlay(context) }
+                            },
+                        )
+                    }
+                    item {
+                        PermissionStatusRow(
+                            title = stringResource(R.string.home_permission_storage),
+                            granted = permissionState.storage,
+                            icon = Icons.Rounded.Folder,
+                            onClick = {
+                                coroutineScope.launch { permissionManager.requestStorage(context) }
+                            },
+                        )
+                    }
+                    item {
+                        PermissionStatusRow(
+                            title = stringResource(R.string.home_permission_battery),
+                            granted = permissionState.batteryWhitelist,
+                            grantedText = stringResource(R.string.home_permission_battery_added),
+                            icon = Icons.Rounded.BatteryChargingFull,
+                            onClick = {
+                                coroutineScope.launch { permissionManager.requestBatteryWhitelist(context) }
+                            },
+                        )
+                    }
+                    item {
+                        PermissionStatusRow(
+                            title = stringResource(R.string.home_permission_accessibility),
+                            granted = permissionState.accessibility,
+                            icon = Icons.Rounded.AccessibilityNew,
+                            ungrantedText = if (permissionState.remoteAccessGranted) {
+                                stringResource(R.string.home_permission_quick_grant)
+                            } else {
+                                stringResource(R.string.home_permission_request)
+                            },
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (permissionState.remoteAccessGranted &&
+                                        permissionManager.quickGrantAccessibility()
+                                    ) {
+                                        return@launch
+                                    }
+                                    permissionManager.requestAccessibility(context)
+                                }
+                            },
+                        )
+                    }
+                    item {
+                        PermissionStatusRow(
+                            title = stringResource(R.string.home_permission_notification),
+                            granted = permissionState.notification,
+                            icon = Icons.Rounded.Notifications,
+                            onClick = {
+                                coroutineScope.launch { permissionManager.requestNotification(context) }
+                            },
+                        )
+                    }
                 }
             }
 

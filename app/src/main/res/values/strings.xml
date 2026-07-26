@@ -378,6 +378,8 @@
 
     <!-- home: run mode card -->
     <string name="home_run_mode_title">运行模式</string>
+    <string name="home_runtime_info_section">运行信息</string>
+    <string name="home_shizuku_status_title">Shizuku 状态</string>
     <string name="home_run_mode_foreground">前台模式</string>
     <string name="home_run_mode_background">后台模式</string>
 

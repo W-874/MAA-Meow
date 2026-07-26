@@ -49,6 +49,8 @@ fun SettingRow(
     description: String? = null,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     descriptionColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceBright,
+    leadingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     icon: ImageVector? = Icons.Rounded.Settings,
     enabled: Boolean = true,
     trailing: @Composable (() -> Unit)? = null,
@@ -59,14 +61,14 @@ fun SettingRow(
     val disabledAlpha = if (enabled) 1f else 0.38f
     val dynamicPadding = (4 * LocalDensity.current.fontScale).dp
     val colors = ListItemDefaults.colors(
-        containerColor = MaterialTheme.colorScheme.surfaceBright,
+        containerColor = containerColor,
         contentColor = titleColor,
-        leadingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        leadingContentColor = leadingColor,
         trailingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         supportingContentColor = descriptionColor,
-        disabledContainerColor = MaterialTheme.colorScheme.surfaceBright,
+        disabledContainerColor = containerColor,
         disabledContentColor = titleColor,
-        disabledLeadingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        disabledLeadingContentColor = leadingColor,
         disabledTrailingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         disabledSupportingContentColor = descriptionColor,
     )
