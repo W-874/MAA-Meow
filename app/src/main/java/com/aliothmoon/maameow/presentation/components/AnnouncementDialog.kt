@@ -152,7 +152,7 @@ fun AnnouncementDialog(
                         vertical = maxVerticalInset,
                     ),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp,

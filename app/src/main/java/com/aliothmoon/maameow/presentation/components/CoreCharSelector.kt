@@ -203,7 +203,7 @@ fun CoreCharSelector(
                         color = MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(8.dp)
                     ),
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 LazyColumn {
                     items(filteredSuggestions) { charName ->

@@ -42,7 +42,7 @@ fun PriorityItemRow(
             containerColor = when {
                 isDragging -> MaterialTheme.colorScheme.surfaceVariant
                 isReorderMode -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
-                enabled -> MaterialTheme.colorScheme.surface
+                enabled -> MaterialTheme.colorScheme.surfaceContainerLow
                 else -> MaterialTheme.colorScheme.surfaceVariant
             }
         ),

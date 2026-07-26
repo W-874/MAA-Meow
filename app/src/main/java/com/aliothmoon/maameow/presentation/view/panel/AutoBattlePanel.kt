@@ -207,7 +207,7 @@ fun AutoBattlePanel(
                                     color = if (selected) {
                                         MaterialTheme.colorScheme.primaryContainer
                                     } else {
-                                        MaterialTheme.colorScheme.surface
+                                        MaterialTheme.colorScheme.surfaceContainerLow
                                     },
                                     border = BorderStroke(
                                         width = 1.dp,
@@ -739,7 +739,7 @@ fun AutoBattlePanel(
                                         Surface(
                                             tonalElevation = if (isDragging) 4.dp else 0.dp,
                                             shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surface,
+                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                             modifier = Modifier
                                                 .longPressDraggableHandle()
                                                 .fillMaxWidth()

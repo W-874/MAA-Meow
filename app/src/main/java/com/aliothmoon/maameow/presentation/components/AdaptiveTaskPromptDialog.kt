@@ -313,7 +313,7 @@ private fun TaskPromptCard(
             .wrapContentHeight()
             .heightIn(max = screenHeight * 0.85f),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 6.dp,
         shadowElevation = 8.dp

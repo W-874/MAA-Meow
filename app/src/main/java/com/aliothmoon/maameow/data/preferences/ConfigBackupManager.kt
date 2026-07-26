@@ -61,13 +61,8 @@ class ConfigBackupManager(
         require(backup.version <= CURRENT_VERSION) {
             "不支持的备份版本: ${backup.version}，当前最高支持: $CURRENT_VERSION"
         }
-        // 自定义背景的开关与令牌指向本机文件，导入其他设备的配置时保留本机值。
-        val localSettings = appSettingsManager.settings.first()
         appSettingsManager.setSettings(
-            backup.appSettings.normalizedForImport().copy(
-                customBackgroundEnabled = localSettings.customBackgroundEnabled,
-                customBackgroundToken = localSettings.customBackgroundToken,
-            )
+            backup.appSettings.normalizedForImport()
         )
         notificationSettingsManager.updateSettings(backup.notificationSettings)
         taskChainState.importProfiles(backup.taskProfiles, backup.activeProfileId)
@@ -83,13 +78,10 @@ class ConfigBackupManager(
         const val CURRENT_VERSION = 1
 
         /**
-         * 导出时剥离设备本地字段：CDK 属敏感信息；
-         * 自定义背景的开关与令牌对应本机 filesDir 下的图片文件，在其他设备上不存在。
+         * 导出时剥离设备本地的敏感字段。
          */
         private fun AppSettings.sanitized() = copy(
             mirrorChyanCdk = "",
-            customBackgroundEnabled = "false",
-            customBackgroundToken = "",
         )
 
         /**

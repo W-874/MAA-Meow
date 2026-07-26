@@ -42,7 +42,7 @@ fun ReorderablePriorityList(
                     .fillMaxWidth()
                     .height(120.dp)
                     .background(
-                        color = MaterialTheme.colorScheme.surface,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         shape = MaterialTheme.shapes.extraSmall
                     )
                     .border(

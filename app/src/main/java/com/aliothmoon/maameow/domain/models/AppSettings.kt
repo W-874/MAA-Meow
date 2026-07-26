@@ -79,33 +79,10 @@ data class AppSettings(
     /** 定时任务触发时跳过锁屏检查 */
     @PrefKey(default = "false") val runScheduleWhenLocked: String = "false",
 
-    /**
-     * 是否启用系统莫奈主题色（Android 12+ Material You）
-     * 启用后主题跟随系统壁纸动态取色，关闭则使用内置硬编码蓝色主题
-     * Android 12 以下设备只能使用内置蓝色主题
-     */
-    @PrefKey(default = "false") val useSystemMonetColor: String = "false",
-
     /** 页面缩放比例（80~110，默认 100 = 1.0x） */
     @PrefKey(default = "100") val fontSizeScale: String = "100",
 
     /** 是否显示成就解锁时的 Snackbar 提示 */
     @PrefKey(default = "true") val showAchievementSnackbar: String = "true",
 
-    /** 是否启用主界面自定义图片背景（仅四个主 Tab 生效） */
-    @PrefKey(default = "false") val customBackgroundEnabled: String = "false",
-
-    /**
-     * 图片文件固定存放在 filesDir/backgrounds/bg.jpg，路径本身无需持久化。
-     */
-    @PrefKey(default = "") val customBackgroundToken: String = "",
-
-    /** 背景图不透明度 0~100（默认 80） */
-    @PrefKey(default = "80") val customBackgroundImageAlpha: String = "80",
-
-    /** 背景遮罩强度 0~100（默认 25，用于保证前景文字可读性） */
-    @PrefKey(default = "25") val customBackgroundScrim: String = "25",
-
-    /** 背景模糊强度 0~100（默认 0，仅 API 31+ 生效） */
-    @PrefKey(default = "0") val customBackgroundBlur: String = "0",
 )

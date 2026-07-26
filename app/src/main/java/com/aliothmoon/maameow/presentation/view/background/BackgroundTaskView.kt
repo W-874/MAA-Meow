@@ -368,7 +368,7 @@ fun BackgroundTaskView(
                                                 .weight(1f)
                                                 .fillMaxHeight(),
                                             colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                             )
                                         ) {
                                             Column(modifier = Modifier.padding(top = 10.dp)) {
@@ -801,7 +801,7 @@ private fun BackgroundMoreActionsOverlay(
                     interactionSource = cardInteractionSource, indication = null, onClick = {}),
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {

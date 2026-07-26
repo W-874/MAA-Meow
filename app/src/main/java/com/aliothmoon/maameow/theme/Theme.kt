@@ -5,8 +5,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
@@ -17,129 +15,27 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
-private val LightBackground = Color(0xFFF5F2ED)
-private val LightSurface = Color(0xFFF9F7F3)
-private val LightSurfaceVariant = Color(0xFFE8E4DE)
-private val LightOnSurface = Color(0xFF1C1B18)
-private val LightOnSurfaceVariant = Color(0xFF8A8580)
-private val LightOutline = Color(0xFFC9C4BE)
-
-private val DarkBackground = Color(0xFF121212)
-private val DarkSurface = Color(0xFF1C1C1E)
-private val DarkSurfaceVariant = Color(0xFF2C2C2E)
-private val DarkOnSurface = Color(0xFFFFFFFF)
-private val DarkOnSurfaceVariant = Color(0xFF98989D)
-private val DarkOutline = Color(0xFF3A3A3C)
-
 private val PureDarkBackground = Color(0xFF000000)
-private val PureDarkSurface = Color(0xFF000000)
-private val PureDarkSurfaceVariant = Color(0xFF121212)
 
-
-private fun createLightColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color
-): ColorScheme {
-    return lightColorScheme(
-        primary = primary,
-        onPrimary = Color(0xFFFFFFFF),
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        secondary = Color(0xFF8A8580),
-        onSecondary = Color(0xFFFFFFFF),
-        secondaryContainer = Color(0xFFE8E4DE),
-        onSecondaryContainer = Color(0xFF1C1B18),
-        tertiary = primary.copy(alpha = 0.8f),
-        onTertiary = Color(0xFFFFFFFF),
-        tertiaryContainer = primaryContainer.copy(alpha = 0.5f),
-        onTertiaryContainer = onPrimaryContainer,
-        background = LightBackground,
-        onBackground = LightOnSurface,
-        surface = LightSurface,
-        surfaceDim = Color(0xFFDCD9D4),
-        surfaceBright = Color(0xFFFDFBF7),
-        surfaceContainerLowest = Color(0xFFFFFFFF),
-        surfaceContainerLow = Color(0xFFF6F3EE),
-        surfaceContainer = Color(0xFFF0EDE8),
-        surfaceContainerHigh = Color(0xFFEAE7E2),
-        surfaceContainerHighest = Color(0xFFE4E1DC),
-        onSurface = LightOnSurface,
-        surfaceVariant = LightSurfaceVariant,
-        onSurfaceVariant = LightOnSurfaceVariant,
-        outline = LightOutline,
-        outlineVariant = LightSurfaceVariant,
-        error = Color(0xfff53f3f),
-        onError = Color.White,
-        errorContainer = Color(0xFFFFD8D6),
-        onErrorContainer = Color(0xFF690005)
+private fun ColorScheme.withDistinctSurfaceContainers(isDark: Boolean): ColorScheme {
+    val tint = if (isDark) onSurface else primary
+    fun container(amount: Float) = lerp(background, tint, amount)
+    return copy(
+        surface = background,
+        surfaceContainerLowest = container(0.02f),
+        surfaceContainerLow = container(0.06f),
+        surfaceContainer = container(0.09f),
+        surfaceContainerHigh = container(0.13f),
+        surfaceContainerHighest = container(0.17f),
+        surfaceVariant = container(0.17f),
     )
 }
-
-private fun createDarkColorScheme(
-    primary: Color, primaryContainer: Color, onPrimaryContainer: Color, isPureDark: Boolean = false
-): ColorScheme {
-    val bg = if (isPureDark) PureDarkBackground else DarkBackground
-    val surface = if (isPureDark) PureDarkSurface else DarkSurface
-    val surfaceVariant = if (isPureDark) PureDarkSurfaceVariant else DarkSurfaceVariant
-
-    return darkColorScheme(
-        primary = primary,
-        onPrimary = Color(0xFFFFFFFF),
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        secondary = Color(0xFF98989D),
-        onSecondary = Color(0xFFFFFFFF),
-        secondaryContainer = Color(0xFF2C2C2E),
-        onSecondaryContainer = Color(0xFFE5E5EA),
-        tertiary = primary.copy(alpha = 0.8f),
-        onTertiary = Color(0xFFFFFFFF),
-        tertiaryContainer = primaryContainer.copy(alpha = 0.5f),
-        onTertiaryContainer = onPrimaryContainer,
-        background = bg,
-        onBackground = DarkOnSurface,
-        surface = surface,
-        surfaceDim = bg,
-        surfaceBright = if (isPureDark) Color(0xFF1F1F1F) else Color(0xFF39393B),
-        surfaceContainerLowest = if (isPureDark) Color.Black else Color(0xFF0E0E0F),
-        surfaceContainerLow = if (isPureDark) Color(0xFF090909) else Color(0xFF1A1A1C),
-        surfaceContainer = if (isPureDark) Color(0xFF101010) else Color(0xFF1E1E20),
-        surfaceContainerHigh = if (isPureDark) Color(0xFF171717) else Color(0xFF29292B),
-        surfaceContainerHighest = if (isPureDark) Color(0xFF202020) else Color(0xFF343436),
-        onSurface = DarkOnSurface,
-        surfaceVariant = surfaceVariant,
-        onSurfaceVariant = DarkOnSurfaceVariant,
-        outline = DarkOutline,
-        outlineVariant = surfaceVariant,
-        error = Color(0xFFFF453A),
-        onError = Color(0xFF690005),
-        errorContainer = Color(0xFF93000A),
-        onErrorContainer = Color(0xFFFFDAD6)
-    )
-}
-
-private val BlueLight = createLightColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFFE5F1FF),
-    onPrimaryContainer = Color(0xFF002453)
-)
-
-private val BlueDark = createDarkColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFF004088),
-    onPrimaryContainer = Color(0xFFD6E8FF)
-)
-
-private val BluePureDark = createDarkColorScheme(
-    primary = Color(0xFF2B6BCA),
-    primaryContainer = Color(0xFF004088),
-    onPrimaryContainer = Color(0xFFD6E8FF),
-    isPureDark = true
-)
 
 val MaaShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
@@ -155,67 +51,15 @@ object MaaThemeAlphas {
     const val MEDIUM = 0.74f
 }
 
-/**
- * 保存启用玻璃背景前的「原始不透明」ColorScheme，供 [OpaqueTheme] 在弹窗中恢复。
- * 由 [MaaMeowTheme] 统一下发；未进入 App 主题时为 null。
- */
-val LocalOpaqueColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
-
-/** 主界面自定义背景启用时，卡片/表面的默认不透明度（玻璃拟态）。 */
-const val GLASS_SURFACE_ALPHA = 0.82f
-
-/**
- * 生成玻璃版配色：背景置透明（露出背景图），各 surface 族加透明度让卡片透出背景，
- * 前景 on* 色保持不透明以保证文字清晰。
- */
-fun ColorScheme.toGlass(surfaceAlpha: Float = GLASS_SURFACE_ALPHA): ColorScheme = copy(
-    background = Color.Transparent,
-    surface = surface.copy(alpha = surfaceAlpha),
-    surfaceVariant = surfaceVariant.copy(alpha = surfaceAlpha),
-    surfaceBright = surfaceBright.copy(alpha = surfaceAlpha),
-    surfaceDim = surfaceDim.copy(alpha = surfaceAlpha),
-    surfaceContainer = surfaceContainer.copy(alpha = surfaceAlpha),
-    surfaceContainerLowest = surfaceContainerLowest.copy(alpha = surfaceAlpha),
-    surfaceContainerLow = surfaceContainerLow.copy(alpha = surfaceAlpha),
-    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = surfaceAlpha),
-    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = surfaceAlpha),
-)
-
-/**
- * 在玻璃背景作用域内恢复不透明配色的包装器。
- *
- * 用于弹窗（[com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog] 等）——
- * 它们在自身独立窗口内呈现，不应透出主界面背景图。若当前不处于玻璃作用域（[LocalOpaqueColorScheme] 为
- * 空或与当前配色一致），则为无副作用的透传。
- */
 @Composable
 fun OpaqueTheme(content: @Composable () -> Unit) {
-    val opaque = LocalOpaqueColorScheme.current
-    if (opaque == null || opaque === MaterialTheme.colorScheme) {
-        content()
-    } else {
-        ProvideColorScheme(opaque, content)
-    }
-}
-
-/**
- * 以指定配色应用 MaterialTheme（沿用当前排版与形状），并把内容色同步为 onSurface。
- * 玻璃配色（[toGlass]）与弹窗恢复不透明配色（[OpaqueTheme]）共用此包装。
- */
-@Composable
-fun ProvideColorScheme(scheme: ColorScheme, content: @Composable () -> Unit) {
-    val typography = MaterialTheme.typography
-    val shapes = MaterialTheme.shapes
-    MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes) {
-        CompositionLocalProvider(LocalContentColor provides scheme.onSurface, content = content)
-    }
+    content()
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
-    useSystemMonetColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -226,35 +70,19 @@ fun MaaMeowTheme(
         AppSettingsManager.ThemeMode.DARK, AppSettingsManager.ThemeMode.PURE_DARK -> true
     }
     val isPureDark = themeMode == AppSettingsManager.ThemeMode.PURE_DARK
-    val colorScheme: ColorScheme = remember(themeMode, useSystemMonetColor, isDarkTheme, context) {
-        when {
-            // Android 12+ with monet enabled ==> system dynamic color (Material You)
-            useSystemMonetColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val dynamic =
-                    if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(
-                        context
-                    )
-                // PURE_DARK keeps the monet-tinted primary but forces pure-black surfaces
-                if (isPureDark) {
-                    dynamic.copy(
-                        background = PureDarkBackground,
-                        surface = PureDarkSurface,
-                        surfaceVariant = PureDarkSurfaceVariant
-                    )
-                } else dynamic
-            }
-            // Otherwise fall back to the built-in blue palette
-            else -> when (themeMode) {
-                AppSettingsManager.ThemeMode.SYSTEM -> if (systemDarkTheme) BlueDark else BlueLight
-                AppSettingsManager.ThemeMode.WHITE -> BlueLight
-                AppSettingsManager.ThemeMode.DARK -> BlueDark
-                AppSettingsManager.ThemeMode.PURE_DARK -> BluePureDark
-            }
+    val colorScheme: ColorScheme = remember(themeMode, isDarkTheme, context) {
+        val monet = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        } else {
+            if (isDarkTheme) darkColorScheme() else lightColorScheme()
         }
+        val base = if (isPureDark) {
+            monet.copy(background = PureDarkBackground, surface = PureDarkBackground)
+        } else monet
+        base.withDistinctSurfaceContainers(isDarkTheme)
     }
 
     CompositionLocalProvider(
-        LocalOpaqueColorScheme provides colorScheme,
         LocalMaaDesignLanguage provides MaaDesignLanguage.MATERIAL_EXPRESSIVE,
     ) {
         MaterialExpressiveTheme(

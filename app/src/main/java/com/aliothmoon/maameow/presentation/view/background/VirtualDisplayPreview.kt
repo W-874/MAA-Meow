@@ -73,7 +73,7 @@ fun VirtualDisplayPreview(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -88,7 +88,7 @@ fun VirtualDisplayPreview(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

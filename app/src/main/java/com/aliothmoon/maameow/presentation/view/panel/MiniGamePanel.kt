@@ -91,7 +91,7 @@ fun MiniGamePanel(
                                 } else if (selected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
-                                    MaterialTheme.colorScheme.surface
+                                    MaterialTheme.colorScheme.surfaceContainerLow
                                 },
                                 border = BorderStroke(
                                     width = 1.dp,
@@ -245,7 +245,7 @@ fun MiniGamePanel(
                                 color = if (selected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
-                                    MaterialTheme.colorScheme.surface
+                                    MaterialTheme.colorScheme.surfaceContainerLow
                                 },
                                 border = BorderStroke(
                                     width = 1.dp,

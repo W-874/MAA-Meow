@@ -1080,7 +1080,7 @@ private fun WeeklyScheduleSection(
                         color = if (selected)
                             MaterialTheme.colorScheme.primaryContainer
                         else
-                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceContainerLow,
                         border = BorderStroke(
                             width = 1.dp,
                             color = if (selected)

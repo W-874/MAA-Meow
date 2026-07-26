@@ -52,7 +52,7 @@ fun FloatWindowEditText(
     textColor: Color = MaterialTheme.colorScheme.onSurface,
     hintColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     labelColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     outlineColor: Color = MaterialTheme.colorScheme.outline,
     focusedOutlineColor: Color = MaterialTheme.colorScheme.primary,
     onImeAction: (() -> Unit)? = null,
