@@ -15,18 +15,18 @@ object MaaDesignTokens {
 
         val listHorizontal: Dp = 16.dp
 
-        val listItemVertical: Dp = 12.dp
+        val listItemVertical: Dp = 14.dp
 
         val rowTitleGap: Dp = 6.dp
 
-        val sectionGap: Dp = 20.dp
+        val sectionGap: Dp = 24.dp
     }
 
     object CornerRadius {
-        val card: Dp = 12.dp
-        val button: Dp = 10.dp
-        val pill: Dp = 20.dp
-        val inner: Dp = 8.dp
+        val card: Dp = 24.dp
+        val button: Dp = 20.dp
+        val pill: Dp = 28.dp
+        val inner: Dp = 12.dp
     }
 
     object Separator {
@@ -35,7 +35,7 @@ object MaaDesignTokens {
     }
 
     object Card {
-        val elevation: Dp = 0.dp
-        val innerPadding: Dp = 16.dp
+        val elevation: Dp = 1.dp
+        val innerPadding: Dp = 20.dp
     }
 }

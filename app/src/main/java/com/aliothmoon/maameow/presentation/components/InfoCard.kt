@@ -18,7 +18,7 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 private fun BaseCard(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
@@ -40,7 +40,7 @@ private fun BaseCard(
 fun InfoCard(
     modifier: Modifier = Modifier,
     title: String = "",
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -52,7 +52,7 @@ fun InfoCard(
         if (title.isNotEmpty()) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = contentColor,
                 modifier = Modifier.padding(bottom = MaaDesignTokens.Spacing.sm),
             )
@@ -64,7 +64,7 @@ fun InfoCard(
 @Composable
 fun SettingsGroupCard(
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BaseCard(

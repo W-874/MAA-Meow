@@ -1,14 +1,14 @@
 package com.aliothmoon.maameow.theme
 
 import android.os.Build
-import androidx.compose.foundation.IndicationNodeFactory
-import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -18,12 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.node.DelegatableNode
-import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
 private val LightBackground = Color(0xFFF5F2ED)
@@ -64,6 +61,13 @@ private fun createLightColorScheme(
         background = LightBackground,
         onBackground = LightOnSurface,
         surface = LightSurface,
+        surfaceDim = Color(0xFFDCD9D4),
+        surfaceBright = Color(0xFFFDFBF7),
+        surfaceContainerLowest = Color(0xFFFFFFFF),
+        surfaceContainerLow = Color(0xFFF6F3EE),
+        surfaceContainer = Color(0xFFF0EDE8),
+        surfaceContainerHigh = Color(0xFFEAE7E2),
+        surfaceContainerHighest = Color(0xFFE4E1DC),
         onSurface = LightOnSurface,
         surfaceVariant = LightSurfaceVariant,
         onSurfaceVariant = LightOnSurfaceVariant,
@@ -99,6 +103,13 @@ private fun createDarkColorScheme(
         background = bg,
         onBackground = DarkOnSurface,
         surface = surface,
+        surfaceDim = bg,
+        surfaceBright = if (isPureDark) Color(0xFF1F1F1F) else Color(0xFF39393B),
+        surfaceContainerLowest = if (isPureDark) Color.Black else Color(0xFF0E0E0F),
+        surfaceContainerLow = if (isPureDark) Color(0xFF090909) else Color(0xFF1A1A1C),
+        surfaceContainer = if (isPureDark) Color(0xFF101010) else Color(0xFF1E1E20),
+        surfaceContainerHigh = if (isPureDark) Color(0xFF171717) else Color(0xFF29292B),
+        surfaceContainerHighest = if (isPureDark) Color(0xFF202020) else Color(0xFF343436),
         onSurface = DarkOnSurface,
         surfaceVariant = surfaceVariant,
         onSurfaceVariant = DarkOnSurfaceVariant,
@@ -131,29 +142,12 @@ private val BluePureDark = createDarkColorScheme(
 )
 
 val MaaShapes = Shapes(
-    extraSmall = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
-    small = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
-    medium = RoundedCornerShape(MaaDesignTokens.CornerRadius.card),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(MaaDesignTokens.CornerRadius.inner),
+    medium = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
     large = RoundedCornerShape(MaaDesignTokens.CornerRadius.card),
-    extraLarge = RoundedCornerShape(MaaDesignTokens.CornerRadius.pill)
+    extraLarge = RoundedCornerShape(MaaDesignTokens.CornerRadius.pill),
 )
-
-
-private object NoIndication : IndicationNodeFactory {
-    private class NoIndicationNode : Modifier.Node(), DrawModifierNode {
-        override fun ContentDrawScope.draw() {
-            drawContent()
-        }
-    }
-
-    override fun create(interactionSource: InteractionSource): DelegatableNode {
-        return NoIndicationNode()
-    }
-
-    override fun hashCode(): Int = -1
-
-    override fun equals(other: Any?): Boolean = other === this
-}
 
 object MaaThemeAlphas {
     const val DISABLED = 0.38f
@@ -217,6 +211,7 @@ fun ProvideColorScheme(scheme: ColorScheme, content: @Composable () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MaaMeowTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
@@ -259,13 +254,14 @@ fun MaaMeowTheme(
     }
 
     CompositionLocalProvider(
-        LocalIndication provides NoIndication,
         LocalOpaqueColorScheme provides colorScheme,
+        LocalMaaDesignLanguage provides MaaDesignLanguage.MATERIAL_EXPRESSIVE,
     ) {
-        MaterialTheme(
+        MaterialExpressiveTheme(
             colorScheme = colorScheme,
             typography = Typography,
             shapes = MaaShapes,
+            motionScheme = MotionScheme.expressive(),
         ) {
             ProvideLogPalette(isDark = isDarkTheme, content = content)
         }
