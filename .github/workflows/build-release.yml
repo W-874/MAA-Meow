@@ -93,11 +93,22 @@ jobs:
           android.defaultConfig.ndk.abiFilters += "${{ matrix.abi }}"
           EOF
 
+      - name: Validate signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "KEYSTORE_BASE64 is not configured" >&2; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "KEYSTORE_PASSWORD is not configured" >&2; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "KEY_ALIAS is not configured" >&2; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "KEY_PASSWORD is not configured" >&2; exit 1; }
+
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/release.jks
+        run: printf '%s' "$KEYSTORE_BASE64" | base64 -d > "${{ github.workspace }}/release.jks"
 
       - name: Build Release APK
         env:
@@ -107,7 +118,13 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x ./gradlew
-          ./gradlew clean assembleRelease
+          ./gradlew --no-daemon clean testDebugUnitTest assembleRelease
+
+      - name: Verify APK signature
+        run: |
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort | tail -n 1)"
+          test -x "$APKSIGNER" || { echo "apksigner not found" >&2; exit 1; }
+          "$APKSIGNER" verify --verbose --print-certs app/build/outputs/apk/release/*.apk
 
       - name: Rename APK
         run: |

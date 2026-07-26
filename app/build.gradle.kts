@@ -18,6 +18,9 @@ val localProperties = Properties().apply {
     }
 }
 
+val releaseKeystorePath = System.getenv("KEYSTORE_PATH")
+    ?: localProperties.getProperty("KEYSTORE_PATH", "")
+
 val gitVersionCode: Int by lazy {
     providers.exec {
         commandLine("git", "rev-list", "--count", "HEAD")
@@ -79,10 +82,8 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystorePath = System.getenv("KEYSTORE_PATH")
-                ?: localProperties.getProperty("KEYSTORE_PATH", "")
-            if (keystorePath.isNotEmpty()) {
-                storeFile = file(keystorePath)
+            if (releaseKeystorePath.isNotEmpty()) {
+                storeFile = file(releaseKeystorePath)
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                     ?: localProperties.getProperty("KEYSTORE_PASSWORD", "")
                 keyAlias = System.getenv("KEY_ALIAS")
@@ -94,6 +95,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (releaseKeystorePath.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+                println("[Signing] Using release keystore for debug: $releaseKeystorePath")
+            } else {
+                println("[Signing] Using default debug keystore")
+            }
+        }
         release {
             isMinifyEnabled = false
             isShrinkResources = false
@@ -101,11 +110,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val keystorePath = System.getenv("KEYSTORE_PATH")
-                ?: localProperties.getProperty("KEYSTORE_PATH", "")
-            if (keystorePath.isNotEmpty()) {
+            if (releaseKeystorePath.isNotEmpty()) {
                 signingConfig = signingConfigs.getByName("release")
-                println("[Signing] Using release keystore: $keystorePath")
+                println("[Signing] Using release keystore: $releaseKeystorePath")
             } else {
                 println("[Signing] No release keystore configured, release build will not be signed")
             }
