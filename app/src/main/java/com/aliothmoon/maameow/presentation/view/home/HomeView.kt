@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -397,7 +397,7 @@ private fun ScreenInfoCard(
                     imageVector = if (serviceStatusColor == StatusColorType.ERROR) {
                         Icons.Rounded.Warning
                     } else {
-                        Icons.Rounded.CheckCircle
+                        Icons.Rounded.CheckCircleOutline
                     },
                     contentDescription = null,
                     tint = contentColor,
@@ -458,18 +458,15 @@ private fun HomeServiceActionButtons(
             )
         }
         if (remoteServiceActive) {
-            OutlinedButton(
+            Button(
                 onClick = onToggleRemoteService,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(56.dp),
                 shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.82f)
-                ),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
                 ),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 enabled = !isLoading,
