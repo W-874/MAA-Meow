@@ -166,6 +166,7 @@
 
     <!-- home: screen info card -->
     <string name="home_screen_resolution">Screen Resolution</string>
+    <string name="home_screen_resolution_summary">Screen resolution: %1$d × %2$d</string>
     <string name="home_resource_version_label">Resource Version</string>
     <string name="home_resource_not_installed">Not Installed</string>
     <string name="home_app_version_label">App Version</string>

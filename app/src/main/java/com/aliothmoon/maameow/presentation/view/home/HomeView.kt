@@ -1,9 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,16 +14,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -50,7 +50,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -73,6 +72,8 @@ import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
+import com.aliothmoon.maameow.presentation.components.SectionHeader
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
@@ -264,15 +265,15 @@ fun HomeView(
                 }
 
                 item {
+                    UpdateCard(viewModel = updateViewModel)
+                }
+
+                item {
                     RunModeCard(
                         runMode = uiState.runMode,
                         onRunModeChange = { viewModel.onRunModeChange(it) },
                         changeEnabled = viewModel.checkRunModeChangeEnabled()
                     )
-                }
-
-                item {
-                    UpdateCard(viewModel = updateViewModel)
                 }
 
                 item {
@@ -357,66 +358,48 @@ private fun ScreenInfoCard(
             contentColor = contentColor,
         ),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.home_screen_resolution),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = contentColor
+            if (serviceStatusLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.5.dp,
+                    color = contentColor,
                 )
-                Text(
-                    text = "$screenWidth × $screenHeight",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor.copy(alpha = 0.78f)
+            } else {
+                Icon(
+                    imageVector = if (serviceStatusColor == StatusColorType.ERROR) {
+                        Icons.Rounded.Warning
+                    } else {
+                        Icons.Rounded.CheckCircle
+                    },
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(28.dp),
                 )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(start = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.home_service_status),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = contentColor
+                    text = serviceStatusLabel,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    color = contentColor,
                 )
-
-                val statusColor = contentColor
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(statusColor)
-                    )
-                    Text(
-                        text = serviceStatusLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = statusColor
-                    )
-                    if (serviceStatusLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(12.dp),
-                            strokeWidth = 1.5.dp,
-                            color = statusColor
-                        )
-                    }
-                }
+                Text(
+                    text = stringResource(
+                        R.string.home_screen_resolution_summary,
+                        screenWidth,
+                        screenHeight,
+                    ),
+                    style = MaterialTheme.typography.bodySmallEmphasized,
+                    color = contentColor,
+                )
             }
         }
     }
@@ -524,41 +507,35 @@ private fun RunModeCard(
     changeEnabled: Boolean
 ) {
     val context = LocalContext.current
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.home_run_mode_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+    SegmentedSettingsGroup {
+        item {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = context.runModeDisplayName(runMode),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = stringResource(R.string.home_run_mode_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Switch(
-                    checked = runMode == RunMode.BACKGROUND,
-                    enabled = changeEnabled,
-                    onCheckedChange = onRunModeChange
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = context.runModeDisplayName(runMode),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Switch(
+                        checked = runMode == RunMode.BACKGROUND,
+                        enabled = changeEnabled,
+                        onCheckedChange = onRunModeChange,
+                    )
+                }
             }
         }
     }
@@ -577,7 +554,7 @@ private fun PermissionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .heightIn(min = 64.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -619,35 +596,17 @@ private fun PermissionCard(
     var expandedPermissions by remember { mutableStateOf(false) }
     val contentColor = MaterialTheme.colorScheme.onSurface
 
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.home_permission_section),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = contentColor,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            PermissionRow(
+    Column {
+        SectionHeader(stringResource(R.string.home_permission_section))
+        SegmentedSettingsGroup {
+            item { PermissionRow(
                 title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
                 granted = permissionState.remoteAccessGranted,
                 onClick = onRequestRemoteAccess,
                 isLoading = isGranting,
-                contentColor = contentColor
-            )
-
-            Row(
+                contentColor = contentColor,
+            ) }
+            item { Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expandedPermissions = !expandedPermissions }
@@ -669,31 +628,30 @@ private fun PermissionCard(
                     modifier = Modifier.size(16.dp),
                     tint = contentColor.copy(alpha = 0.7f)
                 )
-            }
+            } }
 
-            AnimatedVisibility(visible = expandedPermissions) {
-                Column {
-                    PermissionRow(
+            if (expandedPermissions) {
+                item { PermissionRow(
                         title = stringResource(R.string.home_permission_overlay),
                         granted = permissionState.overlay,
                         onClick = onRequestOverlay,
-                        contentColor = contentColor
-                    )
-                    PermissionRow(
+                        contentColor = contentColor,
+                    ) }
+                item { PermissionRow(
                         title = stringResource(R.string.home_permission_storage),
                         granted = permissionState.storage,
                         onClick = onRequestStorage,
-                        contentColor = contentColor
-                    )
-                    PermissionRow(
+                        contentColor = contentColor,
+                    ) }
+                item { PermissionRow(
                         title = stringResource(R.string.home_permission_battery),
                         granted = permissionState.batteryWhitelist,
                         onClick = onRequestBatteryWhitelist,
                         grantedText = stringResource(R.string.home_permission_battery_added),
-                        contentColor = contentColor
-                    )
-                    if (isShowAccessibility) {
-                        PermissionRow(
+                        contentColor = contentColor,
+                    ) }
+                if (isShowAccessibility) {
+                    item { PermissionRow(
                             title = stringResource(R.string.home_permission_accessibility),
                             granted = permissionState.accessibility,
                             onClick = onRequestAccessibility,
@@ -701,16 +659,15 @@ private fun PermissionCard(
                                 stringResource(R.string.home_permission_quick_grant)
                             else
                                 stringResource(R.string.home_permission_request),
-                            contentColor = contentColor
-                        )
-                    }
-                    PermissionRow(
+                            contentColor = contentColor,
+                        ) }
+                }
+                item { PermissionRow(
                         title = stringResource(R.string.home_permission_notification),
                         granted = permissionState.notification,
                         onClick = onRequestNotification,
-                        contentColor = contentColor
-                    )
-                }
+                        contentColor = contentColor,
+                    ) }
             }
         }
     }

@@ -2,31 +2,23 @@ package com.aliothmoon.maameow.presentation.components
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,11 +38,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -249,142 +238,83 @@ fun UpdateCard(
     val appIsInstalling = appUpdateState is UpdateProcessState.Installing
     val appIsUpdating = appIsDownloading || appIsInstalling
 
-    // ==================== UI ====================
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            VersionStatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.update_card_app),
+                value = viewModel.currentAppVersion,
+                checking = appIsChecking,
+                updating = appIsUpdating,
+                onClick = viewModel::checkAppUpdate,
+            )
+            VersionStatCard(
+                modifier = Modifier.weight(1f),
+                title = stringResource(R.string.update_card_resource),
+                value = currentResourceVersion.ifBlank {
+                    stringResource(R.string.home_resource_not_installed)
+                },
+                checking = resIsChecking,
+                updating = resIsUpdating,
+                isError = currentResourceVersion.isBlank(),
+                onClick = viewModel::checkResourceUpdate,
+            )
+        }
+        AnimatedVisibility(visible = appIsUpdating) {
+            AppUpdateProgress(appUpdateState)
+        }
+        AnimatedVisibility(visible = resIsUpdating) {
+            ResourceUpdateProgress(resourceUpdateState)
+        }
+    }
+}
 
+@Composable
+private fun VersionStatCard(
+    modifier: Modifier,
+    title: String,
+    value: String,
+    checking: Boolean,
+    updating: Boolean,
+    isError: Boolean = false,
+    onClick: () -> Unit,
+) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        enabled = !checking && !updating,
+        modifier = modifier.heightIn(min = 96.dp),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
+            containerColor = MaterialTheme.colorScheme.surfaceBright,
         ),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = stringResource(R.string.update_card_title),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
-
-            // ========== 更新项列表 ==========
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // ---- 应用更新行 ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.update_card_app),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Text(
-                        text = viewModel.currentAppVersion,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    if (!appIsUpdating) {
-                        TextButton(
-                            onClick = { viewModel.checkAppUpdate() },
-                            enabled = !appIsChecking,
-                            modifier = Modifier.defaultMinSize(minHeight = 1.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            if (appIsChecking) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(
-                                    stringResource(R.string.update_card_check_button),
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 应用下载进度（动画展开/收起）
-                AnimatedVisibility(
-                    visible = appIsUpdating,
-                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
-                ) {
-                    AppUpdateProgress(appUpdateState)
-                }
-
-                // ---- 资源更新行 ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.update_card_resource),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Text(
-                        text = currentResourceVersion.ifBlank {
-                            stringResource(R.string.home_resource_not_installed)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (currentResourceVersion.isBlank()) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-
-                    if (!resIsUpdating) {
-                        TextButton(
-                            onClick = { viewModel.checkResourceUpdate() },
-                            enabled = !resIsChecking,
-                            modifier = Modifier.defaultMinSize(minHeight = 1.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            if (resIsChecking) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(
-                                    stringResource(R.string.update_card_check_button),
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 资源下载/解压进度（动画展开/收起）
-                AnimatedVisibility(
-                    visible = resIsUpdating,
-                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
-                ) {
-                    ResourceUpdateProgress(resourceUpdateState)
-                }
+            if (checking) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
             }
-
         }
     }
 }
@@ -397,22 +327,26 @@ fun UpdateSourceSettings(viewModel: UpdateViewModel) {
     var showInfoSource by remember { mutableStateOf<UpdateSource?>(null) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.update_card_source_label),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        SettingDropdown(
+            title = stringResource(R.string.update_card_source_label),
+            selected = updateSource,
+            options = UpdateSource.entries,
+            optionLabel = { stringResource(it.resId) },
+            onSelected = viewModel::setUpdateSource,
+            icon = Icons.Rounded.CloudDownload,
         )
-        UpdateSourceButtonGroup(
-            selectedSource = updateSource,
-            onSourceSelected = viewModel::setUpdateSource,
-            onInfoClick = { showInfoSource = it },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        TextButton(onClick = { showInfoSource = updateSource }) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.update_card_about_source_cd, stringResource(updateSource.resId)))
+        }
         AnimatedVisibility(visible = updateSource == UpdateSource.MIRROR_CHYAN) {
             CdkInputField(
                 cdk = mirrorChyanCdk,
@@ -669,54 +603,6 @@ private fun ResourceUpdateProgress(resourceUpdateState: UpdateProcessState) {
 /**
  * 更新源选择按钮组
  */
-@Composable
-private fun UpdateSourceButtonGroup(
-    selectedSource: UpdateSource,
-    onSourceSelected: (UpdateSource) -> Unit,
-    onInfoClick: (UpdateSource) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        UpdateSource.entries.forEach { source ->
-            val sourceName = stringResource(source.resId)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .selectable(
-                        selected = source == selectedSource,
-                        onClick = { onSourceSelected(source) },
-                        role = Role.RadioButton
-                    )
-            ) {
-                RadioButton(
-                    selected = source == selectedSource,
-                    onClick = null
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = sourceName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = stringResource(R.string.update_card_about_source_cd, sourceName),
-                    modifier = Modifier
-                        .padding(start = 2.dp)
-                        .size(16.dp)
-                        .clickable { onInfoClick(source) },
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
 /**
  * 应用更新确认弹窗
  */
