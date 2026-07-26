@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
@@ -74,6 +75,7 @@ import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateCard
 import com.aliothmoon.maameow.presentation.state.StatusColorType
@@ -273,7 +275,9 @@ fun HomeView(
                 item {
                     RunModeCard(
                         runMode = uiState.runMode,
-                        onRunModeChange = { viewModel.onRunModeChange(it) },
+                        onRunModeSelected = {
+                            viewModel.onRunModeChange(it == RunMode.BACKGROUND)
+                        },
                         changeEnabled = viewModel.checkRunModeChangeEnabled()
                     )
                 }
@@ -521,40 +525,21 @@ private fun HomeServiceActionButtons(
 @Composable
 private fun RunModeCard(
     runMode: RunMode,
-    onRunModeChange: (Boolean) -> Unit,
+    onRunModeSelected: (RunMode) -> Unit,
     changeEnabled: Boolean
 ) {
     val context = LocalContext.current
     SegmentedSettingsGroup {
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.home_run_mode_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = context.runModeDisplayName(runMode),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Switch(
-                        checked = runMode == RunMode.BACKGROUND,
-                        enabled = changeEnabled,
-                        onCheckedChange = onRunModeChange,
-                    )
-                }
-            }
+            SettingDropdown(
+                title = stringResource(R.string.home_run_mode_title),
+                selected = runMode,
+                options = RunMode.entries,
+                optionLabel = { context.runModeDisplayName(it) },
+                onSelected = onRunModeSelected,
+                icon = Icons.Rounded.PlayCircle,
+                enabled = changeEnabled,
+            )
         }
     }
 }
