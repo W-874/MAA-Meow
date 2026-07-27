@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,9 +22,11 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
-import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.utils.i18n.wakeUpClientTypeDisplayName
 import org.koin.compose.koinInject
 
@@ -51,48 +52,74 @@ fun WakeUpConfigPanel(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+            .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 客户端类型选择
-        SelectableChipGroup(
-            label = stringResource(R.string.panel_wakeup_client_type),
-            selectedValue = config.clientType,
-            options = WakeUpConfig.CLIENT_TYPES.map { it to context.wakeUpClientTypeDisplayName(it) },
-            onSelected = { onConfigChange(config.copy(clientType = it)) },
-            enabled = !isTaskActive,
-            labelFontWeight = FontWeight.Medium
-        )
-
-        if (showAccountSwitchInput) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ITextField(
-                    value = config.accountName,
-                    onValueChange = { onConfigChange(config.copy(accountName = it)) },
+        SegmentedSettingsGroup {
+            item {
+                SettingDropdown(
+                    title = stringResource(R.string.panel_wakeup_client_type),
+                    selected = config.clientType,
+                    options = WakeUpConfig.CLIENT_TYPES,
+                    optionLabel = { context.wakeUpClientTypeDisplayName(it) },
+                    onSelected = { onConfigChange(config.copy(clientType = it)) },
                     enabled = !isTaskActive,
-                    label = stringResource(R.string.panel_wakeup_account_switch),
-                    placeholder = "123****4567"
+                    icon = null,
                 )
+            }
 
-                Text(
-                    text = stringResource(R.string.panel_wakeup_account_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+            if (showAccountSwitchInput) {
+                item {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ITextField(
+                            value = config.accountName,
+                            onValueChange = { onConfigChange(config.copy(accountName = it)) },
+                            enabled = !isTaskActive,
+                            label = stringResource(R.string.panel_wakeup_account_switch),
+                            placeholder = "123****4567",
+                            shape = RoundedCornerShape(16.dp),
+                        )
+
+                        Text(
+                            text = stringResource(R.string.panel_wakeup_account_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingRow(
+                    title = stringResource(R.string.panel_wakeup_launch_game),
+                    icon = null,
+                    enabled = !isTaskActive,
+                    onClick = {
+                        if (!isTaskActive) {
+                            onConfigChange(config.copy(startGameEnabled = !config.startGameEnabled))
+                        }
+                    },
+                    trailing = {
+                        ExpressiveSwitch(
+                            checked = config.startGameEnabled,
+                            enabled = !isTaskActive,
+                            onCheckedChange = {
+                                onConfigChange(config.copy(startGameEnabled = it))
+                            },
+                        )
+                    },
                 )
             }
         }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-
-        // 启动游戏开关
-        CheckBoxWithLabel(
-            checked = config.startGameEnabled,
-            onCheckedChange = { onConfigChange(config.copy(startGameEnabled = it)) },
-            label = stringResource(R.string.panel_wakeup_launch_game)
-        )
     }
 }

@@ -21,7 +21,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -48,7 +47,12 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.presentation.components.INumericField
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
 import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
@@ -67,115 +71,58 @@ fun RecruitConfigPanel(
     onConfigChange: (RecruitConfig) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(top = 2.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(bottom = 12.dp),
     ) {
-        val pagerState = rememberPagerState(
-            initialPage = 0,
-            pageCount = { 2 }
-        )
-        val coroutineScope = rememberCoroutineScope()
-
-        // Tab 行
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.common_tab_general),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                }
-            )
-            Text(
-                text = stringResource(R.string.common_tab_advanced),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(1)
-                    }
-                }
-            )
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
+        item {
+            SegmentedSettingsGroup {
+                item { UseExpeditedSection(config, onConfigChange) }
+                item { RecruitMaxTimesSection(config, onConfigChange) }
+            }
         }
-        HorizontalDivider(
-            modifier = modifier.padding(
-                top = 2.dp,
-                bottom = 4.dp
-            )
-        )
-
-        HorizontalPager(
-            pageSize = PageSize.Fill,
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),  // 使用 weight(1f) 让 Pager 占据剩余空间
-            userScrollEnabled = true
-        ) { page ->
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxSize()  // LazyColumn 填充 Pager 的全部空间
-            ) {
-                when (page) {
-                    0 -> {
-                        item {
-                            UseExpeditedSection(config, onConfigChange)
-                        }
-                        item {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            RecruitMaxTimesSection(config, onConfigChange)
-                        }
-                    }
-
-                    else -> {
-                        // 高级设置：使用单个 item 包含所有内容，避免 LazyColumn 对 AndroidView 的频繁重组
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                // 自动公招选择策略
-                                SelectExtraTagsSection(config, onConfigChange)
-
-                                // 高优先级Tag列表
-                                AutoRecruitFirstListSection(config, onConfigChange)
-
-                                // 自动刷新3星tags
-                                RefreshLevel3Section(config, onConfigChange)
-
-                                // 无招聘许可时继续尝试刷新Tags
-                                ForceRefreshSection(config, onConfigChange)
-
-                                // 保留指定词条
-                                PreserveTagSection(config, onConfigChange)
-
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-
-                                // 自动选择三星
-                                ChooseLevel3Section(config, onConfigChange)
-
-                                // 自动选择四星
-                                ChooseLevel4Section(config, onConfigChange)
-
-                                // 自动选择五星
-                                ChooseLevel5Section(config, onConfigChange)
-                            }
-                        }
-                    }
-                }
-
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
+        item {
+            SegmentedSettingsGroup {
+                item { SelectExtraTagsSection(config, onConfigChange) }
+                item { AutoRecruitFirstListSection(config, onConfigChange) }
+                item { RefreshLevel3Section(config, onConfigChange) }
+                item { ForceRefreshSection(config, onConfigChange) }
+                item { PreserveTagSection(config, onConfigChange) }
+                item { ChooseLevel3Section(config, onConfigChange) }
+                item { ChooseLevel4Section(config, onConfigChange) }
+                item { ChooseLevel5Section(config, onConfigChange) }
             }
         }
     }
+}
+
+@Composable
+private fun RecruitSwitchSetting(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    description: String? = null,
+    enabled: Boolean = true,
+) {
+    SettingRow(
+        title = title,
+        description = description,
+        icon = null,
+        enabled = enabled,
+        onClick = { if (enabled) onCheckedChange(!checked) },
+        trailing = {
+            ExpressiveSwitch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    )
 }
 
 
@@ -184,37 +131,12 @@ private fun UseExpeditedSection(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
 ) {
-    var tipExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = config.useExpedited,
-                onCheckedChange = { onConfigChange(config.copy(useExpedited = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-
-            Text(
-                text = stringResource(R.string.panel_recruit_use_expedited),
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            ExpandableTipIcon(
-                expanded = tipExpanded,
-                onExpandedChange = { tipExpanded = it }
-            )
-        }
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = stringResource(R.string.panel_recruit_use_expedited_tip)
-        )
-    }
+    RecruitSwitchSetting(
+        title = stringResource(R.string.panel_recruit_use_expedited),
+        description = stringResource(R.string.panel_recruit_use_expedited_tip),
+        checked = config.useExpedited,
+        onCheckedChange = { onConfigChange(config.copy(useExpedited = it)) },
+    )
 }
 
 
@@ -223,28 +145,14 @@ private fun RecruitMaxTimesSection(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = stringResource(R.string.panel_recruit_max_times_title),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-
-        INumericField(
-            value = config.maxRecruitTimes,
-            onValueChange = { onConfigChange(config.copy(maxRecruitTimes = it)) },
-            minimum = 0,
-            modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .height(56.dp)
-        )
-
-        Text(
-            text = stringResource(R.string.panel_recruit_max_times_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    NumberStepperSettingRow(
+        title = stringResource(R.string.panel_recruit_max_times_title),
+        description = stringResource(R.string.panel_recruit_max_times_desc),
+        value = config.maxRecruitTimes,
+        range = 0..100,
+        onValueChange = { onConfigChange(config.copy(maxRecruitTimes = it)) },
+        icon = null,
+    )
 }
 
 
@@ -265,39 +173,14 @@ private fun SelectExtraTagsSection(
         "2" to stringResource(R.string.panel_recruit_extra_tags_rare_only)
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            modifier = Modifier.padding(vertical = 2.dp),
-            text = stringResource(R.string.panel_recruit_extra_tags_strategy),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-
-        Column(
-            modifier = Modifier.padding(vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            options.forEach { (value, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onConfigChange(config.copy(selectExtraTags = value)) }
-                ) {
-                    RadioButton(
-                        selected = config.selectExtraTags == value,
-                        onClick = { onConfigChange(config.copy(selectExtraTags = value)) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.panel_recruit_extra_tags_strategy),
+        selected = config.selectExtraTags,
+        options = options.map { it.first },
+        optionLabel = { value -> options.firstOrNull { it.first == value }?.second ?: value },
+        onSelected = { onConfigChange(config.copy(selectExtraTags = it)) },
+        icon = null,
+    )
 }
 
 /**
@@ -311,7 +194,10 @@ private fun AutoRecruitFirstListSection(
 ) {
     val recruitTags by resourceDataManager.recruitTags.collectAsStateWithLifecycle()
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         var tipExpanded by remember { mutableStateOf(false) }
 
         Row(
@@ -336,16 +222,7 @@ private fun AutoRecruitFirstListSection(
         )
 
         // 多选标签面板 - 使用 FlowRow 自动换行布局
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Column(
-                modifier = Modifier.padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -402,7 +279,6 @@ private fun AutoRecruitFirstListSection(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
         }
     }
 }
@@ -415,23 +291,11 @@ private fun AutoRecruitFirstListSection(
 private fun RefreshLevel3Section(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = config.refreshLevel3,
-            onCheckedChange = { onConfigChange(config.copy(refreshLevel3 = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_recruit_refresh_level3),
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
+) = RecruitSwitchSetting(
+    title = stringResource(R.string.panel_recruit_refresh_level3),
+    checked = config.refreshLevel3,
+    onCheckedChange = { onConfigChange(config.copy(refreshLevel3 = it)) },
+)
 
 /**
  * 无招聘许可时继续尝试刷新Tags（依赖RefreshLevel3）
@@ -441,26 +305,12 @@ private fun RefreshLevel3Section(
 private fun ForceRefreshSection(
     config: RecruitConfig,
     onConfigChange: (RecruitConfig) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (config.refreshLevel3) 1f else 0.5f),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = config.forceRefresh,
-            onCheckedChange = { if (config.refreshLevel3) onConfigChange(config.copy(forceRefresh = it)) },
-            enabled = config.refreshLevel3,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_recruit_force_refresh),
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
+) = RecruitSwitchSetting(
+    title = stringResource(R.string.panel_recruit_force_refresh),
+    checked = config.forceRefresh,
+    enabled = config.refreshLevel3,
+    onCheckedChange = { onConfigChange(config.copy(forceRefresh = it)) },
+)
 
 /**
  * 保留指定词条
@@ -481,46 +331,23 @@ private fun PreserveTagSection(
     onConfigChange: (RecruitConfig) -> Unit,
     resourceDataManager: ResourceDataManager = koinInject()
 ) {
-    var tipExpanded by remember { mutableStateOf(false) }
     val recruitTags by resourceDataManager.recruitTags.collectAsStateWithLifecycle()
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Checkbox(
-                checked = config.preserveTagEnabled,
-                onCheckedChange = { onConfigChange(config.copy(preserveTagEnabled = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = stringResource(R.string.panel_recruit_preserve_tag_enabled),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            ExpandableTipIcon(
-                expanded = tipExpanded,
-                onExpandedChange = { tipExpanded = it }
-            )
-        }
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = stringResource(R.string.panel_recruit_preserve_tag_enabled_tip)
+        RecruitSwitchSetting(
+            title = stringResource(R.string.panel_recruit_preserve_tag_enabled),
+            description = stringResource(R.string.panel_recruit_preserve_tag_enabled_tip),
+            checked = config.preserveTagEnabled,
+            onCheckedChange = { onConfigChange(config.copy(preserveTagEnabled = it)) },
         )
 
         if (config.preserveTagEnabled) {
             Spacer(modifier = Modifier.height(4.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(8.dp),
+            Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     FlowRow(
@@ -578,7 +405,6 @@ private fun PreserveTagSection(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
             }
         }
     }
@@ -594,22 +420,11 @@ private fun ChooseLevel3Section(
     onConfigChange: (RecruitConfig) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // 复选框
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = config.chooseLevel3,
-                onCheckedChange = { onConfigChange(config.copy(chooseLevel3 = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.panel_recruit_choose_level3),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        RecruitSwitchSetting(
+            title = stringResource(R.string.panel_recruit_choose_level3),
+            checked = config.chooseLevel3,
+            onCheckedChange = { onConfigChange(config.copy(chooseLevel3 = it)) },
+        )
 
         // 时长选择器
         RecruitTimeSelector(
@@ -635,21 +450,11 @@ private fun ChooseLevel4Section(
     onConfigChange: (RecruitConfig) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = config.chooseLevel4,
-                onCheckedChange = { onConfigChange(config.copy(chooseLevel4 = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.panel_recruit_choose_level4),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        RecruitSwitchSetting(
+            title = stringResource(R.string.panel_recruit_choose_level4),
+            checked = config.chooseLevel4,
+            onCheckedChange = { onConfigChange(config.copy(chooseLevel4 = it)) },
+        )
 
         RecruitTimeSelector(
             enabled = config.chooseLevel4,
@@ -674,21 +479,11 @@ private fun ChooseLevel5Section(
     onConfigChange: (RecruitConfig) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = config.chooseLevel5,
-                onCheckedChange = { onConfigChange(config.copy(chooseLevel5 = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.panel_recruit_choose_level5),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        RecruitSwitchSetting(
+            title = stringResource(R.string.panel_recruit_choose_level5),
+            checked = config.chooseLevel5,
+            onCheckedChange = { onConfigChange(config.copy(chooseLevel5 = it)) },
+        )
 
         // 对齐上游 v6.13.0-beta.1：5 星时间锁死 9:00，不再允许编辑
         RecruitTimeSelector(

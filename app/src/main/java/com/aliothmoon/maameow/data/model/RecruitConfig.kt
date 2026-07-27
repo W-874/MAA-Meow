@@ -107,7 +107,7 @@ data class RecruitConfig(
     /**
      * 三星招募时长 - 分钟部分
      * 对应 WPF: ChooseLevel3Min
-     * 范围: 0-50，步长10
+     * 范围: 0-55，步长5
      * 默认: 0分钟
      */
     val chooseLevel3Min: Int = 0,
@@ -129,7 +129,7 @@ data class RecruitConfig(
     /**
      * 四星招募时长 - 分钟部分
      * 对应 WPF: ChooseLevel4Min
-     * 范围: 0-50，步长10
+     * 范围: 0-55，步长5
      * 默认: 0分钟
      */
     val chooseLevel4Min: Int = 0,
@@ -152,7 +152,7 @@ data class RecruitConfig(
     /**
      * 五星招募时长 - 分钟部分
      * 对应 WPF: ChooseLevel5Min
-     * 范围: 0-50，步长10
+     * 范围: 0-55，步长5
      * 默认: 0分钟
      */
     val chooseLevel5Min: Int = 0,
@@ -190,7 +190,7 @@ data class RecruitConfig(
     private fun validateTime(totalMinutes: Int): Int = when {
         totalMinutes < 60 -> 540   // 小于 1 小时 → 9 小时
         totalMinutes > 540 -> 60   // 大于 9 小时 → 1 小时
-        else -> (totalMinutes / 10) * 10  // 向下取整到 10 的倍数
+        else -> (totalMinutes / 5) * 5  // 向下取整到 5 的倍数
     }
 
     /**

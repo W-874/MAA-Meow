@@ -3,18 +3,17 @@ package com.aliothmoon.maameow.presentation.view.panel.fight
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,138 +25,130 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.StageGroup
+import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
 
-/**
- * 今日开放关卡提示
- * 显示当日开放的活动关卡和资源本
- */
 @Composable
 fun TodayStagesHint(
     stageGroups: List<StageGroup>,
     isResourceCollectionOpen: Boolean,
     stageTips: List<String>,
-    todayName: String = ""
+    todayName: String = "",
 ) {
-    // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-    // 收集活动关卡分组（包含剩余天数）
     val activities = stageGroups.filter { !it.isPermanent }
-
     val todayOpenStages = stageGroups
         .find { it.isPermanent }
         ?.stages
         ?.filter { it.isOpenToday }
-        ?: emptyList()
-
-    // 如果没有活动关卡也没有今日开放的资源关卡，不显示
+        .orEmpty()
     if (activities.isEmpty() && todayOpenStages.isEmpty()) return
 
+    val activityCodes = remember(activities) {
+        activities.flatMap { group -> group.stages.map { it.code } }.toSet()
+    }
+    val (activityTips, regularTips) = remember(stageTips, activityCodes) {
+        stageTips.partition { tip ->
+            tip.startsWith("｢") ||
+                activityCodes.any { code -> code.isNotEmpty() && tip.startsWith("$code:") }
+        }
+    }
     var expanded by remember { mutableStateOf(false) }
-    val title = stringResource(R.string.panel_fight_today_stage_hint_title, todayName)
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            // 将 stageTips 分为活动相关（常驻显示）和其他（可折叠）
-            val activityCodes = remember(activities) {
-                activities.flatMap { g -> g.stages.map { it.code } }.toSet()
-            }
-            val (activityTips, regularTips) = remember(stageTips, activityCodes) {
-                stageTips.partition { tip ->
-                    tip.startsWith("｢") ||
-                            activityCodes.any { code -> code.isNotEmpty() && tip.startsWith("$code:") }
-                }
-            }
-
-            // ========== 常驻显示部分：活动提示和活动关卡 ==========
-            if (activityTips.isNotEmpty() || isResourceCollectionOpen) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    activityTips.forEach { tip ->
-                        val color = when {
-                            tip.startsWith("｢") -> MaterialTheme.colorScheme.tertiary // 活动提示用橙色
-                            else -> MaterialTheme.colorScheme.onTertiaryContainer // 活动关卡掉落用深橙色
-                        }
-                        Text(
-                            text = "· $tip",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = color
-                        )
-                    }
-                    // 资源收集活动提示
-                    if (isResourceCollectionOpen && activityTips.none { it.contains("资源收集") }) {
-                        Text(
-                            text = stringResource(R.string.panel_fight_resource_collection_open_tip),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                if (regularTips.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-
-            // ========== 可折叠部分：常驻关卡提示 ==========
-            if (regularTips.isNotEmpty()) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TaskSettingsSectionTitle(
+            title = stringResource(R.string.panel_fight_today_stage_hint_title, todayName),
+        )
+        Surface(
+            onClick = { if (regularTips.isNotEmpty()) expanded = !expanded },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = regularTips.isNotEmpty(),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = !expanded },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = if (expanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        activityTips.forEach { tip ->
+                            Text(
+                                text = "· $tip",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (tip.startsWith("｢")) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                },
+                            )
+                        }
+                        if (isResourceCollectionOpen &&
+                            activityTips.none { it.contains("资源收集") }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.panel_fight_resource_collection_open_tip),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        if (activityTips.isEmpty() && !isResourceCollectionOpen) {
+                            Text(
+                                text = stringResource(
+                                    R.string.panel_fight_today_stage_summary,
+                                    regularTips.size,
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                    }
+                    if (regularTips.isNotEmpty()) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.ArrowDropDown,
+                            contentDescription = stringResource(
+                                if (expanded) R.string.common_collapse else R.string.common_expand,
+                            ),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .rotate(if (expanded) 180f else 0f),
+                        )
+                    }
                 }
 
                 AnimatedVisibility(
                     visible = expanded,
                     enter = expandVertically(),
-                    exit = shrinkVertically()
+                    exit = shrinkVertically(),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(top = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         regularTips.forEach { tip ->
-                            val color = when {
-                                tip.trimStart().startsWith("(") -> MaterialTheme.colorScheme.onSurfaceVariant // 仓库信息用灰色
-                                else -> MaterialTheme.colorScheme.onSecondaryContainer // 资源提示用绿色
-                            }
                             Text(
                                 text = "· $tip",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = color
+                                fontWeight = FontWeight.Normal,
+                                color = if (tip.trimStart().startsWith("(")) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                },
                             )
                         }
                     }
                 }
-            } else if (activityTips.isEmpty() && !isResourceCollectionOpen) {
-                // 无活动也无常驻提示时显示标题行
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
             }
         }
     }

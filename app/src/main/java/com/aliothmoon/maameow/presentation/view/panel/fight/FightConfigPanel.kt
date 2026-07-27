@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,8 +63,11 @@ import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
@@ -97,124 +102,58 @@ fun FightConfigPanel(
     }
 
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(top = 2.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 12.dp),
     ) {
-        val pagerState = rememberPagerState(
-            initialPage = 0,
-            pageCount = { 2 }
-        )
-        val coroutineScope = rememberCoroutineScope()
-
-        // Tab 行
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.common_tab_general),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                }
-            )
-            Text(
-                text = stringResource(R.string.common_tab_advanced),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(1)
-                    }
-                }
+        item {
+            TodayStagesHint(
+                stageGroups = stageGroups,
+                isResourceCollectionOpen = isResourceCollectionOpen,
+                stageTips = stageTips,
+                todayName = todayName,
             )
         }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(
-                top = 2.dp,
-                bottom = 4.dp
-            )
-        )
-
-        // Tab 内容区
-        HorizontalPager(
-            pageSize = PageSize.Fill,
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            userScrollEnabled = true
-        ) { page ->
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                when (page) {
-                    // 常规设置 Tab
-                    0 -> {
-                        // 今日开放关卡提示
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
                         item {
-                            TodayStagesHint(
-                                stageGroups = stageGroups,
-                                isResourceCollectionOpen = isResourceCollectionOpen,
-                                stageTips = stageTips,
-                                todayName = todayName
-                            )
-                        }
-                        item {
-                            // 理智药/源石/次数
                             MedicineAndStoneSection(config, onConfigChange)
                         }
                         item {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                        }
-                        item {
-                            // 指定材料掉落
                             SpecifiedDropsSection(
-                                config, onConfigChange,
-                                dropItemsList
+                                config,
+                                onConfigChange,
+                                dropItemsList,
                             )
-                        }
-                        item {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
                         }
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
                             item {
                                 SeriesSection(config, onConfigChange)
                             }
-                            item {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+                        }
+                        item {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceBright,
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    GroupedStageSelectionSection(
+                                        config = config,
+                                        onConfigChange = onConfigChange,
+                                        stageGroups = stageGroups,
+                                        activityManager = activityManager,
+                                    )
+                                }
                             }
                         }
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
                         item {
-                            // 关卡选择
-                            // stageGroups: 分组后的关卡列表（用于分组显示）
-                            GroupedStageSelectionSection(
-                                config = config,
-                                onConfigChange = onConfigChange,
-                                stageGroups = stageGroups,
-                                activityManager = activityManager
-                            )
-                        }
-                    }
-
-                    // 高级设置 Tab
-                    else -> {
-                        item {
-                            // 自定义剿灭
-                            CustomAnnihilationSection(config, onConfigChange)
-                        }
+                            SegmentedSettingsGroup {
+                        item { CustomAnnihilationSection(config, onConfigChange) }
                         item {
                             // 博朗台模式
                             CheckBoxWithExpandableTip(
@@ -271,11 +210,15 @@ fun FightConfigPanel(
                                     exit = shrinkVertically()
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SelectableChipGroup(
-                                            label = stringResource(R.string.panel_fight_medicine_expire_days),
-                                            selectedValue = config.medicineExpireDays,
-                                            options = MEDICINE_EXPIRE_DAY_OPTIONS,
-                                            onSelected = { onConfigChange(config.copy(medicineExpireDays = it)) }
+                                        SettingDropdown(
+                                            title = stringResource(R.string.panel_fight_medicine_expire_days),
+                                            selected = config.medicineExpireDays,
+                                            options = MEDICINE_EXPIRE_DAY_OPTIONS.map { it.first },
+                                            optionLabel = { value ->
+                                                MEDICINE_EXPIRE_DAY_OPTIONS.firstOrNull { it.first == value }?.second.orEmpty()
+                                            },
+                                            onSelected = { onConfigChange(config.copy(medicineExpireDays = it)) },
+                                            icon = null,
                                         )
                                         CheckBoxWithExpandableTip(
                                             checked = config.useExpireMedicineForActivity,
@@ -349,10 +292,8 @@ fun FightConfigPanel(
                         item {
                             WeeklyScheduleSection(config, onConfigChange)
                         }
-                    }
-                }
-            }
-        }
+                            }
+                        }
     }
 }
 
@@ -365,65 +306,23 @@ private fun SeriesSection(
     config: FightConfig,
     onConfigChange: (FightConfig) -> Unit
 ) {
-    var tipExpanded by remember { mutableStateOf(false) }
-    val seriesTipText = stringResource(R.string.panel_fight_series_tip)
-
-
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.panel_fight_series_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            ExpandableTipIcon(
-                expanded = tipExpanded,
-                onExpandedChange = { tipExpanded = it }
-            )
-        }
-
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = seriesTipText
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            UiUsageConstants.seriesOptions.forEach { (value, label) ->
-                val displayLabel = if (value == -1) {
+    SegmentedSettingsGroup {
+        item {
+        SettingDropdown(
+            title = stringResource(R.string.panel_fight_series_title),
+            selected = config.series,
+            options = UiUsageConstants.seriesOptions.map { it.first },
+            optionLabel = { value ->
+                if (value == -1) {
                     stringResource(R.string.panel_fight_series_no_switch)
                 } else {
-                    label
+                    UiUsageConstants.seriesOptions.firstOrNull { it.first == value }?.second
+                        ?: value.toString()
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .width(72.dp)
-                        .clickable { onConfigChange(config.copy(series = value)) }
-                ) {
-                    RadioButton(
-                        selected = config.series == value,
-                        onClick = { onConfigChange(config.copy(series = value)) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = displayLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
+            },
+            onSelected = { onConfigChange(config.copy(series = it)) },
+            icon = null,
+        )
         }
     }
 }
@@ -442,43 +341,14 @@ private fun StageResetModeSection(
         StageResetMode.IGNORE to stringResource(R.string.panel_fight_stage_reset_ignore)
     )
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = stringResource(R.string.panel_fight_stage_reset_title),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            options.forEach { (mode, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .width(100.dp)
-                        .clickable { onConfigChange(config.copy(stageResetMode = mode)) }
-                ) {
-                    RadioButton(
-                        selected = config.stageResetMode == mode,
-                        onClick = { onConfigChange(config.copy(stageResetMode = mode)) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.panel_fight_stage_reset_title),
+        selected = config.stageResetMode,
+        options = options.map { it.first },
+        optionLabel = { value -> options.firstOrNull { it.first == value }?.second.orEmpty() },
+        onSelected = { onConfigChange(config.copy(stageResetMode = it)) },
+        icon = null,
+    )
 }
 
 /**
@@ -494,8 +364,8 @@ private fun GroupedStageSelectionSection(
     stageGroups: List<StageGroup>,
     activityManager: ActivityManager
 ) {
-    // (i) 仅放选关机制/手动输入说明，默认折叠；实时状态（当前执行/告警）见下方状态卡片
     var tipExpanded by remember { mutableStateOf(false) }
+    var detailsExpanded by remember { mutableStateOf(false) }
 
     // 扁平的关卡代码列表（用于输入框模式）
     val stageCodes = remember(stageGroups) {
@@ -556,137 +426,154 @@ private fun GroupedStageSelectionSection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(
+            onClick = { detailsExpanded = !detailsExpanded },
+            modifier = Modifier
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.Transparent,
+        ) {
             Row(
+                modifier = Modifier.padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
                     text = stringResource(R.string.panel_fight_stage_selection_title),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = RoundedCornerShape(6.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.panel_fight_current_execution_label),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
                 ExpandableTipIcon(
                     expanded = tipExpanded,
-                    onExpandedChange = { tipExpanded = it }
+                    onExpandedChange = { tipExpanded = it },
+                )
+                Icon(
+                    imageVector = Icons.Rounded.ArrowDropDown,
+                    contentDescription = stringResource(
+                        if (detailsExpanded) R.string.common_collapse else R.string.common_expand,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(if (detailsExpanded) 180f else 0f),
                 )
             }
-            ExpandableTipContent(
-                visible = tipExpanded,
-                tipText = stagePlanTipText
-            )
         }
+        ExpandableTipContent(
+            visible = tipExpanded,
+            tipText = stagePlanTipText,
+        )
 
-        // 选关状态卡片：当前执行关卡 + 告警，整合展示
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = RoundedCornerShape(6.dp)
+        AnimatedVisibility(
+            visible = detailsExpanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.panel_fight_current_execution_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (stageWarning != null) {
                     Text(
                         text = "· $stageWarning",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
-            }
-        }
 
-        // 首选关卡：无删除按钮，标题行内用等宽占位与备选关卡对齐左右宽度
-        if (config.customStageCode) {
-            // 文本输入模式
-            StageRow(onRemove = null) {
-                StageInputField(
-                    value = config.stage1,
-                    onValueChange = { onConfigChange(config.copy(stage1 = it)) },
-                    label = stringResource(R.string.panel_fight_primary_stage_label),
-                    placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
-                    stageCodes = stageCodes,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        } else {
-            // 分组按钮选择模式
-            GroupedStageButtonGroup(
-                label = stringResource(R.string.panel_fight_primary_stage_label),
-                selectedValue = config.stage1,
-                stageGroups = stageGroups,
-                onItemSelected = { onConfigChange(config.copy(stage1 = it)) },
-                annihilationDisplayName = if (config.useCustomAnnihilation) {
-                    annihilationOptions
-                        .firstOrNull { it.second == config.annihilationStage }
-                        ?.first
-                } else null
-            )
-        }
-
-        // 备选关卡（UseAlternateStage 启用时显示，可动态增删）
-        if (config.useAlternateStage) {
-            // 更新指定序号的备选关卡
-            fun updateAlternate(index: Int, value: String) {
-                onConfigChange(
-                    config.copy(
-                        alternateStages = config.alternateStages.toMutableList().also { it[index] = value }
-                    )
-                )
-            }
-            // 删除指定序号的备选关卡
-            fun removeAlternate(index: Int) {
-                onConfigChange(
-                    config.copy(
-                        alternateStages = config.alternateStages.toMutableList().also { it.removeAt(index) }
-                    )
-                )
-            }
-
-            config.alternateStages.forEachIndexed { index, stage ->
-                val alternateLabel = stringResource(R.string.panel_fight_alternate_stage_label, index + 1)
+                // 首选关卡：无删除按钮，标题行内用等宽占位与备选关卡对齐左右宽度
                 if (config.customStageCode) {
                     // 文本输入模式
-                    StageRow(onRemove = { removeAlternate(index) }) {
+                    StageRow(onRemove = null) {
                         StageInputField(
-                            value = stage,
-                            onValueChange = { updateAlternate(index, it) },
-                            label = alternateLabel,
-                            placeholder = stringResource(R.string.panel_fight_alternate_stage_placeholder),
+                            value = config.stage1,
+                            onValueChange = { onConfigChange(config.copy(stage1 = it)) },
+                            label = stringResource(R.string.panel_fight_primary_stage_label),
+                            placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
                             stageCodes = stageCodes,
                             modifier = Modifier.weight(1f)
                         )
                     }
                 } else {
-                    // 分组按钮选择模式：删除按钮内嵌在折叠标题行内
-                    GroupedStageButtonGroup(
-                        label = alternateLabel,
-                        selectedValue = stage,
+                    StageOptionGroups(
+                        selectedValue = config.stage1,
                         stageGroups = stageGroups,
-                        onItemSelected = { updateAlternate(index, it) },
-                        onRemove = { removeAlternate(index) }
+                        onItemSelected = { onConfigChange(config.copy(stage1 = it)) },
+                        annihilationDisplayName = if (config.useCustomAnnihilation) {
+                            annihilationOptions
+                                .firstOrNull { it.second == config.annihilationStage }
+                                ?.first
+                        } else null,
+                    )
+                }
+
+                // 备选关卡（UseAlternateStage 启用时显示，可动态增删）
+                if (config.useAlternateStage) {
+                    // 更新指定序号的备选关卡
+                    fun updateAlternate(index: Int, value: String) {
+                        onConfigChange(
+                            config.copy(
+                                alternateStages = config.alternateStages.toMutableList().also { it[index] = value }
+                            )
+                        )
+                    }
+                    // 删除指定序号的备选关卡
+                    fun removeAlternate(index: Int) {
+                        onConfigChange(
+                            config.copy(
+                                alternateStages = config.alternateStages.toMutableList().also { it.removeAt(index) }
+                            )
+                        )
+                    }
+
+                    config.alternateStages.forEachIndexed { index, stage ->
+                        val alternateLabel = stringResource(R.string.panel_fight_alternate_stage_label, index + 1)
+                        if (config.customStageCode) {
+                            // 文本输入模式
+                            StageRow(onRemove = { removeAlternate(index) }) {
+                                StageInputField(
+                                    value = stage,
+                                    onValueChange = { updateAlternate(index, it) },
+                                    label = alternateLabel,
+                                    placeholder = stringResource(R.string.panel_fight_alternate_stage_placeholder),
+                                    stageCodes = stageCodes,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        } else {
+                            // 分组按钮选择模式：删除按钮内嵌在折叠标题行内
+                            GroupedStageButtonGroup(
+                                label = alternateLabel,
+                                selectedValue = stage,
+                                stageGroups = stageGroups,
+                                onItemSelected = { updateAlternate(index, it) },
+                                onRemove = { removeAlternate(index) }
+                            )
+                        }
+                    }
+
+                    // 添加备选关卡
+                    AddAlternateStageButton(
+                        onClick = { onConfigChange(config.copy(alternateStages = config.alternateStages + "")) }
                     )
                 }
             }
-
-            // 添加备选关卡
-            AddAlternateStageButton(
-                onClick = { onConfigChange(config.copy(alternateStages = config.alternateStages + "")) }
-            )
         }
-
     }
 }
 
@@ -778,60 +665,67 @@ private fun GroupedStageButtonGroup(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                stageGroups.forEach { group ->
-                    // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-                    val displayTitle = if (group.isPermanent) {
-                        stringResource(R.string.panel_fight_stage_group_permanent)
-                    } else {
-                        group.title
-                    }
-                    // 分组标题
-                    Text(
-                        text = displayTitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-                        color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+            StageOptionGroups(
+                selectedValue = selectedValue,
+                stageGroups = stageGroups,
+                onItemSelected = onItemSelected,
+                annihilationDisplayName = annihilationDisplayName,
+            )
+        }
+    }
+}
 
-                    // 分组内的关卡（自动换行平铺）
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth()
+@Composable
+private fun StageOptionGroups(
+    selectedValue: String,
+    stageGroups: List<StageGroup>,
+    onItemSelected: (String) -> Unit,
+    annihilationDisplayName: String? = null,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        stageGroups.forEach { group ->
+            Text(
+                text = if (group.isPermanent) {
+                    stringResource(R.string.panel_fight_stage_group_permanent)
+                } else {
+                    group.title
+                },
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                group.stages.forEach { stage ->
+                    val isSelected = stage.code == selectedValue
+                    val isOpen = stage.isOpenToday
+                    Surface(
+                        onClick = { onItemSelected(stage.code) },
+                        color = when {
+                            isSelected -> MaterialTheme.colorScheme.primary
+                            !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
+                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        },
+                        shape = RoundedCornerShape(16.dp),
                     ) {
-                        group.stages.forEach { stage ->
-                            val isSelected = stage.code == selectedValue
-                            val isOpen = stage.isOpenToday
-                            Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { onItemSelected(stage.code) },
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.primary
-                                    !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                                },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
-                                        annihilationDisplayName
-                                    } else {
-                                        stage.displayName
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
+                        Text(
+                            text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
+                                annihilationDisplayName
+                            } else {
+                                stage.displayName
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when {
+                                isSelected -> MaterialTheme.colorScheme.onPrimary
+                                !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                                else -> MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
                     }
                 }
             }
@@ -937,37 +831,15 @@ private fun CustomAnnihilationSection(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.panel_fight_annihilation_title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    localizedAnnihilationOptions().forEach { (displayName, value) ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clickable { onConfigChange(config.copy(annihilationStage = value)) }
-                        ) {
-                            RadioButton(
-                                selected = config.annihilationStage == value,
-                                onClick = { onConfigChange(config.copy(annihilationStage = value)) },
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            }
+            val options = localizedAnnihilationOptions()
+            SettingDropdown(
+                title = stringResource(R.string.panel_fight_annihilation_title),
+                selected = config.annihilationStage,
+                options = options.map { it.second },
+                optionLabel = { value -> options.firstOrNull { it.second == value }?.first.orEmpty() },
+                onSelected = { onConfigChange(config.copy(annihilationStage = it)) },
+                icon = null,
+            )
         }
     }
 }

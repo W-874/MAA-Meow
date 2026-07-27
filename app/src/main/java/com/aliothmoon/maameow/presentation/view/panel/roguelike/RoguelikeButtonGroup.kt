@@ -2,8 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
 
 /**
  * 通用按钮组组件
@@ -16,12 +15,13 @@ fun RoguelikeButtonGroup(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SelectableChipGroup(
-        label = label,
-        selectedValue = selectedValue,
-        options = options,
+    SettingDropdown(
+        title = label,
+        selected = selectedValue,
+        options = options.map { it.first },
+        optionLabel = { value -> options.firstOrNull { it.first == value }?.second ?: value },
         onSelected = onValueChange,
         modifier = modifier,
-        labelFontWeight = FontWeight.Medium
+        icon = null,
     )
 }

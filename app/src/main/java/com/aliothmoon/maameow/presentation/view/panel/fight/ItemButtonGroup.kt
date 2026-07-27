@@ -2,7 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel.fight
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
 
 /**
  * 材料选择按钮组
@@ -16,11 +16,13 @@ fun ItemButtonGroup(
     onItemSelected: (String) -> Unit,
     displayMapper: (String) -> String = { it },
 ) {
-    SelectableChipGroup(
-        label = label,
-        selectedValue = selectedValue,
-        options = items.map { it to displayMapper(it) },
+    SettingDropdown(
+        title = label,
+        selected = selectedValue,
+        options = items,
+        optionLabel = { displayMapper(it) },
         onSelected = onItemSelected,
-        modifier = modifier
+        modifier = modifier,
+        icon = null,
     )
 }
