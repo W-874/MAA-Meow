@@ -8,12 +8,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,8 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -35,6 +37,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.widget.Toast
@@ -44,7 +48,6 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -65,12 +68,17 @@ import com.aliothmoon.maameow.domain.enums.InfrastRoomType
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.ReorderableFlowRow
 import com.aliothmoon.maameow.utils.JsonUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import sh.calvin.reorderable.ReorderableColumn
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -82,151 +90,75 @@ import java.time.format.DateTimeFormatter
 fun InfrastConfigPanel(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit, modifier: Modifier = Modifier
 ) {
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(top = 2.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 12.dp),
     ) {
-        val pagerState = rememberPagerState(
-            initialPage = 0, pageCount = { 2 })
-        val coroutineScope = rememberCoroutineScope()
-
-        // Tab 行
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.common_tab_general),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(0)
-                    }
-                })
-            Text(
-                text = stringResource(R.string.common_tab_advanced),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.clickable {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(1)
-                    }
-                })
-        }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(
-                top = 4.dp, bottom = 8.dp
-            )
-        )
-
-        // Tab 内容区
-        HorizontalPager(
-            pageSize = PageSize.Fill,
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            userScrollEnabled = true
-        ) { page ->
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()
-            ) {
-                when (page) {
-                    // 常规设置 Tab
-                    0 -> {
-                        item {
-                            // 基建模式选择
-                            InfrastModeSection(config, onConfigChange)
-                        }
-                        item {
-                            // 自定义基建配置 (仅 Custom 模式显示)
-                            AnimatedVisibility(
-                                visible = config.mode == InfrastMode.Custom,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                CustomInfrastSection(config, onConfigChange)
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
+                        item { SegmentedSettingsGroup {
+                            item {
+                                InfrastModeSection(config, onConfigChange)
                             }
-                        }
-                        item {
-                            // 无人机用途 (Custom 模式下禁用)
-                            AnimatedVisibility(
-                                visible = config.mode != InfrastMode.Custom,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                UsesOfDronesSection(config, onConfigChange)
+                            item {
+                                AnimatedVisibility(
+                                    visible = config.mode == InfrastMode.Custom,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    CustomInfrastSection(config, onConfigChange)
+                                }
                             }
-                        }
-                        item {
-                            // 心情阈值 (仅 Normal 模式显示)
-                            AnimatedVisibility(
-                                visible = config.mode != InfrastMode.Rotation,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                DormThresholdSection(config, onConfigChange)
+                            item {
+                                AnimatedVisibility(
+                                    visible = config.mode != InfrastMode.Custom,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    UsesOfDronesSection(config, onConfigChange)
+                                }
                             }
-                        }
-                        item {
-                            // 设施列表
-                            FacilitiesSection(config, onConfigChange)
-                        }
-                    }
-
-                    // 高级设置 Tab
-                    else -> {
-                        item {
-                            // 宿舍信赖模式 (仅 Normal 模式显示)
-                            AnimatedVisibility(
-                                visible = config.mode != InfrastMode.Rotation,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                DormTrustEnabledSection(config, onConfigChange)
+                            item {
+                                AnimatedVisibility(
+                                    visible = config.mode != InfrastMode.Rotation,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    DormThresholdSection(config, onConfigChange)
+                                }
                             }
-                        }
-                        item {
-                            // 不将已进驻干员放入宿舍 (仅 Normal 模式显示)
-                            AnimatedVisibility(
-                                visible = config.mode != InfrastMode.Rotation,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                DormFilterNotStationedSection(config, onConfigChange)
+                            item {
+                                FacilitiesSection(config, onConfigChange)
                             }
-                        }
-                        item {
-                            // 制造站搓玉自动补货
-                            OriginiumShardAutoReplenishmentSection(config, onConfigChange)
-                        }
-                        item {
-                            // 会客室留言板领取信用
-                            ReceptionMessageBoardReceiveSection(config, onConfigChange)
-                        }
-                        item {
-                            // 会客室线索交流
-                            ReceptionClueExchangeSection(config, onConfigChange)
-                        }
-                        item {
-                            // 会客室赠送线索
-                            ReceptionSendClueSection(config, onConfigChange)
-                        }
-                        item {
-                            // 继续专精
-                            ContinueTrainingSection(config, onConfigChange)
-                        }
-                    }
-                }
-            }
-        }
+                        } }
+        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
+                        item { SegmentedSettingsGroup {
+                            item {
+                                    AnimatedVisibility(
+                                        visible = config.mode != InfrastMode.Rotation,
+                                        enter = expandVertically(),
+                                        exit = shrinkVertically()
+                                    ) {
+                                        DormTrustEnabledSection(config, onConfigChange)
+                                    }
+                            }
+                            item {
+                                    AnimatedVisibility(
+                                        visible = config.mode != InfrastMode.Rotation,
+                                        enter = expandVertically(),
+                                        exit = shrinkVertically()
+                                    ) {
+                                        DormFilterNotStationedSection(config, onConfigChange)
+                                    }
+                            }
+                            item { OriginiumShardAutoReplenishmentSection(config, onConfigChange) }
+                            item { ReceptionMessageBoardReceiveSection(config, onConfigChange) }
+                            item { ReceptionClueExchangeSection(config, onConfigChange) }
+                            item { ReceptionSendClueSection(config, onConfigChange) }
+                            item { ContinueTrainingSection(config, onConfigChange) }
+                        } }
     }
 }
 
@@ -237,34 +169,15 @@ fun InfrastConfigPanel(
 private fun InfrastModeSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.panel_infrast_mode_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            InfrastMode.values.forEach {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = config.mode == it,
-                        onClick = { onConfigChange(config.copy(mode = it)) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = infrastModeLabel(it),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SettingDropdown(
+            title = stringResource(R.string.panel_infrast_mode_title),
+            selected = config.mode,
+            options = InfrastMode.values.toList(),
+            optionLabel = { infrastModeLabel(it) },
+            onSelected = { onConfigChange(config.copy(mode = it)) },
+            icon = null,
+        )
 
         // Rotation 模式提示文字
         AnimatedVisibility(
@@ -385,7 +298,10 @@ private fun CustomInfrastSection(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         // 配置信息卡片（仅当 custom 有 title/description 时显示）
         if (custom != null && custom.plans.isNotEmpty()) {
             if (!custom.title.isNullOrBlank() || !custom.description.isNullOrBlank()) {
@@ -502,30 +418,15 @@ private fun CustomInfrastSection(
 private fun PresetButtonGroup(
     selectedPreset: String, onPresetSelected: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.panel_infrast_presets_title),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-
-        UiUsageConstants.defaultInfrastPresets.forEach { (key, _) ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPresetSelected(key) }) {
-                RadioButton(
-                    selected = selectedPreset == key,
-                    onClick = { onPresetSelected(key) },
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = infrastPresetLabel(key),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-    }
+    val options = UiUsageConstants.defaultInfrastPresets.map { it.first }
+    SettingDropdown(
+        title = stringResource(R.string.panel_infrast_presets_title),
+        selected = selectedPreset,
+        options = options,
+        optionLabel = { infrastPresetLabel(it) },
+        onSelected = onPresetSelected,
+        icon = null,
+    )
 }
 
 /**
@@ -558,76 +459,37 @@ private fun PlanSelectButtonGroup(
     } else null
 
     val currentPlanDisplayName = currentPlanName ?: "???"
-
-    var tipExpanded by remember { mutableStateOf(false) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.panel_infrast_plan_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            ExpandableTipIcon(
-                expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
-        }
-
-        val tip =
-            stringResource(R.string.panel_infrast_plan_tip)
-        ExpandableTipContent(
-            visible = tipExpanded, tipText = tip
-        )
-
-        // 时间轮换项（仅当存在带 period 的计划时显示）
-        if (hasPeriodicPlan) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPlanSelected(-1) }) {
-                RadioButton(
-                    selected = selectedPlanIndex == -1,
-                    onClick = { onPlanSelected(-1) },
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.panel_infrast_plan_auto_switch,
-                            currentPlanDisplayName
-                        ),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-            }
-        }
-
-        // 各计划选项
-        plans.forEachIndexed { index, plan ->
+    val autoSwitchLabel = stringResource(
+        R.string.panel_infrast_plan_auto_switch,
+        currentPlanDisplayName,
+    )
+    val optionIndexes = buildList {
+        if (hasPeriodicPlan) add(-1)
+        addAll(plans.indices)
+    }
+    val optionLabels = plans.mapIndexed { index, plan ->
             val periodText = if (plan.period.isNotEmpty()) {
                 plan.period.joinToString(", ") { range ->
                     if (range.size >= 2) "${range[0]}-${range[1]}" else ""
                 }
             } else ""
-            val label = buildString {
+            index to buildString {
                 append(plan.name ?: "Plan ${'A' + index}")
                 if (periodText.isNotBlank()) append(" ($periodText)")
             }
+    }.toMap()
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onPlanSelected(index) }) {
-                RadioButton(
-                    selected = selectedPlanIndex == index,
-                    onClick = { onPlanSelected(index) },
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = label, style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingDropdown(
+            title = stringResource(R.string.panel_infrast_plan_title),
+            selected = selectedPlanIndex.takeIf { it in optionIndexes } ?: optionIndexes.first(),
+            options = optionIndexes,
+            optionLabel = { index ->
+                if (index == -1) autoSwitchLabel else optionLabels[index].orEmpty()
+            },
+            onSelected = onPlanSelected,
+            icon = null,
+        )
 
         // 当前选中计划的描述
         if (selectedPlanIndex >= 0 && selectedPlanIndex < plans.size) {
@@ -636,7 +498,8 @@ private fun PlanSelectButtonGroup(
                 Text(
                     text = desc,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
         }
@@ -646,7 +509,8 @@ private fun PlanSelectButtonGroup(
             Text(
                 text = stringResource(R.string.panel_infrast_plan_missing_period_warning),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
     }
@@ -714,37 +578,14 @@ private fun UsesOfDronesSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
     val options = localizedDroneUsageOptions()
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = stringResource(R.string.panel_infrast_drones_title),
-                style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            options.forEach { (value, label) ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .widthIn(min = 80.dp)
-                        .clickable { onConfigChange(config.copy(usesOfDrones = value)) }) {
-                    RadioButton(
-                        selected = config.usesOfDrones == value,
-                        onClick = { onConfigChange(config.copy(usesOfDrones = value)) },
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = label, style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
+    SettingDropdown(
+        title = stringResource(R.string.panel_infrast_drones_title),
+        selected = config.usesOfDrones,
+        options = options.map { it.first },
+        optionLabel = { value -> options.firstOrNull { it.first == value }?.second ?: value },
+        onSelected = { onConfigChange(config.copy(usesOfDrones = it)) },
+        icon = null,
+    )
 }
 
 /**
@@ -755,7 +596,10 @@ private fun DormThresholdSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
     var tipExpanded by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -802,119 +646,63 @@ private fun DormThresholdSection(
 private fun FacilitiesSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-
-    var tipExpanded by remember { mutableStateOf(false) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.panel_infrast_facilities_title),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            ExpandableTipIcon(
-                expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
-        }
-
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = stringResource(R.string.panel_infrast_facilities_tip)
-        )
-
-        // 设施列表（支持拖拽排序 + 勾选）
-        FacilityList(
-            facilities = config.facilities,
-            onFacilitiesChange = { onConfigChange(config.copy(facilities = it)) })
-
-        // 全选/清除按钮
-        Row(
-            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = {
-                    onConfigChange(
-                        config.copy(
-                            facilities = config.facilities.map { it.first to true })
-                    )
-                }, modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.common_select_all))
-            }
-
-            OutlinedButton(
-                onClick = {
-                    onConfigChange(
-                        config.copy(
-                            facilities = config.facilities.map { it.first to false })
-                    )
-                }, modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.common_clear))
-            }
-        }
-    }
-}
-
-/**
- * 设施列表展示（支持拖拽排序 + 勾选）
- *
- * @param facilities 设施列表（有序，含启用状态）
- * @param onFacilitiesChange 设施列表变化回调
- */
-@Composable
-private fun FacilityList(
-    facilities: List<Pair<InfrastRoomType, Boolean>>,
-    onFacilitiesChange: (List<Pair<InfrastRoomType, Boolean>>) -> Unit
-) {
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ReorderableColumn(
-            list = facilities, onSettle = { fromIndex, toIndex ->
-                val newList = facilities.toMutableList().apply {
-                    add(toIndex, removeAt(fromIndex))
-                }
-                onFacilitiesChange(newList)
-            }, modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) { _, entry, _ ->
-            key(entry.first) {
-                ReorderableItem {
-                    val (facility, enabled) = entry
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .longPressDraggableHandle()
-                            .clickable {
-                                val newList = facilities.map {
-                                    if (it.first == facility) it.first to !it.second else it
-                                }
-                                onFacilitiesChange(newList)
-                            }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = enabled, onCheckedChange = { checked ->
-                                val newList = facilities.map {
-                                    if (it.first == facility) it.first to checked else it
-                                }
-                                onFacilitiesChange(newList)
-                            }, modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = infrastRoomTypeLabel(facility),
-                            style = MaterialTheme.typography.bodyMedium
+        Text(
+            text = stringResource(R.string.panel_infrast_facilities_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(R.string.panel_infrast_facilities_tip_fixed),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ReorderableFlowRow(
+            items = config.facilities,
+            itemKey = { it.first },
+            onOrderChanged = { onConfigChange(config.copy(facilities = it)) },
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) { (facility, selected), _, dragModifier ->
+            FilterChip(
+                selected = selected,
+                onClick = {
+                    onConfigChange(
+                        config.copy(
+                            facilities = config.facilities.map {
+                                if (it.first == facility) it.first to !selected else it
+                            },
+                        ),
+                    )
+                },
+                label = {
+                    Text(
+                        text = infrastRoomTypeLabel(facility),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+                leadingIcon = if (selected) {
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
                         )
                     }
-                }
-            }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                border = null,
+                modifier = dragModifier.height(30.dp),
+            )
         }
     }
 }
@@ -926,20 +714,11 @@ private fun FacilityList(
 private fun DormTrustEnabledSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = config.dormTrustEnabled,
-            onCheckedChange = { onConfigChange(config.copy(dormTrustEnabled = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_dorm_trust),
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
+    CheckBoxWithLabel(
+        checked = config.dormTrustEnabled,
+        onCheckedChange = { onConfigChange(config.copy(dormTrustEnabled = it)) },
+        label = stringResource(R.string.panel_infrast_dorm_trust),
+    )
 }
 
 /**
@@ -949,32 +728,12 @@ private fun DormTrustEnabledSection(
 private fun DormFilterNotStationedSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    var tipExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Checkbox(
-                checked = config.dormFilterNotStationedEnabled,
-                onCheckedChange = { onConfigChange(config.copy(dormFilterNotStationedEnabled = it)) },
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = stringResource(R.string.panel_infrast_dorm_filter_not_stationed),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            ExpandableTipIcon(
-                expanded = tipExpanded, onExpandedChange = { tipExpanded = it })
-        }
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = stringResource(R.string.panel_infrast_dorm_filter_not_stationed_tip)
-        )
-    }
+    CheckBoxWithExpandableTip(
+        checked = config.dormFilterNotStationedEnabled,
+        onCheckedChange = { onConfigChange(config.copy(dormFilterNotStationedEnabled = it)) },
+        label = stringResource(R.string.panel_infrast_dorm_filter_not_stationed),
+        tipText = stringResource(R.string.panel_infrast_dorm_filter_not_stationed_tip),
+    )
 }
 
 /**
@@ -984,21 +743,7 @@ private fun DormFilterNotStationedSection(
 private fun OriginiumShardAutoReplenishmentSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
-    ) {
-        Checkbox(
-            checked = config.originiumShardAutoReplenishment,
-            onCheckedChange = { onConfigChange(config.copy(originiumShardAutoReplenishment = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_originium_shard_auto_replenishment),
-            style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-        )
-    }
+    CheckBoxWithLabel(config.originiumShardAutoReplenishment, { onConfigChange(config.copy(originiumShardAutoReplenishment = it)) }, stringResource(R.string.panel_infrast_originium_shard_auto_replenishment))
 }
 
 /**
@@ -1008,21 +753,7 @@ private fun OriginiumShardAutoReplenishmentSection(
 private fun ReceptionMessageBoardReceiveSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
-    ) {
-        Checkbox(
-            checked = config.receptionMessageBoard,
-            onCheckedChange = { onConfigChange(config.copy(receptionMessageBoard = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_reception_message_board),
-            style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-        )
-    }
+    CheckBoxWithLabel(config.receptionMessageBoard, { onConfigChange(config.copy(receptionMessageBoard = it)) }, stringResource(R.string.panel_infrast_reception_message_board))
 }
 
 /**
@@ -1032,21 +763,7 @@ private fun ReceptionMessageBoardReceiveSection(
 private fun ReceptionClueExchangeSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
-    ) {
-        Checkbox(
-            checked = config.receptionClueExchange,
-            onCheckedChange = { onConfigChange(config.copy(receptionClueExchange = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_reception_clue_exchange),
-            style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-        )
-    }
+    CheckBoxWithLabel(config.receptionClueExchange, { onConfigChange(config.copy(receptionClueExchange = it)) }, stringResource(R.string.panel_infrast_reception_clue_exchange))
 }
 
 /**
@@ -1056,21 +773,7 @@ private fun ReceptionClueExchangeSection(
 private fun ReceptionSendClueSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
-    ) {
-        Checkbox(
-            checked = config.receptionSendClue,
-            onCheckedChange = { onConfigChange(config.copy(receptionSendClue = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_reception_send_clue),
-            style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-        )
-    }
+    CheckBoxWithLabel(config.receptionSendClue, { onConfigChange(config.copy(receptionSendClue = it)) }, stringResource(R.string.panel_infrast_reception_send_clue))
 }
 
 /**
@@ -1080,21 +783,7 @@ private fun ReceptionSendClueSection(
 private fun ContinueTrainingSection(
     config: InfrastConfig, onConfigChange: (InfrastConfig) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top
-    ) {
-        Checkbox(
-            checked = config.continueTraining,
-            onCheckedChange = { onConfigChange(config.copy(continueTraining = it)) },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(R.string.panel_infrast_continue_training),
-            style = MaterialTheme.typography.bodyMedium,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-        )
-    }
+    CheckBoxWithLabel(config.continueTraining, { onConfigChange(config.copy(continueTraining = it)) }, stringResource(R.string.panel_infrast_continue_training))
 }
 
 private fun queryFileName(context: Context, uri: Uri): String? = Misc.queryFileName(context, uri)
