@@ -11,8 +11,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.AwardConfig
+import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.FightConfig
 import com.aliothmoon.maameow.data.model.InfrastConfig
 import com.aliothmoon.maameow.data.model.MallConfig
@@ -30,6 +33,7 @@ import com.aliothmoon.maameow.data.model.RecruitConfig
 import com.aliothmoon.maameow.data.model.RoguelikeConfig
 import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
+import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
 
 @Composable
@@ -69,6 +73,8 @@ fun taskConfigIcon(config: TaskParamProvider): ImageVector = when (config) {
     is AwardConfig -> Icons.Default.Star
     is RoguelikeConfig -> Icons.Default.Settings
     is ReclamationConfig -> Icons.Default.Build
+    is UserDataUpdateConfig -> Icons.Default.Refresh
+    is DepotMaintainConfig -> Icons.Default.Inventory2
 }
 
 fun taskTypeIcon(typeInfo: TaskTypeInfo): ImageVector = taskConfigIcon(typeInfo.defaultConfig())
@@ -84,6 +90,8 @@ fun taskTypeDescription(typeInfo: TaskTypeInfo): String = stringResource(
         TaskTypeInfo.MISSION -> R.string.task_type_mission_description
         TaskTypeInfo.AUTO_ROGUELIKE -> R.string.task_type_auto_roguelike_description
         TaskTypeInfo.RECLAMATION -> R.string.task_type_reclamation_description
+        TaskTypeInfo.USER_DATA_UPDATE -> R.string.task_type_user_data_update_description
+        TaskTypeInfo.DEPOT_MAINTAIN -> R.string.task_type_depot_maintain_description
     },
 )
 
@@ -128,5 +136,13 @@ fun taskConfigSummary(config: TaskParamProvider): String = when (config) {
     is ReclamationConfig -> stringResource(
         R.string.panel_task_summary_reclamation,
         config.theme,
+    )
+    is UserDataUpdateConfig -> stringResource(
+        R.string.panel_task_summary_user_data_update,
+        listOf(config.updateOperBox, config.updateDepot).count { it },
+    )
+    is DepotMaintainConfig -> stringResource(
+        R.string.panel_task_summary_depot_maintain,
+        config.plans.size,
     )
 }

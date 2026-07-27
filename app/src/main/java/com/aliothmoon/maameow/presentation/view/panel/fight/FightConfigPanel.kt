@@ -61,6 +61,7 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
+import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
@@ -70,6 +71,7 @@ import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -82,6 +84,7 @@ private val MEDICINE_EXPIRE_DAY_OPTIONS = listOf(
 @Composable
 fun FightConfigPanel(
     config: FightConfig,
+    clientType: String,
     onConfigChange: (FightConfig) -> Unit,
     modifier: Modifier = Modifier,
     activityManager: ActivityManager = koinInject(),
@@ -131,7 +134,7 @@ fun FightConfigPanel(
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
                             item {
-                                SeriesSection(config, onConfigChange)
+                                SeriesSection(config, clientType, onConfigChange)
                             }
                         }
                         item {
@@ -304,25 +307,40 @@ fun FightConfigPanel(
 @Composable
 private fun SeriesSection(
     config: FightConfig,
+    clientType: String,
     onConfigChange: (FightConfig) -> Unit
 ) {
+    val locked = remember(clientType) { SeriesLock.isLocked(clientType) }
+    val displayedSeries = if (locked) -1 else config.series
+
     SegmentedSettingsGroup {
         item {
-        SettingDropdown(
-            title = stringResource(R.string.panel_fight_series_title),
-            selected = config.series,
-            options = UiUsageConstants.seriesOptions.map { it.first },
-            optionLabel = { value ->
-                if (value == -1) {
-                    stringResource(R.string.panel_fight_series_no_switch)
-                } else {
-                    UiUsageConstants.seriesOptions.firstOrNull { it.first == value }?.second
-                        ?: value.toString()
-                }
-            },
-            onSelected = { onConfigChange(config.copy(series = it)) },
-            icon = null,
-        )
+            SettingDropdown(
+                title = stringResource(R.string.panel_fight_series_title),
+                selected = displayedSeries,
+                options = UiUsageConstants.seriesOptions.map { it.first },
+                optionLabel = { value ->
+                    if (value == -1) {
+                        stringResource(R.string.panel_fight_series_no_switch)
+                    } else {
+                        UiUsageConstants.seriesOptions.firstOrNull { it.first == value }?.second
+                            ?: value.toString()
+                    }
+                },
+                onSelected = { onConfigChange(config.copy(series = it)) },
+                icon = null,
+                enabled = !locked,
+            )
+        }
+        if (locked) {
+            item {
+                Text(
+                    text = stringResource(R.string.panel_fight_series_locked_tip),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }
@@ -377,13 +395,13 @@ private fun GroupedStageSelectionSection(
     val stage1Open = config.stage1.isBlank() || activityManager.isStageOpen(config.stage1)
     val annihilationOptions = localizedAnnihilationOptions()
 
-    // 当前执行关卡：直接复用 config.getActiveStage()，与实际下发 core 的选关完全一致
+    // 当前执行关卡：直接复用 config.getActiveStage(activityManager)，与实际下发 core 的选关完全一致
     // （对齐 WPF：tip 与 SerializeTask 共用 GetFightStage，避免「显示」与「执行」分叉）
     val executingStage = remember(
         config.stage1, config.alternateStages, config.useAlternateStage,
-        config.customStageCode, config.stageResetMode, stageGroups
+        config.customStageCode, config.stageResetMode, stageGroups, activityManager
     ) {
-        config.getActiveStage()
+        config.getActiveStage(activityManager)
     }
     val defaultStageLabel = stringResource(R.string.panel_fight_stage_reset_current)
 
@@ -841,60 +859,6 @@ private fun CustomAnnihilationSection(
                 icon = null,
             )
         }
-    }
-}
-
-
-/**
- * 关卡代码输入框
- * 支持别名自动映射：失去焦点时自动转换别名为实际关卡代码
- *
- * 例如：龙门币 → CE-6，经验 → LS-6
- *
- */
-@Composable
-private fun StageInputField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    stageCodes: List<String>,
-    modifier: Modifier = Modifier
-) {
-    var textValue by remember(value) { mutableStateOf(value) }
-    var showConvertedHint by remember { mutableStateOf(false) }
-    var convertedCode by remember { mutableStateOf("") }
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ITextFieldWithFocus(
-            value = textValue,
-            onValueChange = { newValue ->
-                textValue = newValue
-                // 检查是否是已知别名，显示转换提示
-                val mapped = StageAliasMapper.mapToStageCode(newValue, stageCodes)
-                if (mapped != newValue.uppercase() && newValue.isNotBlank()) {
-                    showConvertedHint = true
-                    convertedCode = mapped
-                } else {
-                    showConvertedHint = false
-                }
-            },
-            onFocusLost = {
-                if (textValue.isNotBlank()) {
-                    // 失去焦点时应用别名映射
-                    val mapped = StageAliasMapper.mapToStageCode(textValue, stageCodes)
-                    textValue = mapped
-                    onValueChange(mapped)
-                    showConvertedHint = false
-                }
-            },
-            label = label,
-            placeholder = placeholder,
-            singleLine = true,
-            supportingText = if (showConvertedHint) {
-                { Text(stringResource(R.string.panel_fight_converted_prefix, convertedCode), color = MaterialTheme.colorScheme.primary) }
-            } else null
-        )
     }
 }
 

@@ -90,6 +90,7 @@ fun TaskProfileEditorView(
     val activeProfileId by viewModel.chainState.activeProfileId.collectAsStateWithLifecycle()
     val activeProfile = profiles.find { it.id == activeProfileId }
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
+    val clientType = remember(nodes) { viewModel.chainState.getClientType() }
 
     var showDetail by rememberSaveable { mutableStateOf(false) }
     var showTaskPicker by rememberSaveable { mutableStateOf(false) }
@@ -302,6 +303,7 @@ fun TaskProfileEditorView(
                         isProfileMode = false,
                         profiles = profiles,
                         activeProfileId = activeProfileId,
+                        clientType = clientType,
                         onConfigChange = { config ->
                             selectedNode?.id?.let { viewModel.onNodeConfigChange(it, config) }
                         },

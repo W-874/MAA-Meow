@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
+import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
@@ -114,8 +115,11 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
 @Composable
 private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
     val taskChainState: TaskChainState = koinInject()
+    val activityManager: ActivityManager = koinInject()
     val chain by taskChainState.chain.collectAsStateWithLifecycle()
-    val creditFightAvailability = remember(chain) { resolveMallCreditFightAvailability(chain) }
+    val creditFightAvailability = remember(chain, activityManager) {
+        resolveMallCreditFightAvailability(chain, activityManager)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SegmentedSettingsGroup {

@@ -692,6 +692,8 @@
     <string name="panel_task_type_mission">领取奖励</string>
     <string name="panel_task_type_auto_roguelike">自动肉鸽</string>
     <string name="panel_task_type_reclamation">生息演算</string>
+    <string name="panel_task_type_user_data_update">更新数据</string>
+    <string name="panel_task_type_depot_maintain">库存保持</string>
 
     <!-- panel: profile -->
     <string name="panel_profile_title">配置管理</string>
@@ -712,6 +714,8 @@
     <string name="panel_task_summary_award">已启用 %1$d 项领取任务</string>
     <string name="panel_task_summary_roguelike">%1$s 主题</string>
     <string name="panel_task_summary_reclamation">%1$s 主题</string>
+    <string name="panel_task_summary_user_data_update">更新 %1$d 项数据</string>
+    <string name="panel_task_summary_depot_maintain">%1$d 个保持计划</string>
     <string name="panel_task_list_drag_hint">长按任务并拖动调整顺序，点击任务修改设置</string>
     <string name="task_type_wake_up_description">启动游戏、切换客户端或登录账号</string>
     <string name="task_type_recruiting_description">自动识别并处理公开招募</string>
@@ -721,6 +725,8 @@
     <string name="task_type_mission_description">领取任务、邮件及活动奖励</string>
     <string name="task_type_auto_roguelike_description">按指定策略运行集成战略</string>
     <string name="task_type_reclamation_description">自动运行生息演算任务</string>
+    <string name="task_type_user_data_update_description">按设定周期更新干员与仓库数据</string>
+    <string name="task_type_depot_maintain_description">按优先级将材料补充至目标库存</string>
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
 
@@ -833,6 +839,8 @@
     <string name="panel_fight_series_title">代理倍率</string>
     <string name="panel_fight_series_tip">• AUTO:\n自动识别关卡最大代理倍率, 保持最大代理倍率且使用理智药后理智不溢出\n\n• 数值 (1~6):\n按设定倍率执行代理\n若当前理智不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 则无法进入战斗\n或者\n战斗次数不足完成设定倍率 (如仅够 5 次 but 设为 6 倍), 也将无法进入战斗\n\n• 不切换:\n不调整游戏内代理倍率设定</string>
     <string name="panel_fight_series_no_switch">不切换</string>
+    <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
+    <string name="panel_fight_series_locked_tip">游戏更新后暂未适配，请手动在游戏内设置代理倍率</string>
     <string name="panel_fight_stage_reset_current">当前/上次</string>
     <string name="panel_fight_stage_reset_ignore">不切换</string>
     <string name="panel_fight_stage_reset_title">未开放活动关卡重置为</string>
@@ -1059,9 +1067,35 @@
     <string name="panel_fight_specified_drops_stage_tip">该选项不会自动计算最优关卡，请手动选择关卡</string>
     <string name="panel_fight_material">材料</string>
     <string name="panel_fight_target_count">目标数量</string>
+    <string name="panel_fight_drops_mode_quantity">数量</string>
+    <string name="panel_fight_drops_mode_target_inventory">目标库存</string>
+    <string name="panel_fight_target_inventory">目标库存</string>
+    <string name="panel_fight_target_inventory_tip">会参考「小工具-仓库识别」保存的库存数据，只补到设定库存为止。库存数据是缓存值，手动刷关、合成或消耗材料后可能与实际不一致；运行时会根据掉落实时更新库存，前序任务刷出的材料会影响后续任务的缺口计算。</string>
     <string name="panel_fight_resource_collection_open_tip">· 资源收集活动进行中（资源本全开放）</string>
     <string name="panel_fight_today_stage_hint_title">今日关卡小提示（%1$s）</string>
     <string name="panel_fight_today_stage_summary">%1$d 条开放关卡与活动提示</string>
+
+    <!-- panel: toolbox sync / user data update -->
+    <string name="panel_toolbox_last_sync">上次同步：%1$s</string>
+    <string name="panel_toolbox_never_synced">尚未同步</string>
+    <string name="panel_userdata_update_oper_box">干员识别</string>
+    <string name="panel_userdata_update_depot">仓库识别</string>
+    <string name="panel_userdata_trigger_interval">触发间隔</string>
+    <string name="panel_userdata_interval_every_time">每次</string>
+    <string name="panel_userdata_interval_daily">每天</string>
+    <string name="panel_userdata_interval_weekly">每周</string>
+
+    <!-- panel: depot maintain -->
+    <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
+    <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；本次的缺口仍按识别前的库存计算</string>
+    <string name="panel_depot_skip_during_activity">活动期间跳过</string>
+    <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
+    <string name="panel_depot_add_plan">添加</string>
+    <string name="panel_depot_collapse_all">折叠</string>
+    <string name="panel_depot_target_inventory">目标库存</string>
+    <string name="panel_depot_stone_count">最多使用 N 个源石</string>
+    <string name="panel_depot_not_selected">未选择</string>
+    <string name="panel_depot_remove_plan">删除此计划</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">高级选项</string>
@@ -1607,6 +1641,8 @@
     <string name="task_type_mission">领取奖励</string>
     <string name="task_type_auto_roguelike">自动肉鸽</string>
     <string name="task_type_reclamation">生息演算</string>
+    <string name="task_type_user_data_update">更新数据</string>
+    <string name="task_type_depot_maintain">库存保持</string>
 
     <!-- i18n: announcement -->
     <string name="announcement_title">重要公告</string>
@@ -1895,6 +1931,16 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">开始执行任务，共 %1$d 项</string>
     <string name="runlog_task_started">任务开始运行</string>
+    <!-- TODO: MaaCore 适配代理倍率 7~10 后删除 -->
+    <string name="runlog_series_locked">游戏更新后暂未适配代理倍率，已使用「不切换」，请手动在游戏内设置</string>
+    <string name="runlog_depot_plan_invalid_drop">计划 %1$d：未指定掉落物。</string>
+    <string name="runlog_depot_plan_zero_count">计划 %1$d：目标库存为 0。</string>
+    <string name="runlog_depot_plan_no_stage">计划 %1$d：关卡未指定或为「当前/上次」。</string>
+    <string name="runlog_depot_plan_stage_not_open">计划 %1$d：关卡「%2$s」未开放。</string>
+    <string name="runlog_depot_plan_inventory_enough">计划 %1$s：%2$s 库存已充足（当前 %3$d / 目标 %4$d）。</string>
+    <string name="runlog_depot_set_params_failed">计划 %1$s：更新任务参数失败，将按原参数执行。</string>
+    <string name="runlog_depot_skipped_activity">当前有活动进行中，已跳过库存保持。</string>
+    <string name="runlog_depot_skipped_resource">当前处于资源收集限时全天开放期间，已跳过库存保持。</string>
     <string name="runlog_copilot_start">开始执行自动战斗</string>
     <string name="runlog_copilot_started">自动战斗开始运行</string>
     <string name="runlog_service_connecting">服务正在启动中，请稍后再试</string>

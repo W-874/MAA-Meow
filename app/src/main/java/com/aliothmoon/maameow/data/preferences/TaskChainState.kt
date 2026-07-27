@@ -27,8 +27,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -73,6 +76,14 @@ class TaskChainState(
 
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
+
+    /**
+     * 配置档被删除事件（携带 profileId）。
+     * 供 DepotRepository 等按 profileId 分片存储的组件清理数据；
+     * 用单向事件流而非直接调用，避免与本类形成循环依赖。
+     */
+    private val _profileDeleted = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val profileDeleted: SharedFlow<String> = _profileDeleted.asSharedFlow()
 
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
     private var pendingConfigPersistence: Job? = null
@@ -455,6 +466,7 @@ class TaskChainState(
         _activeProfileId.value = newActiveId
         _profiles.value = remaining
         persistProfiles(remaining, newActiveId)
+        _profileDeleted.tryEmit(profileId)
         Timber.d("Deleted profile: %s", profileId)
     }
 
@@ -596,7 +608,7 @@ class TaskChainState(
     }
 
     private fun buildDefaultChain(): List<TaskChainNode> {
-        return TaskTypeInfo.entries.mapIndexed { index, info ->
+        return TaskTypeInfo.entries.filter { it.inDefaultChain }.mapIndexed { index, info ->
             TaskChainNode(
                 name = defaultTaskName(info),
                 enabled = false,
