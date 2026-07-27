@@ -4,30 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
-import com.aliothmoon.maameow.theme.MaaThemeAlphas
 
 /**
  * 带可展开提示的复选框
@@ -50,32 +39,21 @@ fun CheckBoxWithExpandableTip(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    var tipExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = modifier
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            CheckBoxWithLabel(
+    SettingRow(
+        title = label,
+        description = tipText,
+        modifier = modifier,
+        icon = null,
+        enabled = enabled,
+        onClick = { if (enabled) onCheckedChange(!checked) },
+        trailing = {
+            ExpressiveSwitch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                label = label,
-                enabled = enabled
+                enabled = enabled,
             )
-            ExpandableTipIcon(
-                expanded = tipExpanded,
-                onExpandedChange = { tipExpanded = it }
-            )
-        }
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = tipText
-        )
-    }
+        },
+    )
 }
 
 /**
@@ -97,33 +75,21 @@ fun CheckBoxWithLabel(
     enabled: Boolean = true,
     subtitle: String? = null
 ) {
-    Row(
+    SettingRow(
+        title = label,
+        description = subtitle,
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface 
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = MaaThemeAlphas.DISABLED)
+        icon = null,
+        enabled = enabled,
+        onClick = { if (enabled) onCheckedChange(!checked) },
+        trailing = {
+            ExpressiveSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled,
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
+        },
+    )
 }
 
 

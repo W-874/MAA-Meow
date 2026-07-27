@@ -36,6 +36,7 @@ import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
+import com.aliothmoon.maameow.presentation.view.background.TaskProfileEditorView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementView
 import com.aliothmoon.maameow.presentation.view.settings.AboutView
@@ -175,6 +176,12 @@ fun AppNavigation(
                 }
                 composable(Routes.ERROR_LOG) {
                     ErrorLogView(navController = navController)
+                }
+                composable(Routes.TASK_PROFILE_EDITOR) {
+                    TaskProfileEditorView(
+                        navController = navController,
+                        viewModel = backgroundTaskViewModel,
+                    )
                 }
                 composable(Routes.SCHEDULE_EDIT) { backStackEntry ->
                     val strategyId = backStackEntry.arguments?.getString("strategyId")

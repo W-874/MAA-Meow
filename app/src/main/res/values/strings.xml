@@ -482,6 +482,17 @@
 
     <!-- panel: profile management -->
     <string name="panel_new_profile">新建配置</string>
+    <string name="panel_profile_selector_title">长草配置</string>
+    <string name="panel_profile_selector_description">选择执行配置，或进入编辑页面调整任务内容</string>
+    <string name="panel_profile_active">当前使用</string>
+    <string name="panel_profile_task_count">%1$d 个任务，%2$d 个已启用</string>
+    <string name="panel_profile_edit_tasks">编辑配置</string>
+    <string name="panel_profile_editor_title">编辑长草配置</string>
+    <string name="panel_profile_editor_named_title">编辑 %1$s</string>
+    <string name="panel_profile_task_list">任务顺序</string>
+    <string name="panel_task_list_edit_order">编辑顺序</string>
+    <string name="panel_task_list_view_hint">点击任务调整执行参数和详细设置</string>
+    <string name="panel_task_list_edit_hint">长按任务并拖动以调整执行顺序</string>
 
     <!-- panel: auto battle (Copilot) -->
     <string name="panel_autobattle_read_set">读取作业集</string>
@@ -686,6 +697,30 @@
     <string name="panel_profile_title">配置管理</string>
     <string name="panel_profile_delete_title">确认删除</string>
     <string name="panel_profile_delete_message">确定要删除配置「%1$s」吗？此操作不可撤销。</string>
+    <string name="panel_profile_delete_action">删除配置</string>
+    <string name="panel_profile_rename_title">重命名配置</string>
+    <string name="panel_profile_name_label">配置名称</string>
+    <string name="panel_task_rename_title">重命名任务</string>
+    <string name="panel_task_delete_title">删除任务</string>
+    <string name="panel_task_delete_message">确定要删除任务「%1$s」吗？此操作不可撤销。</string>
+    <string name="panel_task_summary_wakeup">%1$s 客户端</string>
+    <string name="panel_task_summary_recruit">最多处理 %1$d 次招募</string>
+    <string name="panel_task_summary_infrast">%1$s 模式</string>
+    <string name="panel_task_summary_fight_limited">最多作战 %1$d 次</string>
+    <string name="panel_task_summary_fight_unlimited">不限作战次数</string>
+    <string name="panel_task_summary_mall">已启用 %1$d 项信用任务</string>
+    <string name="panel_task_summary_award">已启用 %1$d 项领取任务</string>
+    <string name="panel_task_summary_roguelike">%1$s 主题</string>
+    <string name="panel_task_summary_reclamation">%1$s 主题</string>
+    <string name="panel_task_list_drag_hint">长按任务并拖动调整顺序，点击任务修改设置</string>
+    <string name="task_type_wake_up_description">启动游戏、切换客户端或登录账号</string>
+    <string name="task_type_recruiting_description">自动识别并处理公开招募</string>
+    <string name="task_type_base_description">自动完成基建设施换班</string>
+    <string name="task_type_combat_description">选择关卡并设置理智消耗策略</string>
+    <string name="task_type_mall_description">访问好友并购买信用商店物品</string>
+    <string name="task_type_mission_description">领取任务、邮件及活动奖励</string>
+    <string name="task_type_auto_roguelike_description">按指定策略运行集成战略</string>
+    <string name="task_type_reclamation_description">自动运行生息演算任务</string>
     <string name="panel_profile_copy_id">复制 Profile ID</string>
     <string name="panel_profile_id_copied">已复制 Profile ID</string>
 
@@ -757,7 +792,7 @@
     <string name="panel_mall_credit_fight_unavailable">当前存在无法解析有效关卡的理智作战任务，本次不会借助战打一把 OF-1。</string>
     <string name="panel_mall_credit_fight_notice">借助战需要好友支援，确保好友列表有可用支援干员</string>
     <string name="panel_mall_priority_title">优先购买物品</string>
-    <string name="panel_mall_priority_reorder_tip">拖动调整购买优先级，越靠上优先级越高</string>
+    <string name="panel_mall_priority_reorder_tip">点击 × 删除，长按拖动调整购买优先级</string>
     <string name="panel_mall_priority_mode_active">当前处于排序模式，长按列表项可调整优先级，完成后点击勾选按钮退出</string>
     <string name="panel_mall_priority_mode_inactive">开启排序模式可调整优先级顺序，点击×删除</string>
     <string name="panel_mall_enable_shopping_first">请先启用「购买信用商店物品」功能</string>
@@ -766,7 +801,7 @@
     <string name="panel_mall_info_line_blacklist">* 黑名单物品不会被购买（除非信用溢出且启用强制购买）</string>
     <string name="panel_mall_info_line_credit_fight">* 借助战每日可获得额外信用点，但需要消耗好友支援次数</string>
     <string name="panel_mall_blacklist_title">黑名单（不购买）</string>
-    <string name="panel_mall_blacklist_tip">黑名单中的物品不会被购买（除非启用「溢出时无视黑名单」）</string>
+    <string name="panel_mall_blacklist_tip">点击 × 删除，长按拖动调整顺序；黑名单物品默认不会购买</string>
     <string name="panel_mall_blacklist_delete_hint">点击×删除物品</string>
     <string name="panel_mall_blacklist_empty">暂无黑名单物品</string>
     <string name="panel_mall_add_blacklist">添加黑名单</string>
@@ -869,7 +904,8 @@
     <string name="panel_infrast_dorm_threshold_title">宿舍心情阈值</string>
     <string name="panel_infrast_dorm_threshold_tip">若启用自定义换班，该字段仅针对 autofill 和使用工员编组的房间有效</string>
     <string name="panel_infrast_facilities_title">基建设施</string>
-    <string name="panel_infrast_facilities_tip">勾选需要换班的设施\n设施顺序代表换班优先级</string>
+    <string name="panel_infrast_facilities_tip_fixed">点击选择需要进入的设施，长按拖动调整执行顺序</string>
+    <string name="panel_infrast_facilities_tip">选择任务执行时需要进入处理的设施</string>
     <string name="panel_infrast_room_mfg">制造站</string>
     <string name="panel_infrast_room_trade">贸易站</string>
     <string name="panel_infrast_room_control">控制中心</string>
@@ -1025,6 +1061,7 @@
     <string name="panel_fight_target_count">目标数量</string>
     <string name="panel_fight_resource_collection_open_tip">· 资源收集活动进行中（资源本全开放）</string>
     <string name="panel_fight_today_stage_hint_title">今日关卡小提示（%1$s）</string>
+    <string name="panel_fight_today_stage_summary">%1$d 条开放关卡与活动提示</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">高级选项</string>
@@ -1059,6 +1096,12 @@
     <string name="panel_recruit_choose_level3">自动确认 3 星</string>
     <string name="panel_recruit_choose_level4">自动确认 4 星</string>
     <string name="panel_recruit_choose_level5">自动确认 5 星</string>
+    <string name="panel_recruit_duration_title">确认时长</string>
+    <string name="panel_recruit_duration_value">%1$d 小时 %2$02d 分钟</string>
+    <string name="panel_recruit_duration_picker_title">设置确认时长</string>
+    <string name="panel_recruit_duration_picker_desc">最长 9 小时，分钟以 5 分钟为单位调整</string>
+    <string name="panel_recruit_duration_hours">小时</string>
+    <string name="panel_recruit_duration_minutes">分钟</string>
 
     <!-- panel: reclamation -->
     <string name="panel_reclamation_theme">主题</string>
@@ -1090,6 +1133,7 @@
     <string name="panel_reclamation_mode_no_save">无存档（进出关卡刷点数）</string>
     <string name="panel_reclamation_mode_with_save">有存档（组装道具刷点数）</string>
     <string name="panel_reclamation_relaunch_anchor_stage">关卡</string>
+    <string name="panel_reclamation_stage_instructions">执行说明</string>
     <string name="panel_reclamation_mode_ra1">RA-1</string>
     <string name="panel_reclamation_mode_ra4">RA-4</string>
     <string name="panel_reclamation_mode_ra15">RA-15</string>
@@ -1134,6 +1178,7 @@
     <string name="panel_roguelike_mizuki_settings">水月专用设置</string>
     <string name="panel_roguelike_refresh_trader_with_dice">刷新商店（指路鳞）</string>
     <string name="panel_roguelike_sami_settings">萨米专用设置</string>
+    <string name="panel_roguelike_jiegarden_settings">界园专用设置</string>
     <string name="panel_roguelike_first_floor_foldartal">凹第一层远见密文板，不进行作战</string>
     <string name="panel_roguelike_foldartal_placeholder">密文板名称</string>
     <string name="panel_roguelike_new_squad_foldartal">生活队凹开局密文板</string>

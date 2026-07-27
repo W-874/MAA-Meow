@@ -278,6 +278,17 @@
 
     <!-- panel: profile management -->
     <string name="panel_new_profile">New Profile</string>
+    <string name="panel_profile_selector_title">Routine Profiles</string>
+    <string name="panel_profile_selector_description">Choose a profile or edit its task sequence</string>
+    <string name="panel_profile_active">Active</string>
+    <string name="panel_profile_task_count">%1$d tasks, %2$d enabled</string>
+    <string name="panel_profile_edit_tasks">Edit profile</string>
+    <string name="panel_profile_editor_title">Edit Routine Profile</string>
+    <string name="panel_profile_editor_named_title">Edit %1$s</string>
+    <string name="panel_profile_task_list">Task order</string>
+    <string name="panel_task_list_edit_order">Edit order</string>
+    <string name="panel_task_list_view_hint">Tap a task to adjust its parameters and settings</string>
+    <string name="panel_task_list_edit_hint">Long-press and drag tasks to change their order</string>
 
     <!-- panel: auto battle (Copilot) -->
     <string name="panel_autobattle_read_set">Load Copilot Set</string>
@@ -631,6 +642,30 @@
     <string name="panel_profile_title">Profile Management</string>
     <string name="panel_profile_delete_title">Confirm Delete</string>
     <string name="panel_profile_delete_message">Delete profile \"%1$s\"? This action cannot be undone.</string>
+    <string name="panel_profile_delete_action">Delete profile</string>
+    <string name="panel_profile_rename_title">Rename profile</string>
+    <string name="panel_profile_name_label">Profile name</string>
+    <string name="panel_task_rename_title">Rename task</string>
+    <string name="panel_task_delete_title">Delete task</string>
+    <string name="panel_task_delete_message">Delete task \"%1$s\"? This action cannot be undone.</string>
+    <string name="panel_task_summary_wakeup">%1$s client</string>
+    <string name="panel_task_summary_recruit">Up to %1$d recruitments</string>
+    <string name="panel_task_summary_infrast">%1$s mode</string>
+    <string name="panel_task_summary_fight_limited">Up to %1$d battles</string>
+    <string name="panel_task_summary_fight_unlimited">No battle limit</string>
+    <string name="panel_task_summary_mall">%1$d credit tasks enabled</string>
+    <string name="panel_task_summary_award">%1$d reward tasks enabled</string>
+    <string name="panel_task_summary_roguelike">%1$s theme</string>
+    <string name="panel_task_summary_reclamation">%1$s theme</string>
+    <string name="panel_task_list_drag_hint">Long-press and drag a task to reorder; tap to configure it</string>
+    <string name="task_type_wake_up_description">Launch the game, choose a client, or switch accounts</string>
+    <string name="task_type_recruiting_description">Recognize and process public recruitment</string>
+    <string name="task_type_base_description">Automate infrastructure shift changes</string>
+    <string name="task_type_combat_description">Choose stages and configure sanity usage</string>
+    <string name="task_type_mall_description">Visit friends and purchase credit store items</string>
+    <string name="task_type_mission_description">Collect missions, mail, and event rewards</string>
+    <string name="task_type_auto_roguelike_description">Run Integrated Strategies with a selected plan</string>
+    <string name="task_type_reclamation_description">Automate Reclamation Algorithm tasks</string>
     <string name="panel_profile_copy_id">Copy Profile ID</string>
     <string name="panel_profile_id_copied">Profile ID copied</string>
 
@@ -702,7 +737,7 @@
     <string name="panel_mall_credit_fight_unavailable">No valid combat stage could be resolved from the current combat task. Support OF-1 will be skipped this time.</string>
     <string name="panel_mall_credit_fight_notice">Support combat requires an available support unit in your friend list.</string>
     <string name="panel_mall_priority_title">Priority Items</string>
-    <string name="panel_mall_priority_reorder_tip">Drag to adjust purchase priority. Items closer to the top are bought first.</string>
+    <string name="panel_mall_priority_reorder_tip">Tap × to remove; long-press and drag to change purchase priority.</string>
     <string name="panel_mall_priority_mode_active">Reorder mode is enabled. Long-press list items to change priority, then tap the check button to exit.</string>
     <string name="panel_mall_priority_mode_inactive">Enable reorder mode to change priority order. Tap × to remove an item.</string>
     <string name="panel_mall_enable_shopping_first">Please enable \"Credit shopping\" first.</string>
@@ -711,7 +746,7 @@
     <string name="panel_mall_info_line_blacklist">* Blacklisted items will not be purchased unless overflow purchase is enabled.</string>
     <string name="panel_mall_info_line_credit_fight">* Support combat grants extra daily credits, but consumes friend support chances.</string>
     <string name="panel_mall_blacklist_title">Blacklist (Do not buy)</string>
-    <string name="panel_mall_blacklist_tip">Blacklisted items will not be purchased unless \"Ignore blacklist if credits overflow\" is enabled.</string>
+    <string name="panel_mall_blacklist_tip">Tap × to remove; long-press and drag to reorder. Blacklisted items are not purchased by default.</string>
     <string name="panel_mall_blacklist_delete_hint">Tap × to remove an item.</string>
     <string name="panel_mall_blacklist_empty">No blacklisted items yet</string>
     <string name="panel_mall_add_blacklist">Add Blacklist Item</string>
@@ -814,7 +849,8 @@
     <string name="panel_infrast_dorm_threshold_title">Dorm Mood Threshold</string>
     <string name="panel_infrast_dorm_threshold_tip">When custom shift switching is enabled, this field only applies to autofill and rooms that use worker groups.</string>
     <string name="panel_infrast_facilities_title">Facilities</string>
-    <string name="panel_infrast_facilities_tip">Check the facilities that should be swapped.\nThe order of facilities represents shift priority.</string>
+    <string name="panel_infrast_facilities_tip_fixed">Tap to select facilities; long-press and drag to change execution order</string>
+    <string name="panel_infrast_facilities_tip">Choose which facilities the task should visit and process.</string>
     <string name="panel_infrast_room_mfg">Factory</string>
     <string name="panel_infrast_room_trade">Trading Post</string>
     <string name="panel_infrast_room_control">Control Center</string>
@@ -970,6 +1006,7 @@
     <string name="panel_fight_target_count">Target Amount</string>
     <string name="panel_fight_resource_collection_open_tip">· Resource collection event is active (all resource stages are open)</string>
     <string name="panel_fight_today_stage_hint_title">Today\'s stage tips (%1$s)</string>
+    <string name="panel_fight_today_stage_summary">%1$d stage and event tip(s)</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_advanced_options">Advanced Options</string>
@@ -1004,6 +1041,12 @@
     <string name="panel_recruit_choose_level3">Auto confirm 3★</string>
     <string name="panel_recruit_choose_level4">Auto confirm 4★</string>
     <string name="panel_recruit_choose_level5">Auto confirm 5★</string>
+    <string name="panel_recruit_duration_title">Confirmation duration</string>
+    <string name="panel_recruit_duration_value">%1$d h %2$02d min</string>
+    <string name="panel_recruit_duration_picker_title">Set confirmation duration</string>
+    <string name="panel_recruit_duration_picker_desc">Up to 9 hours, adjustable in 5-minute increments</string>
+    <string name="panel_recruit_duration_hours">Hours</string>
+    <string name="panel_recruit_duration_minutes">Minutes</string>
 
     <!-- panel: reclamation -->
     <string name="panel_reclamation_theme">Theme</string>
@@ -1035,6 +1078,7 @@
     <string name="panel_reclamation_mode_no_save">No save (farm prosperity by entering and exiting stages)</string>
     <string name="panel_reclamation_mode_with_save">Existing save (farm prosperity by crafting props)</string>
     <string name="panel_reclamation_relaunch_anchor_stage">Stage</string>
+    <string name="panel_reclamation_stage_instructions">Execution guide</string>
     <string name="panel_reclamation_mode_ra1">RA-1</string>
     <string name="panel_reclamation_mode_ra4">RA-4</string>
     <string name="panel_reclamation_mode_ra15">RA-15</string>
@@ -1079,6 +1123,7 @@
     <string name="panel_roguelike_mizuki_settings">Mizuki-Specific Settings</string>
     <string name="panel_roguelike_refresh_trader_with_dice">Refresh Rogue Trader with Dice</string>
     <string name="panel_roguelike_sami_settings">Sami-Specific Settings</string>
+    <string name="panel_roguelike_jiegarden_settings">JieGarden-Specific Settings</string>
     <string name="panel_roguelike_first_floor_foldartal">Repeat for foldartal foreseed first floor, No Battle</string>
     <string name="panel_roguelike_foldartal_placeholder">Foldartal name</string>
     <string name="panel_roguelike_new_squad_foldartal">Start with ｢Life Prioritizing Squad｣ and acquire the cypherboard</string>

@@ -2,20 +2,29 @@ package com.aliothmoon.maameow.presentation.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +83,7 @@ fun SettingRow(
     )
     val shapes = ListItemDefaults.shapes(
         shape = shape,
-        pressedShape = RoundedCornerShape(16.dp),
+        pressedShape = shape,
         selectedShape = shape,
         focusedShape = shape,
         hoveredShape = shape,
@@ -161,7 +170,12 @@ fun <T> SettingDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
+            DropdownMenuGroup(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                shapes = MenuDefaults.groupShapes(),
+            ) {
                 options.forEachIndexed { index, option ->
                     DropdownMenuItem(
                         selected = option == selected,
@@ -195,7 +209,12 @@ fun <T> SettingDropdown(
                 }
             }
         } else {
-            null
+            {
+                Icon(
+                    imageVector = Icons.Rounded.ArrowDropDown,
+                    contentDescription = null,
+                )
+            }
         },
         headlineOverlay = {
             if (!singleLine) {
@@ -212,8 +231,10 @@ fun ExpressiveSwitch(
     checked: Boolean,
     enabled: Boolean = true,
     onCheckedChange: ((Boolean) -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     Switch(
+        modifier = modifier,
         checked = checked,
         enabled = enabled,
         onCheckedChange = onCheckedChange,
@@ -227,6 +248,48 @@ fun ExpressiveSwitch(
                 contentDescription = null,
                 modifier = Modifier.size(SwitchDefaults.IconSize),
             )
+        },
+    )
+}
+
+@Composable
+fun NumberStepperSettingRow(
+    title: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    range: IntRange,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = Icons.Rounded.Settings,
+    enabled: Boolean = true,
+    step: Int = 1,
+) {
+    SettingRow(
+        title = title,
+        description = description,
+        modifier = modifier,
+        icon = icon,
+        enabled = enabled,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    enabled = enabled && value > range.first,
+                    onClick = { onValueChange((value - step).coerceIn(range)) },
+                ) {
+                    Icon(Icons.Rounded.Remove, contentDescription = null)
+                }
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.widthIn(min = 28.dp),
+                )
+                IconButton(
+                    enabled = enabled && value < range.last,
+                    onClick = { onValueChange((value + step).coerceIn(range)) },
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null)
+                }
+            }
         },
     )
 }

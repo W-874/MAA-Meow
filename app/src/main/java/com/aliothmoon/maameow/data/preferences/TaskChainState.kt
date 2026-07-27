@@ -53,7 +53,8 @@ class TaskChainState(
         private val PROFILES_KEY = stringPreferencesKey("profiles")
         private val ACTIVE_PROFILE_KEY = stringPreferencesKey("active_profile_id")
 
-        private const val PROFILE_NAME_PREFIX = "配置-"
+        private const val PROFILE_NAME_PREFIX = "长草配置-"
+        private const val LEGACY_PROFILE_NAME_PREFIX = "配置-"
         private const val MAX_PROFILES = 10
         private const val MAX_PROFILE_NAME_LENGTH = 20
     }
@@ -80,14 +81,30 @@ class TaskChainState(
             if (profilesJson != null) {
                 // 已有 Profile 数据
                 val loadedProfiles = decodeProfiles(profilesJson)
-                val activeId = prefs[ACTIVE_PROFILE_KEY] ?: loadedProfiles.firstOrNull()?.id ?: ""
-                _profiles.value = loadedProfiles
+                val migratedProfiles = loadedProfiles.map { profile ->
+                    val legacyNumber = profile.name
+                        .takeIf { it.startsWith(LEGACY_PROFILE_NAME_PREFIX) }
+                        ?.removePrefix(LEGACY_PROFILE_NAME_PREFIX)
+                        ?.toIntOrNull()
+                    if (legacyNumber != null) {
+                        profile.copy(name = "$PROFILE_NAME_PREFIX$legacyNumber")
+                    } else {
+                        profile
+                    }
+                }
+                val activeId = prefs[ACTIVE_PROFILE_KEY]
+                    ?: migratedProfiles.firstOrNull()?.id
+                    ?: ""
+                _profiles.value = migratedProfiles
                 _activeProfileId.value = activeId
-                val activeProfile = loadedProfiles.find { it.id == activeId }
-                    ?: loadedProfiles.firstOrNull()
+                val activeProfile = migratedProfiles.find { it.id == activeId }
+                    ?: migratedProfiles.firstOrNull()
                 if (activeProfile != null) {
                     _activeProfileId.value = activeProfile.id
                     _chain.value = activeProfile.chain
+                }
+                if (migratedProfiles != loadedProfiles && activeProfile != null) {
+                    persistProfiles(migratedProfiles, activeProfile.id)
                 }
             } else {
                 // 迁移: 旧版数据无 profiles key, 将现有 chain 包装为单个 Profile

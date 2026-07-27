@@ -351,6 +351,38 @@ class BackgroundTaskViewModel(
         Timber.d("Adding task mode toggled: %s", _state.value.isAddingTask)
     }
 
+    fun onStartAddingTask() {
+        _state.update {
+            it.copy(
+                selectedNodeId = null,
+                isAddingTask = true,
+                isEditMode = true,
+                isProfileMode = false,
+            )
+        }
+    }
+
+    fun onDismissTaskEditorDetail() {
+        _state.update {
+            it.copy(
+                selectedNodeId = null,
+                isAddingTask = false,
+                isProfileMode = false,
+            )
+        }
+    }
+
+    fun onCloseTaskEditor() {
+        _state.update {
+            it.copy(
+                selectedNodeId = null,
+                isAddingTask = false,
+                isEditMode = false,
+                isProfileMode = false,
+            )
+        }
+    }
+
     fun onAddNode(typeInfo: TaskTypeInfo) {
         viewModelScope.launch {
             val nodeId = chainState.addNode(typeInfo)
@@ -359,11 +391,15 @@ class BackgroundTaskViewModel(
     }
 
     fun onRemoveNode(nodeId: String) {
+        _state.update {
+            it.copy(
+                selectedNodeId = if (it.selectedNodeId == nodeId) null else it.selectedNodeId,
+                isEditMode = false,
+                isAddingTask = false,
+            )
+        }
         viewModelScope.launch {
             chainState.removeNode(nodeId)
-            if (_state.value.selectedNodeId == nodeId) {
-                _state.update { it.copy(selectedNodeId = null) }
-            }
         }
     }
 

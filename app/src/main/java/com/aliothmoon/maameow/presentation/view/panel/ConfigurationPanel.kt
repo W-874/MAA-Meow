@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -232,41 +233,34 @@ private fun HintItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text
 
 @Composable
 private fun TaskGalleryView(onAddNode: (TaskTypeInfo) -> Unit) {
-    Column(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = Modifier
             .fillMaxSize()
-            .padding(12.dp)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
-        Text(
-            stringResource(R.string.panel_config_select_type),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 12.dp)
-        ) {
-            items(TaskTypeInfo.entries) { typeInfo ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.clickable { onAddNode(typeInfo) }) {
-                    Box(
-                        modifier = Modifier.padding(12.dp), contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = taskTypeLabel(typeInfo),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+        items(TaskTypeInfo.entries) { typeInfo ->
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .heightIn(min = 84.dp)
+                    .clickable { onAddNode(typeInfo) },
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = taskTypeLabel(typeInfo),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }
@@ -294,7 +288,7 @@ private fun TaskManagementView(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(4.dp)
+                shape = MaterialTheme.shapes.large,
             ) {
                 Text(
                     text = stringResource(R.string.panel_config_editing_badge),
@@ -326,7 +320,7 @@ private fun TaskManagementView(
                 }
             },
             label = stringResource(R.string.panel_config_task_name_label),
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(),
             supportingText = {
                 if (isError) {
@@ -354,7 +348,7 @@ private fun TaskManagementView(
         OutlinedButton(
             onClick = onDuplicate,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(4.dp)
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(
                 Icons.Default.ContentCopy,
@@ -374,7 +368,7 @@ private fun TaskManagementView(
                 contentColor = MaterialTheme.colorScheme.error
             ),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
-            shape = RoundedCornerShape(4.dp)
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -388,7 +382,7 @@ private fun taskTypeInfoForConfig(config: TaskParamProvider): TaskTypeInfo? {
 }
 
 @Composable
-private fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
+internal fun taskTypeLabel(typeInfo: TaskTypeInfo): String {
     return when (typeInfo) {
         TaskTypeInfo.WAKE_UP -> stringResource(R.string.panel_task_type_wake_up)
         TaskTypeInfo.RECRUITING -> stringResource(R.string.panel_task_type_recruiting)

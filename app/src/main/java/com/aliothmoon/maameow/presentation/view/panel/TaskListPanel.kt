@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Card
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import sh.calvin.reorderable.ReorderableColumn
 
 /**
@@ -65,9 +68,16 @@ fun TaskListPanel(
     onToggleAddingTask: () -> Unit,
     onToggleProfileMode: () -> Unit,
     showManagementActions: Boolean = true,
+    useIntrinsicWidth: Boolean = true,
+    expressiveStyle: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.width(IntrinsicSize.Max)) {
+    val widthModifier = if (useIntrinsicWidth) {
+        Modifier.width(IntrinsicSize.Max)
+    } else {
+        Modifier.fillMaxWidth()
+    }
+    Column(modifier = modifier.then(widthModifier)) {
         if (showManagementActions) {
         // 配置选择按钮 - 在编辑任务按钮上方
         Card(
@@ -187,20 +197,23 @@ fun TaskListPanel(
             list = nodes,
             onSettle = { fromIndex, toIndex -> onNodeMove(fromIndex, toIndex) },
             modifier = Modifier
-                .width(IntrinsicSize.Max)
+                .then(widthModifier)
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) { _, node, _ ->
+            verticalArrangement = Arrangement.spacedBy(if (expressiveStyle) 2.dp else 6.dp)
+        ) { index, node, _ ->
             key(node.id) {
                 ReorderableItem {
                     TaskNodeRow(
                         node = node,
                         isSelected = selectedNodeId == node.id,
                         isEditMode = isEditMode,
+                        expressiveStyle = expressiveStyle,
+                        itemIndex = index,
+                        itemCount = nodes.size,
                         onEnabledChange = { enabled -> onNodeEnabledChange(node.id, enabled) },
                         onSelected = { onNodeSelected(node.id) },
-                        modifier = Modifier.longPressDraggableHandle()
+                        modifier = Modifier.longPressDraggableHandle(),
                     )
                 }
             }
@@ -213,16 +226,45 @@ private fun TaskNodeRow(
     node: TaskChainNode,
     isSelected: Boolean,
     isEditMode: Boolean,
+    expressiveStyle: Boolean,
+    itemIndex: Int,
+    itemCount: Int,
     onEnabledChange: (Boolean) -> Unit,
     onSelected: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
+    val itemShape = if (expressiveStyle) {
+        when {
+            itemCount <= 1 -> RoundedCornerShape(16.dp)
+            itemIndex == 0 -> RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = 5.dp,
+                bottomEnd = 5.dp,
+            )
+            itemIndex == itemCount - 1 -> RoundedCornerShape(
+                topStart = 5.dp,
+                topEnd = 5.dp,
+                bottomStart = 16.dp,
+                bottomEnd = 16.dp,
+            )
+            else -> RoundedCornerShape(5.dp)
+        }
+    } else {
+        RoundedCornerShape(4.dp)
+    }
     Card(
         modifier = modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(4.dp),
+        shape = itemShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else if (expressiveStyle) {
+                MaterialTheme.colorScheme.surfaceBright
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
         ),
         border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
     ) {
@@ -230,28 +272,74 @@ private fun TaskNodeRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onSelected() }
-                .padding(horizontal = 4.dp, vertical = 6.dp),
+                .padding(
+                    horizontal = if (expressiveStyle) 14.dp else 4.dp,
+                    vertical = if (expressiveStyle) 11.dp else 6.dp,
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 在编辑模式下也可以保留勾选框，或者隐藏以展示纯粹的排序视图
-            // 这里根据用户反馈“保持清爽”，我们依然显示勾选框以便快速切换状态，但调整间距
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                Checkbox(
+            if (expressiveStyle) {
+                Icon(
+                    imageVector = taskConfigIcon(node.config),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = node.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = taskConfigSummary(node.config),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.76f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                ExpressiveSwitch(
                     checked = node.enabled,
                     onCheckedChange = onEnabledChange,
-                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    Checkbox(
+                        checked = node.enabled,
+                        onCheckedChange = onEnabledChange,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = node.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = if (isEditMode) Icons.Default.DragHandle else Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
                 )
             }
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = node.name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
         }
     }
 }

@@ -22,15 +22,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -79,33 +80,14 @@ fun ProfileManagementPanel(
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // 顶部标题 + 新建按钮
-        Row(
+        FilledTonalButton(
+            onClick = onCreate,
+            enabled = profiles.size < 10,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.panel_profile_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedButton(
-                onClick = onCreate,
-                enabled = profiles.size < 10,
-                shape = RoundedCornerShape(4.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-            ) {
-                Text(
-                    text = stringResource(R.string.panel_new_profile),
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1
-                )
-            }
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.panel_new_profile))
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -119,7 +101,7 @@ fun ProfileManagementPanel(
         LazyColumn(
             state = lazyListState,
             modifier = Modifier.fillMaxWidth().weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             itemsIndexed(profiles, key = { _, item -> item.id }) { _, profile ->
                 ReorderableItem(reorderableState, key = profile.id) { isDragging ->
@@ -198,12 +180,12 @@ private fun ProfileCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSwitch() },
-        shape = RoundedCornerShape(4.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = if (isActive) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
+                MaterialTheme.colorScheme.surfaceContainer
             }
         ),
         border = if (isActive) {
@@ -220,20 +202,20 @@ private fun ProfileCard(
             Row(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = isActive,
                     onClick = onSwitch,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(36.dp)
                 )
 
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
                     text = profile.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     color = if (isActive) {
                         MaterialTheme.colorScheme.onPrimaryContainer
@@ -248,35 +230,35 @@ private fun ProfileCard(
                 // 操作按钮
                 IconButton(
                     onClick = onStartRename,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = stringResource(R.string.common_rename),
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(19.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(
                     onClick = onDuplicate,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         Icons.Default.ContentCopy,
                         contentDescription = stringResource(R.string.common_copy),
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(19.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(
                     onClick = onDelete,
                     enabled = canDelete,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(R.string.common_delete),
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(19.dp),
                         tint = if (canDelete) {
                             MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                         } else {
@@ -295,9 +277,9 @@ private fun ProfileCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .padding(bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ITextField(
@@ -307,10 +289,10 @@ private fun ProfileCard(
                             },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(16.dp),
                             onImeAction = onRenameConfirm
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         TextButton(onClick = onRenameConfirm) {
                             Text(stringResource(R.string.common_confirm), style = MaterialTheme.typography.labelMedium)
                         }

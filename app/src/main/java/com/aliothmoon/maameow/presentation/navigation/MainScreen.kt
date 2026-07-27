@@ -1,6 +1,6 @@
 package com.aliothmoon.maameow.presentation.navigation
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -40,6 +43,7 @@ fun MainScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val scope = rememberCoroutineScope()
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
@@ -58,8 +62,13 @@ fun MainScreen(
     }
 
     // 非首页 Tab 按返回键先回到首页；全屏由 BackgroundTaskView 自行处理。
-    BackHandler(enabled = visible && !fullscreen && pagerState.targetPage != 0) {
-        goToPage(0)
+    PredictiveBackHandler(enabled = visible && !fullscreen && pagerState.targetPage != 0) { events ->
+        try {
+            events.collect { event -> predictiveBackProgress = event.progress }
+            goToPage(0)
+        } finally {
+            predictiveBackProgress = 0f
+        }
     }
 
     // 定时任务触发时：若正处于子页面，先弹回主 Tab 浮出主界面，再滑到后台任务页
@@ -73,7 +82,12 @@ fun MainScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            translationX = size.width * predictiveBackProgress * 0.12f
+            val predictiveScale = 1f - predictiveBackProgress * 0.015f
+            scaleX = predictiveScale
+            scaleY = predictiveScale
+        },
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         bottomBar = {
             if (visible && !fullscreen) {
@@ -105,6 +119,7 @@ fun MainScreen(
                         onViewAnnouncement = onViewAnnouncement,
                     )
                     BottomNavTab.BACKGROUND -> BackgroundTaskView(
+                        navController = navController,
                         viewModel = backgroundTaskViewModel,
                     )
 

@@ -12,7 +12,8 @@ import androidx.compose.animation.slideOutHorizontally
 
 object MaaAnimations {
 
-    private const val PAGE_DURATION = 380
+    private const val PAGE_DURATION = 240
+    private const val FADE_DURATION = 140
 
     /**
      * Ease-out cubic bezier (0.32, 0.72, 0.0, 1.0): fast start, smooth settle.
@@ -25,17 +26,17 @@ object MaaAnimations {
             initialOffsetX = offsetX,
             animationSpec = tween(PAGE_DURATION, easing = springEasing)
         ) +
-                fadeIn(animationSpec = tween(PAGE_DURATION, easing = LinearEasing))
+                fadeIn(animationSpec = tween(FADE_DURATION, easing = LinearEasing))
 
     private fun slideExit(offsetX: (Int) -> Int): ExitTransition =
         slideOutHorizontally(
             targetOffsetX = offsetX,
             animationSpec = tween(PAGE_DURATION, easing = springEasing)
         ) +
-                fadeOut(animationSpec = tween(PAGE_DURATION, easing = LinearEasing))
+                fadeOut(animationSpec = tween(FADE_DURATION, easing = LinearEasing))
 
-    val sharedAxisForwardEnter: EnterTransition = slideEnter { fullWidth -> fullWidth }
-    val sharedAxisForwardExit: ExitTransition = slideExit { fullWidth -> -fullWidth / 2 }
-    val sharedAxisPopEnter: EnterTransition = slideEnter { fullWidth -> -fullWidth / 2 }
-    val sharedAxisPopExit: ExitTransition = slideExit { fullWidth -> fullWidth }
+    val sharedAxisForwardEnter: EnterTransition = slideEnter { fullWidth -> fullWidth / 5 }
+    val sharedAxisForwardExit: ExitTransition = slideExit { fullWidth -> -fullWidth / 12 }
+    val sharedAxisPopEnter: EnterTransition = slideEnter { fullWidth -> -fullWidth / 12 }
+    val sharedAxisPopExit: ExitTransition = slideExit { fullWidth -> fullWidth / 5 }
 }
