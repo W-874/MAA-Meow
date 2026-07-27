@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - refactor/background-task-layout
   pull_request:
     branches:
       - main
