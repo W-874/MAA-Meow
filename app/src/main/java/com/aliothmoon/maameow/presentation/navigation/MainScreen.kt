@@ -2,7 +2,6 @@ package com.aliothmoon.maameow.presentation.navigation
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -15,10 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
@@ -42,6 +41,7 @@ fun MainScreen(
     fullscreen: Boolean = false,
 ) {
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
+    val tabStateHolder = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
 
@@ -81,6 +81,8 @@ fun MainScreen(
         }
     }
 
+    if (!visible) return
+
     Scaffold(
         modifier = modifier.graphicsLayer {
             translationX = size.width * predictiveBackProgress * 0.12f
@@ -90,7 +92,7 @@ fun MainScreen(
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         bottomBar = {
-            if (visible && !fullscreen) {
+            if (!fullscreen) {
                 AppBottomNavigation(
                     currentRoute = BottomNavTab.all[pagerState.targetPage].route,
                     onTabSelected = { tab -> goToPage(BottomNavTab.all.indexOf(tab)) },
@@ -98,21 +100,16 @@ fun MainScreen(
             }
         },
     ) { paddingValues ->
-        Box(
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = paddingValues.calculateBottomPadding())
-                .graphicsLayer {
-                    // 隐藏时跳过绘制但保留组合树，避免 HorizontalPager 状态丢失
-                    alpha = if (visible) 1f else 0f
-                },
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                key = { BottomNavTab.all[it].route },
-                userScrollEnabled = visible && !fullscreen,
-            ) { page ->
+                .padding(bottom = paddingValues.calculateBottomPadding()),
+            key = { BottomNavTab.all[it].route },
+            userScrollEnabled = !fullscreen,
+        ) { page ->
+            val tab = BottomNavTab.all[page]
+            tabStateHolder.SaveableStateProvider(tab.route) {
                 when (BottomNavTab.all[page]) {
                     BottomNavTab.HOME -> HomeView(
                         navController = navController,
@@ -126,20 +123,6 @@ fun MainScreen(
                     BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
                     BottomNavTab.SETTINGS -> SettingsView(navController = navController)
                 }
-            }
-
-            // 隐藏（子页面叠加其上）时吞掉所有指针，防止横滑切走主 Tab / 点击穿透到底层页。
-            if (!visible) {
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    awaitPointerEvent().changes.forEach { it.consume() }
-                                }
-                            }
-                        })
             }
         }
     }

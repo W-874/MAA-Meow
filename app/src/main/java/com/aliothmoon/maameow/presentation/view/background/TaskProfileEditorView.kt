@@ -1,12 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.background
 
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +45,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -101,8 +97,20 @@ fun TaskProfileEditorView(
     var showDeleteTask by rememberSaveable { mutableStateOf(false) }
     var renameValue by rememberSaveable { mutableStateOf("") }
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    var hasRenderedPage by remember { mutableStateOf(false) }
 
     val detailVisible = showDetail && selectedNode != null
+    val pageEnterProgress = remember(detailVisible) {
+        Animatable(if (hasRenderedPage) 1f else 0f)
+    }
+
+    LaunchedEffect(detailVisible) {
+        hasRenderedPage = true
+        pageEnterProgress.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 220),
+        )
+    }
 
     fun closeDetail() {
         viewModel.onDismissTaskEditorDetail()
@@ -261,27 +269,7 @@ fun TaskProfileEditorView(
             )
         },
     ) { paddingValues ->
-        AnimatedContent(
-            targetState = detailVisible,
-            transitionSpec = {
-                val transform = if (targetState) {
-                    (slideInHorizontally(tween(220)) { width -> width / 5 } + fadeIn(tween(140)))
-                        .togetherWith(
-                            slideOutHorizontally(tween(180)) { width -> -width / 12 } +
-                                    fadeOut(tween(120)),
-                        )
-                } else {
-                    (slideInHorizontally(tween(220)) { width -> -width / 12 } + fadeIn(tween(140)))
-                        .togetherWith(
-                            slideOutHorizontally(tween(180)) { width -> width / 5 } +
-                                    fadeOut(tween(120)),
-                        )
-                }
-                transform.using(null)
-            },
-            label = "taskProfileDetail",
-        ) { showingDetail ->
-        if (showingDetail) {
+        if (detailVisible) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -292,8 +280,11 @@ fun TaskProfileEditorView(
                         vertical = MaaDesignTokens.Spacing.sm,
                     )
                     .graphicsLayer {
-                        translationX = size.width * predictiveBackProgress
-                        alpha = 1f - predictiveBackProgress * 0.15f
+                        translationX = size.width * (
+                            pageEnterProgress.value * 0.2f + predictiveBackProgress
+                        )
+                        alpha = (1f - pageEnterProgress.value * 0.2f) *
+                            (1f - predictiveBackProgress * 0.15f)
                     },
             ) {
                 TaskConfigPanel(
@@ -329,7 +320,11 @@ fun TaskProfileEditorView(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .navigationBarsPadding()
-                    .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal),
+                    .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal)
+                    .graphicsLayer {
+                        translationX = -size.width * pageEnterProgress.value / 12f
+                        alpha = 1f - pageEnterProgress.value * 0.2f
+                    },
             ) {
                 Spacer(modifier = Modifier.height(MaaDesignTokens.Spacing.sm))
 
@@ -394,7 +389,6 @@ fun TaskProfileEditorView(
                 }
                 Spacer(modifier = Modifier.height(MaaDesignTokens.Spacing.sm))
             }
-        }
         }
     }
 

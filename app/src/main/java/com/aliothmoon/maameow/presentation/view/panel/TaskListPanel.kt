@@ -17,9 +17,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
@@ -37,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
-import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
  * 左侧任务列表（支持模式切换、拖拽排序、勾选、新增任务入口）
@@ -77,6 +78,12 @@ fun TaskListPanel(
     } else {
         Modifier.fillMaxWidth()
     }
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(
+        lazyListState = lazyListState,
+        onMove = { from, to -> onNodeMove(from.index, to.index) },
+    )
+
     Column(modifier = modifier.then(widthModifier)) {
         if (showManagementActions) {
         // 配置选择按钮 - 在编辑任务按钮上方
@@ -193,17 +200,18 @@ fun TaskListPanel(
         Spacer(modifier = Modifier.height(8.dp))
         }
 
-        ReorderableColumn(
-            list = nodes,
-            onSettle = { fromIndex, toIndex -> onNodeMove(fromIndex, toIndex) },
+        LazyColumn(
+            state = lazyListState,
             modifier = Modifier
                 .then(widthModifier)
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+                .weight(1f),
             verticalArrangement = Arrangement.spacedBy(if (expressiveStyle) 2.dp else 6.dp)
-        ) { index, node, _ ->
-            key(node.id) {
-                ReorderableItem {
+        ) {
+            itemsIndexed(
+                items = nodes,
+                key = { _, node -> node.id },
+            ) { index, node ->
+                ReorderableItem(reorderableState, key = node.id) {
                     TaskNodeRow(
                         node = node,
                         isSelected = selectedNodeId == node.id,

@@ -134,26 +134,10 @@ fun SettingsView(
     permissionManager: PermissionManager = koinInject(),
 ) {
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
-    val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-    val isGrantingPermission by permissionManager.isGranting.collectAsStateWithLifecycle()
-    val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
-    val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
-    val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
-    val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
-    val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
-    val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
-    val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
-    val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
-    val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
-    val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
-    val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
-    val language by viewModel.language.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -412,7 +396,7 @@ fun SettingsView(
                 top = paddingValues.calculateTopPadding() + MaaDesignTokens.Spacing.sm,
                 bottom = paddingValues.calculateBottomPadding() + 16.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap)
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap),
         ) {
             // 更新管理
             item {
@@ -426,7 +410,9 @@ fun SettingsView(
                     ) {
                         showReInitConfirm = true
                     } }
-                    item { SettingSwitchItem(
+                    item {
+                        val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_check_update_title),
                         description = stringResource(R.string.settings_auto_check_update_desc),
                         contentColor = contentColor,
@@ -434,7 +420,10 @@ fun SettingsView(
                         icon = Icons.Rounded.Update,
                         onCheckedChange = { viewModel.setAutoCheckUpdate(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val autoDownloadUpdate by viewModel.autoDownloadUpdate.collectAsStateWithLifecycle()
+                        val autoCheckUpdate by viewModel.autoCheckUpdate.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_auto_download_update_title),
                         description = stringResource(R.string.settings_auto_download_update_desc),
                         contentColor = contentColor,
@@ -443,7 +432,9 @@ fun SettingsView(
                         icon = Icons.Rounded.Download,
                         onCheckedChange = { viewModel.setAutoDownloadUpdate(it) }
                     ) }
-                    item { SettingChannelItem(
+                    item {
+                        val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
+                        SettingChannelItem(
                         contentColor = contentColor,
                         selectedChannel = updateChannel,
                         onChannelSelected = { viewModel.setUpdateChannel(it) }
@@ -464,7 +455,9 @@ fun SettingsView(
                     ) {
                         navController.navigate("log_history")
                     } }
-                    item { SettingSwitchItem(
+                    item {
+                        val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_debug_mode_title),
                         description = stringResource(R.string.settings_debug_mode_desc),
                         contentColor = contentColor,
@@ -485,16 +478,22 @@ fun SettingsView(
             item {
                 SectionHeader(stringResource(R.string.settings_section_display))
                 SegmentedSettingsGroup {
-                    item { SettingLanguageItem(
+                    item {
+                        val language by viewModel.language.collectAsStateWithLifecycle()
+                        SettingLanguageItem(
                         contentColor = contentColor,
                         selectedLanguage = language,
                         onLanguageSelected = { viewModel.setLanguage(it) }
                     ) }
-                    item { SettingThemeModeItem(
+                    item {
+                        val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+                        SettingThemeModeItem(
                         selectedMode = themeMode,
                         onModeSelected = { viewModel.setThemeMode(it) },
                     ) }
-                    item { FontSizeSetting(
+                    item {
+                        val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
+                        FontSizeSetting(
                         contentColor = contentColor,
                         fontSizeScale = fontSizeScale,
                         onFontSizeScaleChanged = { viewModel.setFontSizeScale(it) },
@@ -507,6 +506,8 @@ fun SettingsView(
                 SectionHeader(stringResource(R.string.home_permission_section))
                 SegmentedSettingsGroup {
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
+                        val isGrantingPermission by permissionManager.isGranting.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
                             granted = permissionState.remoteAccessGranted,
@@ -535,6 +536,7 @@ fun SettingsView(
                         )
                     }
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = stringResource(R.string.home_permission_overlay),
                             granted = permissionState.overlay,
@@ -545,6 +547,7 @@ fun SettingsView(
                         )
                     }
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = stringResource(R.string.home_permission_storage),
                             granted = permissionState.storage,
@@ -555,6 +558,7 @@ fun SettingsView(
                         )
                     }
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = stringResource(R.string.home_permission_battery),
                             granted = permissionState.batteryWhitelist,
@@ -566,6 +570,7 @@ fun SettingsView(
                         )
                     }
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = stringResource(R.string.home_permission_accessibility),
                             granted = permissionState.accessibility,
@@ -588,6 +593,7 @@ fun SettingsView(
                         )
                     }
                     item {
+                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
                         PermissionStatusRow(
                             title = stringResource(R.string.home_permission_notification),
                             granted = permissionState.notification,
@@ -647,12 +653,16 @@ fun SettingsView(
                                 } }
                         }
                     }
-                    item { SettingBackgroundResolutionItem(
+                    item {
+                        val backgroundResolution by viewModel.backgroundResolution.collectAsStateWithLifecycle()
+                        SettingBackgroundResolutionItem(
                         contentColor = contentColor,
                         selectedPreference = backgroundResolution,
                         onPreferenceSelected = { viewModel.setBackgroundResolution(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val skipShizukuCheck by viewModel.skipShizukuCheck.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_skip_shizuku_check),
                         contentColor = contentColor,
                         checked = skipShizukuCheck,
@@ -660,7 +670,9 @@ fun SettingsView(
                         icon = Icons.Rounded.Security,
                         onCheckedChange = { viewModel.setSkipShizukuCheck(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val deploymentWithPause by viewModel.deploymentWithPause.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_deployment_with_pause),
                         description = stringResource(R.string.settings_deployment_with_pause_tip),
                         contentColor = contentColor,
@@ -668,21 +680,27 @@ fun SettingsView(
                         icon = Icons.Rounded.Build,
                         onCheckedChange = { viewModel.setDeploymentWithPause(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val forceFullscreenOnVirtualDisplay by viewModel.forceFullscreenOnVirtualDisplay.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_force_fullscreen_on_virtual_display),
                         contentColor = contentColor,
                         checked = forceFullscreenOnVirtualDisplay,
                         icon = Icons.Rounded.AspectRatio,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_allow_foreground_scheduled_task),
                         contentColor = contentColor,
                         checked = allowForegroundScheduledTask,
                         icon = Icons.Rounded.Schedule,
                         onCheckedChange = { viewModel.setAllowForegroundScheduledTask(it) }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        val runScheduleWhenLocked by viewModel.runScheduleWhenLocked.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_run_schedule_when_locked),
                         contentColor = contentColor,
                         checked = runScheduleWhenLocked,
@@ -695,7 +713,8 @@ fun SettingsView(
                             }
                         }
                     ) }
-                    item { SettingSwitchItem(
+                    item {
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_tasks_override_title),
                         description = stringResource(R.string.settings_tasks_override_desc),
                         contentColor = contentColor,
@@ -765,7 +784,9 @@ fun SettingsView(
                     ) {
                         navController.navigate(Routes.ACHIEVEMENT)
                     } }
-                    item { SettingSwitchItem(
+                    item {
+                        val showAchievementSnackbar by viewModel.showAchievementSnackbar.collectAsStateWithLifecycle()
+                        SettingSwitchItem(
                         title = stringResource(R.string.settings_achievement_snackbar_title),
                         description = stringResource(R.string.settings_achievement_snackbar_desc),
                         contentColor = contentColor,

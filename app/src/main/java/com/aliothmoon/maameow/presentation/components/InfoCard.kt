@@ -76,6 +76,23 @@ class SegmentedSettingsScope internal constructor() {
     }
 }
 
+private fun segmentedItemShape(index: Int, lastIndex: Int) = when {
+    lastIndex == 0 -> RoundedCornerShape(16.dp)
+    index == 0 -> RoundedCornerShape(
+        topStart = 16.dp,
+        topEnd = 16.dp,
+        bottomStart = 5.dp,
+        bottomEnd = 5.dp,
+    )
+    index == lastIndex -> RoundedCornerShape(
+        topStart = 5.dp,
+        topEnd = 5.dp,
+        bottomStart = 16.dp,
+        bottomEnd = 16.dp,
+    )
+    else -> RoundedCornerShape(5.dp)
+}
+
 @Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun SegmentedSettingsGroup(
@@ -89,22 +106,7 @@ fun SegmentedSettingsGroup(
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
         items.forEachIndexed { index, itemContent ->
-            val shape = when {
-                items.size == 1 -> RoundedCornerShape(16.dp)
-                index == 0 -> RoundedCornerShape(
-                    topStart = 16.dp,
-                    topEnd = 16.dp,
-                    bottomStart = 5.dp,
-                    bottomEnd = 5.dp,
-                )
-                index == items.lastIndex -> RoundedCornerShape(
-                    topStart = 5.dp,
-                    topEnd = 5.dp,
-                    bottomStart = 16.dp,
-                    bottomEnd = 16.dp,
-                )
-                else -> RoundedCornerShape(5.dp)
-            }
+            val shape = segmentedItemShape(index, items.lastIndex)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = shape,
