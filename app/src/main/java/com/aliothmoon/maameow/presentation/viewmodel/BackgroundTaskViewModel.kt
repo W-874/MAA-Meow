@@ -419,9 +419,7 @@ class BackgroundTaskViewModel(
     }
 
     fun onNodeConfigChange(nodeId: String, config: TaskParamProvider) {
-        viewModelScope.launch {
-            chainState.updateNodeConfig(nodeId, config)
-        }
+        chainState.updateNodeConfigFromUi(nodeId, config)
     }
 
     // ==================== UI State ====================

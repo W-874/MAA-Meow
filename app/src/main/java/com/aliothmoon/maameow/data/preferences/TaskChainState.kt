@@ -23,7 +23,9 @@ import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocaleBootstrap.resolveSelectedLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +59,7 @@ class TaskChainState(
         private const val LEGACY_PROFILE_NAME_PREFIX = "配置-"
         private const val MAX_PROFILES = 10
         private const val MAX_PROFILE_NAME_LENGTH = 20
+        private const val CONFIG_PERSIST_DEBOUNCE_MS = 200L
     }
 
     private val _chain = MutableStateFlow(buildDefaultChain())
@@ -72,6 +75,7 @@ class TaskChainState(
     val isLoaded: StateFlow<Boolean> = _isLoaded.asStateFlow()
 
     private val _lastUsedClientType = MutableStateFlow<String?>(null)
+    private var pendingConfigPersistence: Job? = null
 
     init {
         scope.launch {
@@ -231,6 +235,37 @@ class TaskChainState(
         }
     }
 
+    /**
+     * Publishes interactive editor changes immediately while coalescing disk writes. Sliders can
+     * emit dozens of values per second; serializing every intermediate profile blocks slower
+     * devices without adding useful durability.
+     */
+    fun updateNodeConfigFromUi(nodeId: String, config: TaskParamProvider) {
+        val current = _chain.value
+        val index = current.indexOfFirst { it.id == nodeId }
+        if (index < 0) {
+            Timber.w("updateNodeConfigFromUi: node %s not found", nodeId)
+            return
+        }
+        if (current[index].config == config) return
+
+        val snapshot = current.toMutableList().apply {
+            this[index] = this[index].copy(config = config)
+        }.toList()
+        val updatedProfiles = _profiles.value.map { profile ->
+            if (profile.id == _activeProfileId.value) profile.copy(chain = snapshot) else profile
+        }
+
+        _chain.value = snapshot
+        _profiles.value = updatedProfiles
+
+        pendingConfigPersistence?.cancel()
+        pendingConfigPersistence = scope.launch {
+            delay(CONFIG_PERSIST_DEBOUNCE_MS)
+            persistChainSnapshot(snapshot, updatedProfiles)
+        }
+    }
+
 
     suspend fun resetRecruitConfigUseExpedited() {
         updateChain { current ->
@@ -354,6 +389,7 @@ class TaskChainState(
             Timber.w("switchProfile: profile %s not found", profileId)
             return
         }
+        cancelPendingConfigPersistence()
         // 保存当前链到旧 Profile
         val updatedProfiles = currentProfiles.map { p ->
             if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
@@ -373,6 +409,7 @@ class TaskChainState(
             Timber.w("createProfile: max profiles (%d) reached", MAX_PROFILES)
             return null
         }
+        cancelPendingConfigPersistence()
         // 先保存当前活跃 Profile 的链
         val savedProfiles = currentProfiles.map { p ->
             if (p.id == _activeProfileId.value) p.copy(chain = _chain.value) else p
@@ -406,6 +443,7 @@ class TaskChainState(
             Timber.w("deleteProfile: profile %s not found", profileId)
             return
         }
+        cancelPendingConfigPersistence()
         // 若删除的是活跃 Profile,切换到列表第一个
         val newActiveId = if (_activeProfileId.value == profileId) {
             val first = remaining.first()
@@ -426,6 +464,7 @@ class TaskChainState(
             Timber.w("renameProfile: invalid name length: %d", trimmed.length)
             return
         }
+        cancelPendingConfigPersistence()
         val currentProfiles = _profiles.value
         val updatedProfiles = currentProfiles.map { p ->
             if (p.id == profileId) p.copy(name = trimmed) else p
@@ -449,6 +488,7 @@ class TaskChainState(
             Timber.w("duplicateProfile: profile %s not found", profileId)
             return null
         }
+        cancelPendingConfigPersistence()
         // 复制链时为每个节点生成新 ID
         val duplicatedChain = source.chain.map { it.copy(id = UUID.randomUUID().toString()) }
         val newProfile = TaskProfile(
@@ -472,6 +512,7 @@ class TaskChainState(
             return
         }
         if (fromIndex == toIndex) return
+        cancelPendingConfigPersistence()
 
         // 顺便把当前未保存的链快照写回 active profile, 避免重排时丢失正在编辑的内容
         val savedProfiles = current.map { p ->
@@ -490,6 +531,7 @@ class TaskChainState(
     private suspend inline fun updateChain(
         crossinline block: (MutableList<TaskChainNode>) -> Unit
     ) {
+        cancelPendingConfigPersistence()
         val current = _chain.value.toMutableList()
         block(current)
         reindex(current)
@@ -500,10 +542,22 @@ class TaskChainState(
             if (p.id == _activeProfileId.value) p.copy(chain = snapshot) else p
         }
         _profiles.value = updatedProfiles
-        context.store.edit { prefs ->        // 异步持久化
-            prefs[CHAIN_KEY] = json.encodeToString<List<TaskChainNode>>(snapshot)
-            prefs[PROFILES_KEY] = json.encodeToString<List<TaskProfile>>(updatedProfiles)
+        persistChainSnapshot(snapshot, updatedProfiles)
+    }
+
+    private suspend fun persistChainSnapshot(
+        chain: List<TaskChainNode>,
+        profiles: List<TaskProfile>,
+    ) {
+        context.store.edit { prefs ->
+            prefs[CHAIN_KEY] = json.encodeToString<List<TaskChainNode>>(chain)
+            prefs[PROFILES_KEY] = json.encodeToString<List<TaskProfile>>(profiles)
         }
+    }
+
+    private fun cancelPendingConfigPersistence() {
+        pendingConfigPersistence?.cancel()
+        pendingConfigPersistence = null
     }
 
     private fun decodeChain(raw: String?): List<TaskChainNode> {
@@ -565,6 +619,7 @@ class TaskChainState(
     suspend fun importProfiles(profiles: List<TaskProfile>, activeId: String) {
         val resolvedActiveId = profiles.find { it.id == activeId }?.id
             ?: profiles.firstOrNull()?.id ?: return
+        cancelPendingConfigPersistence()
         val activeChain = profiles.find { it.id == resolvedActiveId }?.chain ?: buildDefaultChain()
         _profiles.value = profiles
         _activeProfileId.value = resolvedActiveId

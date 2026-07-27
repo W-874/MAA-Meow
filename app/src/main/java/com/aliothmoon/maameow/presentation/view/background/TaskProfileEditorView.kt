@@ -263,7 +263,7 @@ fun TaskProfileEditorView(
         AnimatedContent(
             targetState = detailVisible,
             transitionSpec = {
-                if (targetState) {
+                val transform = if (targetState) {
                     (slideInHorizontally(tween(220)) { width -> width / 5 } + fadeIn(tween(140)))
                         .togetherWith(
                             slideOutHorizontally(tween(180)) { width -> -width / 12 } +
@@ -276,6 +276,7 @@ fun TaskProfileEditorView(
                                     fadeOut(tween(120)),
                         )
                 }
+                transform.using(null)
             },
             label = "taskProfileDetail",
         ) { showingDetail ->
