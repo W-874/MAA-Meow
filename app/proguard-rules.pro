@@ -19,3 +19,20 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# bridge.cpp resolves these classes and methods by their original JNI names.
+-keep class com.aliothmoon.maameow.bridge.NativeBridgeLib { *; }
+-keep class com.aliothmoon.maameow.maa.DriverClass { *; }
+
+# JNA maps Java method names directly to exported MaaCore symbols.
+-dontwarn java.awt.**
+-keep class com.sun.jna.** { *; }
+-keep interface com.aliothmoon.maameow.maa.MaaCoreLibrary { *; }
+-keep interface com.aliothmoon.maameow.maa.AsstApiCallback { *; }
+
+# Shizuku and liblauncher instantiate these entry points outside the app's
+# normal call graph. Keep constructors/main methods that R8 cannot observe.
+-keep class com.aliothmoon.maameow.remote.RemoteServiceImpl { *; }
+-keep class com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl { *; }
+-keep class com.aliothmoon.maameow.root.RootServiceStarter { *; }
+-keep class com.aliothmoon.maameow.root.RootUserService { *; }
