@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.overlay.OverlayController
+import com.aliothmoon.maameow.maa.task.visibleTaskCount
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.panel.FloatingPanelState
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
@@ -283,7 +284,7 @@ class ExpandedControlPanelViewModel(
             val message = application.formatStartResult(result)
             if (result is MaaCompositionService.StartResult.Success) {
                 achievementReporter.reportTaskStarted(
-                    taskCount = plan.params.size,
+                    taskCount = plan.params.visibleTaskCount(),
                     launchesGame = plan.launchesGame,
                     gameAliveBeforeStart = plan.gameAliveBeforeStart,
                 )

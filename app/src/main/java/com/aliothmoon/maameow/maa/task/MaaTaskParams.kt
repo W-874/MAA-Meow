@@ -17,3 +17,10 @@ data class MaaTaskParams(
     val nodeId: String? = null,
     val dropTarget: DropTarget? = null,
 )
+
+/** Count user-visible configuration items instead of expanded MaaCore tasks. */
+fun List<MaaTaskParams>.visibleTaskCount(): Int {
+    return mapIndexed { index, task ->
+        task.nodeId?.let { "node:$it" } ?: "task:$index"
+    }.distinct().size
+}

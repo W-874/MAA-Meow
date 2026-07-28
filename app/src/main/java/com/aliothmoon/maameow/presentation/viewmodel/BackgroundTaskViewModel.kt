@@ -22,6 +22,7 @@ import com.aliothmoon.maameow.domain.usecase.TaskStartContext
 import com.aliothmoon.maameow.domain.usecase.TaskStartDecision
 import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.aliothmoon.maameow.maa.task.visibleTaskCount
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
 import com.aliothmoon.maameow.presentation.state.PreviewTouchMarker
 import com.aliothmoon.maameow.presentation.state.UiEffect
@@ -514,7 +515,7 @@ class BackgroundTaskViewModel(
         }
         if (result is MaaCompositionService.StartResult.Success) {
             achievementReporter.reportTaskStarted(
-                taskCount = plan.params.size,
+                taskCount = plan.params.visibleTaskCount(),
                 launchesGame = plan.launchesGame,
                 gameAliveBeforeStart = plan.gameAliveBeforeStart,
             )

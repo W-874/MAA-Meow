@@ -25,6 +25,7 @@ import com.aliothmoon.maameow.maa.callback.SubTaskHandler
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.ToolboxResultCollector
 import com.aliothmoon.maameow.maa.task.MaaTaskParams
+import com.aliothmoon.maameow.maa.task.visibleTaskCount
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
@@ -210,7 +211,7 @@ class MaaCompositionService(
         tasks = tasks,
         clientType = clientType,
         isScheduled = isScheduled,
-        startMessage = context.getString(R.string.runlog_task_start, tasks.size),
+        startMessage = context.getString(R.string.runlog_task_start, tasks.visibleTaskCount()),
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
         expectDoubleSync = expectDoubleSync,

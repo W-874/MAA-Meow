@@ -21,6 +21,7 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.TaskRunInfo
 import com.aliothmoon.maameow.maa.callback.TaskRunStatus
+import com.aliothmoon.maameow.maa.callback.groupByVisibleTask
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -61,6 +62,9 @@ class TaskExecutionService : Service() {
             "Reclamation" to R.string.maa_reclamation,
             "Custom" to R.string.maa_custom,
             "CloseDown" to R.string.maa_close_down,
+            "StartUp" to R.string.maa_start_up,
+            "Depot" to R.string.maa_depot,
+            "OperBox" to R.string.maa_oper_box,
         )
 
         fun start(context: Context) {
@@ -303,7 +307,7 @@ class TaskExecutionService : Service() {
 
     private fun buildProgressInfo(snapshot: TaskNotificationSnapshot): TaskProgressInfo {
         // IDLE/ERROR 分支仅用于 onCreate fast-fail 时构建初始通知的兜底。
-        val tasks = snapshot.tasks
+        val tasks = snapshot.tasks.groupByVisibleTask()
         val total = tasks.size
         if (total == 0) {
             return TaskProgressInfo(

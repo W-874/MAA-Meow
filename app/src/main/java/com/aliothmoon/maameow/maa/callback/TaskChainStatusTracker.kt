@@ -25,6 +25,27 @@ data class TaskRunInfo(
 )
 
 /**
+ * Aggregate MaaCore tasks by the configuration item visible to the user.
+ * Container items can expand into several Core tasks but still count as one item.
+ */
+internal fun List<TaskRunInfo>.groupByVisibleTask(): List<TaskRunInfo> {
+    return groupBy { info -> info.nodeId?.let { "node:$it" } ?: "task:${info.taskId}" }
+        .values
+        .map { group ->
+            val status = when {
+                group.any { it.status == TaskRunStatus.ERROR } -> TaskRunStatus.ERROR
+                group.all { it.status == TaskRunStatus.COMPLETED } -> TaskRunStatus.COMPLETED
+                group.any { it.status == TaskRunStatus.IN_PROGRESS } ||
+                    group.any { it.status == TaskRunStatus.COMPLETED } -> TaskRunStatus.IN_PROGRESS
+                else -> TaskRunStatus.PENDING
+            }
+            val representative = group.firstOrNull { it.status == TaskRunStatus.IN_PROGRESS }
+                ?: group.first()
+            representative.copy(status = status)
+        }
+}
+
+/**
  * 跟踪每条任务链的运行状态（taskId → status）。
  *
  * - 任务 append 时 [register] 注册为 PENDING
