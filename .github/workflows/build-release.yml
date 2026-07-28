@@ -1,6 +1,9 @@
 name: Build Release APK
 
 on:
+  push:
+    tags:
+      - 'build-*'
   workflow_dispatch:
     inputs:
       maa_repo:
