@@ -214,7 +214,6 @@ dependencies {
     implementation(libs.fastjson2)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
-    implementation(libs.libsu)
     implementation(libs.device.compat)
     implementation(libs.xx.permissions)
     implementation(libs.floatingx)

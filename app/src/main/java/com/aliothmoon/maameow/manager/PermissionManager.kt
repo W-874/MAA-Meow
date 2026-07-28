@@ -77,8 +77,6 @@ class PermissionManager(
             PermissionState(
                 shizukuAvailable = remoteState.shizukuAvailable,
                 shizuku = remoteState.shizukuGranted,
-                root = remoteState.rootGranted,
-                rootAvailable = remoteState.rootAvailable,
                 startupBackend = remoteState.configuredBackend,
                 overlay = checkOverlay(),
                 storage = checkStorage(),
@@ -94,8 +92,6 @@ class PermissionManager(
             _state.value.copy(
                 shizukuAvailable = remoteState.shizukuAvailable,
                 shizuku = remoteState.shizukuGranted,
-                root = remoteState.rootGranted,
-                rootAvailable = remoteState.rootAvailable,
                 startupBackend = remoteState.configuredBackend
             )
         )
@@ -184,12 +180,6 @@ class PermissionManager(
         }
 
         val granted = RemoteAccessCoordinator.request(RemoteBackend.SHIZUKU)
-        refresh()
-        return granted
-    }
-
-    suspend fun requestRoot(): Boolean {
-        val granted = RemoteAccessCoordinator.request(RemoteBackend.ROOT)
         refresh()
         return granted
     }

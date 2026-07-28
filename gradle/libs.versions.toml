@@ -33,7 +33,6 @@ window = "1.5.1"
 jna = "5.18.1"
 fastjson2 = "2.0.62"
 shizuku = "13.1.5"
-libsu = "6.0.0"
 floatingX = "2.3.7"
 sonner = "0.3.9"
 timber = "5.0.1"
@@ -99,7 +98,6 @@ symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-ap
 xx-permissions = { group = "com.github.getActivity", name = "XXPermissions", version.ref = "xxPermissions" }
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
-libsu = { group = "com.github.topjohnwu.libsu", name = "core", version.ref = "libsu" }
 floatingx = { group = "io.github.petterpx", name = "floatingx", version.ref = "floatingX" }
 sonner = { group = "io.github.dokar3", name = "sonner", version.ref = "sonner" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }

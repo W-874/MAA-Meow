@@ -22,22 +22,12 @@ object RemoteAccessCoordinator {
 
     val state: StateFlow<RemoteAccessState> = _state.asStateFlow()
 
-    private val backends = mapOf(
-        RemoteBackend.ROOT to RootManager,
-        RemoteBackend.SHIZUKU to ShizukuManager
-    )
+    private val backends = mapOf(RemoteBackend.SHIZUKU to ShizukuManager)
 
     fun initialize(appSettings: AppSettingsManager) {
         this.appSettings = appSettings
         if (initialized.compareAndSet(false, true)) {
             backends.values.forEach { it.addStateListener(listener) }
-            
-            scope.launch {
-                val backend = configuredBackend()
-                if (backend == RemoteBackend.ROOT) {
-                    backends.getValue(RemoteBackend.ROOT).requestPermission()
-                }
-            }
         }
         refresh()
     }
@@ -76,14 +66,10 @@ object RemoteAccessCoordinator {
     private fun snapshot(): RemoteAccessState {
         val shizukuAvailable = ShizukuManager.isAvailable()
         val shizukuGranted = ShizukuManager.isGranted()
-        val rootAvailable = RootManager.isAvailable()
-        val rootGranted = RootManager.isGranted()
         return RemoteAccessState(
             shizukuAvailable = shizukuAvailable,
             shizukuGranted = shizukuGranted,
-            rootAvailable = rootAvailable,
-            rootGranted = rootGranted,
-            configuredBackend = configuredBackend()
+            configuredBackend = RemoteBackend.SHIZUKU
         )
     }
 }

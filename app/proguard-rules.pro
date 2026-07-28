@@ -30,9 +30,7 @@
 -keep interface com.aliothmoon.maameow.maa.MaaCoreLibrary { *; }
 -keep interface com.aliothmoon.maameow.maa.AsstApiCallback { *; }
 
-# Shizuku and liblauncher instantiate these entry points outside the app's
+# Shizuku instantiates these entry points outside the app's
 # normal call graph. Keep constructors/main methods that R8 cannot observe.
 -keep class com.aliothmoon.maameow.remote.RemoteServiceImpl { *; }
 -keep class com.aliothmoon.maameow.remote.LogcatCaptureServiceImpl { *; }
--keep class com.aliothmoon.maameow.root.RootServiceStarter { *; }
--keep class com.aliothmoon.maameow.root.RootUserService { *; }

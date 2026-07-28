@@ -44,7 +44,7 @@
 | 项目 | 要求 |
 |---|---|
 | 系统版本 | Android 9+（API 28） |
-| 权限方案 | [Shizuku](https://shizuku.rikka.app/) 已运行并授权，或设备已 Root |
+| 权限方案 | [Shizuku](https://shizuku.rikka.app/) 已运行并授权 |
 | 设备架构 | arm64-v8a 或 x86_64 |
 
 ## 文档

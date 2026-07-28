@@ -143,13 +143,6 @@
             android:exported="true"
             android:multiprocess="false" />
 
-        <provider
-            android:name=".root.RootServiceBootstrapProvider"
-            android:authorities="${applicationId}.root.bootstrap"
-            android:enabled="true"
-            android:exported="true"
-            android:multiprocess="false" />
-
         <!-- FileProvider for log export -->
         <provider
             android:name="androidx.core.content.FileProvider"

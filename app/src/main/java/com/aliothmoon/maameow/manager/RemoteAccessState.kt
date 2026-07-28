@@ -5,21 +5,13 @@ import com.aliothmoon.maameow.domain.models.RemoteBackend
 data class RemoteAccessState(
     val shizukuAvailable: Boolean = false,
     val shizukuGranted: Boolean = false,
-    val rootAvailable: Boolean = false,
-    val rootGranted: Boolean = false,
     val configuredBackend: RemoteBackend = RemoteBackend.SHIZUKU,
 ) {
     fun isAvailable(backend: RemoteBackend): Boolean {
-        return when (backend) {
-            RemoteBackend.SHIZUKU -> shizukuAvailable
-            RemoteBackend.ROOT -> rootAvailable
-        }
+        return backend == RemoteBackend.SHIZUKU && shizukuAvailable
     }
 
     fun isGranted(backend: RemoteBackend): Boolean {
-        return when (backend) {
-            RemoteBackend.SHIZUKU -> shizukuGranted
-            RemoteBackend.ROOT -> rootGranted
-        }
+        return backend == RemoteBackend.SHIZUKU && shizukuGranted
     }
 }

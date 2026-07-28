@@ -248,7 +248,6 @@
     <!-- settings: other section -->
     <string name="settings_section_display">显示设置</string>
     <string name="settings_section_other">其他设置</string>
-    <string name="settings_startup_backend_title">启动模式</string>
     <string name="settings_startup_backend_desc">选择应用获取系统权限的方式</string>
 
     <string name="settings_achievement_title">成就</string>

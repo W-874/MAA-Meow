@@ -56,9 +56,6 @@ class ShizukuReadinessProvider(
             // 用户已选择跳过：无需展示引导，也不必付出 checkStatus 的 IPC 开销
             skipCheck -> ShizukuReadinessStage.Ready
 
-            remoteState.configuredBackend != RemoteBackend.SHIZUKU ->
-                ShizukuReadinessStage.Ready
-
             // Sui 在启动时已 init：优先告知兼容性，避免被下面的 shizukuAvailable 抢占成 NeedAuth
             ShizukuManager.isSui ->
                 ShizukuReadinessStage.SuiAvailable
@@ -86,7 +83,7 @@ class ShizukuReadinessProvider(
         }
         return ShizukuReadiness(
             stage = stage,
-            canSwitchToRoot = remoteState.rootAvailable,
+            canSwitchToRoot = false,
         )
     }
 }

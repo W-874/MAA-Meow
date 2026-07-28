@@ -143,7 +143,7 @@ class MaaCompositionService(
         /** 远程服务正在连接中，任务无法立即启动 */
         data object ServiceConnecting : StartResult()
 
-        /** 远程后端（Shizuku/Root）不可用或无法获取，任务拒绝启动 */
+        /** Shizuku 不可用或无法获取，任务拒绝启动 */
         data class RemoteAccessUnavailable(val backend: RemoteBackend) : StartResult()
     }
 

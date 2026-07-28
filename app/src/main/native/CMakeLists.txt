@@ -32,11 +32,4 @@ option(ENABLE_FRAME_TIMING "Enable per-frame timing logs" OFF)
 if (ENABLE_FRAME_TIMING)
     target_compile_definitions(bridge PRIVATE ENABLE_FRAME_TIMING)
 endif ()
-add_executable(launcher launcher.c)
-set_target_properties(launcher PROPERTIES
-        OUTPUT_NAME "liblauncher"
-        SUFFIX ".so"
-        LINKER_LANGUAGE C)
-
 target_link_libraries(bridge log android jnigraphics mediandk EGL GLESv2)
-target_link_libraries(launcher log)

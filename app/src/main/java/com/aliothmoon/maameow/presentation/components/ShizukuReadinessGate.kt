@@ -9,7 +9,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.manager.ShizukuReadinessProvider
@@ -43,9 +42,7 @@ fun ShizukuReadinessGate(
         onDismiss = {
             scope.launch { appSettingsManager.setSkipShizukuCheck(true) }
         },
-        onSwitchToRoot = {
-            scope.launch { permissionManager.setStartupBackend(RemoteBackend.ROOT) }
-        },
+        onSwitchToRoot = {},
         isRequesting = isRequesting,
     )
 }

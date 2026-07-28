@@ -45,8 +45,7 @@ object RemoteServiceManager {
     private val connectAttempt = AtomicInteger(0)
 
     private val connectors: Map<RemoteBackend, RemoteServiceConnectorBackend> = mapOf(
-        RemoteBackend.SHIZUKU to ShizukuRemoteServiceConnector,
-        RemoteBackend.ROOT to RootRemoteServiceConnector
+        RemoteBackend.SHIZUKU to ShizukuRemoteServiceConnector
     )
 
     @Volatile
@@ -132,8 +131,6 @@ object RemoteServiceManager {
         ServiceBootLogger.init(context)
         ShizukuManager.initSui(context.packageName)
         RemoteAccessCoordinator.initialize(appSettings)
-        RootRemoteServiceConnector.initialize(context)
-        LogcatServiceManager.initialize(context)
     }
 
     private fun onBinderDied(recipient: BindingDeathRecipient) {
