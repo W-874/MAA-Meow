@@ -1,15 +1,19 @@
 package com.aliothmoon.maameow.presentation.view.panel.depot
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,15 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.view.panel.LocalTaskPanelBottomPadding
 import com.aliothmoon.maameow.data.model.DepotMaintainConfig
 import com.aliothmoon.maameow.data.model.DepotMaintainPlan
 import com.aliothmoon.maameow.data.repository.DepotRepository
@@ -50,10 +55,14 @@ import com.aliothmoon.maameow.domain.enums.UiUsageConstants
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.INumericField
-import com.aliothmoon.maameow.presentation.view.panel.common.GroupedStageButtonGroup
-import com.aliothmoon.maameow.presentation.view.panel.common.ItemButtonGroup
+import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
+import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
+import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
-import com.aliothmoon.maameow.presentation.view.panel.common.StageRow
+import com.aliothmoon.maameow.presentation.view.panel.common.StageOptionGroups
 import org.koin.compose.koinInject
 
 /** 目标库存上限，对齐 WPF NumericUpDown 的 Maximum */
@@ -86,6 +95,8 @@ fun DepotMaintainConfigPanel(
 
     // 展开态是纯 UI 局部状态，不持久化；删除时重映射下标，避免落到相邻计划。
     val expandedIndices = remember { mutableStateListOf<Int>() }
+    val expandedStageIndices = remember { mutableStateListOf<Int>() }
+    val expandedMaterialIndices = remember { mutableStateListOf<Int>() }
 
     val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
 
@@ -93,267 +104,470 @@ fun DepotMaintainConfigPanel(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(PaddingValues(horizontal = 12.dp, vertical = 4.dp)),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(
+                top = 4.dp,
+                bottom = LocalTaskPanelBottomPadding.current,
+            ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CheckBoxWithExpandableTip(
-            checked = config.updateDepot,
-            onCheckedChange = { onConfigChange(config.copy(updateDepot = it)) },
-            label = stringResource(R.string.panel_depot_update_before_start),
-            tipText = stringResource(R.string.panel_depot_update_before_start_tip),
-        )
+        TaskSettingsSectionTitle(stringResource(R.string.common_tab_general))
+        SegmentedSettingsGroup {
+            item {
+                CheckBoxWithExpandableTip(
+                    checked = config.updateDepot,
+                    onCheckedChange = { onConfigChange(config.copy(updateDepot = it)) },
+                    label = stringResource(R.string.panel_depot_update_before_start),
+                    tipText = stringResource(R.string.panel_depot_update_before_start_tip),
+                )
+            }
+            item {
+                CheckBoxWithLabel(
+                    checked = config.skipDuringActivity,
+                    onCheckedChange = { onConfigChange(config.copy(skipDuringActivity = it)) },
+                    label = stringResource(R.string.panel_depot_skip_during_activity),
+                )
+            }
+            item {
+                CheckBoxWithLabel(
+                    checked = config.skipDuringResourceCollection,
+                    onCheckedChange = {
+                        onConfigChange(config.copy(skipDuringResourceCollection = it))
+                    },
+                    label = stringResource(R.string.panel_depot_skip_during_resource),
+                )
+            }
+            item {
+                CheckBoxWithExpandableTip(
+                    checked = config.customStageCode,
+                    onCheckedChange = { onConfigChange(config.copy(customStageCode = it)) },
+                    label = stringResource(R.string.panel_fight_custom_stage_code),
+                    tipText = stringResource(R.string.panel_fight_custom_stage_code_tip),
+                )
+            }
+        }
 
-        CheckBoxWithLabel(
-            checked = config.skipDuringActivity,
-            onCheckedChange = { onConfigChange(config.copy(skipDuringActivity = it)) },
-            label = stringResource(R.string.panel_depot_skip_during_activity),
-        )
+        TaskSettingsSectionTitle(stringResource(R.string.panel_depot_plans))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val itemCount = config.plans.size + 1
+            config.plans.forEachIndexed { index, plan ->
+                val expanded = index in expandedIndices
+                val stageExpanded = index in expandedStageIndices
+                val materialExpanded = index in expandedMaterialIndices
+                val planShape = animatedSegmentedItemShape(index, itemCount, expanded)
+                val stageShape = animatedSegmentedItemShape(0, 2, stageExpanded)
+                val materialShape = animatedSegmentedItemShape(1, 2, materialExpanded)
+                val current = if (snapshot.syncTimeMillis == 0L) {
+                    "--"
+                } else {
+                    (snapshot.items[plan.dropId] ?: 0).toString()
+                }
+                val updatePlan: (DepotMaintainPlan) -> Unit = { updated ->
+                    onConfigChange(config.copy(
+                        plans = config.plans.toMutableList().also { it[index] = updated },
+                    ))
+                }
 
-        CheckBoxWithLabel(
-            checked = config.skipDuringResourceCollection,
-            onCheckedChange = { onConfigChange(config.copy(skipDuringResourceCollection = it)) },
-            label = stringResource(R.string.panel_depot_skip_during_resource),
-        )
-
-        CheckBoxWithExpandableTip(
-            checked = config.customStageCode,
-            onCheckedChange = { onConfigChange(config.copy(customStageCode = it)) },
-            label = stringResource(R.string.panel_fight_custom_stage_code),
-            tipText = stringResource(R.string.panel_fight_custom_stage_code_tip),
-        )
-
-        // 汇总区：i: 关卡 - 材料 当前/目标
-        if (config.plans.isNotEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    config.plans.forEachIndexed { index, plan ->
-                        // 未跑过仓库识别时用「--」表达「无数据」，而非误导性的 0
-                        val current = if (snapshot.syncTimeMillis == 0L) {
-                            "--"
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Surface(
+                        onClick = {
+                            if (expanded) {
+                                expandedIndices.remove(index)
+                                expandedStageIndices.remove(index)
+                                expandedMaterialIndices.remove(index)
+                            } else {
+                                expandedIndices.add(index)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = planShape,
+                        color = if (expanded) {
+                            MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            (snapshot.items[plan.dropId] ?: 0).toString()
+                            MaterialTheme.colorScheme.surfaceBright
+                        },
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = if (expanded) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                },
+                                modifier = Modifier.size(44.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = (index + 1).toString(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (expanded) {
+                                            MaterialTheme.colorScheme.onPrimary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = itemNameMap[plan.dropId] ?: notSelectedLabel,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (expanded) {
+                                        FontWeight.SemiBold
+                                    } else {
+                                        FontWeight.Medium
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = stringResource(
+                                        R.string.panel_depot_plan_progress,
+                                        stageDisplayOf(stageGroups, plan.stage),
+                                        current,
+                                        plan.dropCount,
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (expanded) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                            alpha = 0.76f,
+                                        )
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            Icon(
+                                imageVector = if (expanded) {
+                                    Icons.Default.ExpandLess
+                                } else {
+                                    Icons.Default.ExpandMore
+                                },
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp),
+                            )
                         }
-                        Text(
-                            text = "${index + 1}: ${stageDisplayOf(stageGroups, plan.stage)}" +
-                                    " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" +
-                                    " $current/${plan.dropCount}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 12.dp),
+                        ) {
+                            SegmentedSettingsGroup {
+                                item(
+                                    shape = stageShape,
+                                ) {
+                                    Column {
+                                        SettingRow(
+                                            title = stringResource(
+                                                R.string.panel_fight_primary_stage_label,
+                                            ),
+                                            description = stageDisplayOf(stageGroups, plan.stage),
+                                            icon = null,
+                                            onClick = {
+                                                if (stageExpanded) {
+                                                    expandedStageIndices.remove(index)
+                                                } else {
+                                                    expandedStageIndices.add(index)
+                                                }
+                                            },
+                                            trailing = {
+                                                Icon(
+                                                    imageVector = if (stageExpanded) {
+                                                        Icons.Default.ExpandLess
+                                                    } else {
+                                                        Icons.Default.ExpandMore
+                                                    },
+                                                    contentDescription = stringResource(
+                                                        if (stageExpanded) {
+                                                            R.string.common_collapse
+                                                        } else {
+                                                            R.string.common_expand
+                                                        },
+                                                    ),
+                                                )
+                                            },
+                                        )
+                                        AnimatedVisibility(
+                                            visible = stageExpanded,
+                                            enter = fadeIn() + expandVertically(),
+                                            exit = fadeOut() + shrinkVertically(),
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(
+                                                    start = 16.dp,
+                                                    end = 16.dp,
+                                                    bottom = 16.dp,
+                                                ),
+                                            ) {
+                                                if (config.customStageCode) {
+                                                    StageInputField(
+                                                        value = plan.stage,
+                                                        onValueChange = {
+                                                            updatePlan(plan.copy(stage = it))
+                                                        },
+                                                        label = stringResource(
+                                                            R.string.panel_fight_primary_stage_label,
+                                                        ),
+                                                        placeholder = stringResource(
+                                                            R.string.panel_fight_primary_stage_placeholder,
+                                                        ),
+                                                        stageCodes = stageCodes,
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                    )
+                                                } else {
+                                                    StageOptionGroups(
+                                                        selectedValue = plan.stage,
+                                                        stageGroups = stageGroups,
+                                                        onItemSelected = {
+                                                            updatePlan(plan.copy(stage = it))
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                item(
+                                    shape = materialShape,
+                                ) {
+                                    Column {
+                                        SettingRow(
+                                            title = stringResource(R.string.panel_fight_material),
+                                            description = itemNameMap[plan.dropId]
+                                                ?: notSelectedLabel,
+                                            icon = null,
+                                            onClick = {
+                                                if (materialExpanded) {
+                                                    expandedMaterialIndices.remove(index)
+                                                } else {
+                                                    expandedMaterialIndices.add(index)
+                                                }
+                                            },
+                                            trailing = {
+                                                Icon(
+                                                    imageVector = if (materialExpanded) {
+                                                        Icons.Default.ExpandLess
+                                                    } else {
+                                                        Icons.Default.ExpandMore
+                                                    },
+                                                    contentDescription = stringResource(
+                                                        if (materialExpanded) {
+                                                            R.string.common_collapse
+                                                        } else {
+                                                            R.string.common_expand
+                                                        },
+                                                    ),
+                                                )
+                                            },
+                                        )
+                                        AnimatedVisibility(
+                                            visible = materialExpanded,
+                                            enter = fadeIn() + expandVertically(),
+                                            exit = fadeOut() + shrinkVertically(),
+                                        ) {
+                                            SingleSelectItemTags(
+                                                selectedValue = plan.dropId,
+                                                itemIds = listOf("") + itemIds,
+                                                itemNameMap = itemNameMap,
+                                                notSelectedLabel = notSelectedLabel,
+                                                onItemSelected = {
+                                                    updatePlan(plan.copy(dropId = it))
+                                                },
+                                                modifier = Modifier.padding(
+                                                    start = 16.dp,
+                                                    end = 16.dp,
+                                                    bottom = 16.dp,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                }
+                                item {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        INumericField(
+                                            value = plan.dropCount,
+                                            onValueChange = {
+                                                updatePlan(plan.copy(dropCount = it))
+                                            },
+                                            label = stringResource(
+                                                R.string.panel_depot_target_inventory,
+                                            ),
+                                            minimum = 0,
+                                            maximum = MAX_TARGET_INVENTORY,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
+                                item {
+                                    CheckBoxWithLabel(
+                                        checked = plan.useMedicine,
+                                        onCheckedChange = {
+                                            updatePlan(plan.copy(useMedicine = it))
+                                        },
+                                        label = stringResource(
+                                            R.string.panel_fight_use_medicine,
+                                        ),
+                                    )
+                                }
+                                if (plan.useMedicine) {
+                                    item {
+                                        NumberStepperSettingRow(
+                                            title = stringResource(
+                                                R.string.panel_fight_use_medicine_count,
+                                            ),
+                                            value = plan.medicineCount,
+                                            onValueChange = {
+                                                updatePlan(plan.copy(medicineCount = it))
+                                            },
+                                            range = 0..999,
+                                            icon = null,
+                                        )
+                                    }
+                                }
+                                item {
+                                    CheckBoxWithLabel(
+                                        checked = plan.useStone,
+                                        onCheckedChange = {
+                                            updatePlan(plan.copy(useStone = it))
+                                        },
+                                        label = stringResource(R.string.panel_stone_use),
+                                    )
+                                }
+                                if (plan.useStone) {
+                                    item {
+                                        NumberStepperSettingRow(
+                                            title = stringResource(
+                                                R.string.panel_depot_stone_count,
+                                            ),
+                                            value = plan.stoneCount,
+                                            onValueChange = {
+                                                updatePlan(plan.copy(stoneCount = it))
+                                            },
+                                            range = 0..999,
+                                            icon = null,
+                                        )
+                                    }
+                                }
+                                item {
+                                    SettingRow(
+                                        title = stringResource(
+                                            R.string.panel_depot_remove_plan,
+                                        ),
+                                        titleColor = MaterialTheme.colorScheme.error,
+                                        leadingColor = MaterialTheme.colorScheme.error,
+                                        icon = Icons.Default.Delete,
+                                        onClick = {
+                                            fun remap(indices: List<Int>): List<Int> =
+                                                indices.mapNotNull { expandedIndex ->
+                                                    when {
+                                                        expandedIndex < index -> expandedIndex
+                                                        expandedIndex == index -> null
+                                                        else -> expandedIndex - 1
+                                                    }
+                                                }.distinct()
+
+                                            val remappedPlans = remap(expandedIndices)
+                                            val remappedStages = remap(expandedStageIndices)
+                                            val remappedMaterials = remap(expandedMaterialIndices)
+                                            expandedIndices.clear()
+                                            expandedIndices.addAll(remappedPlans)
+                                            expandedStageIndices.clear()
+                                            expandedStageIndices.addAll(remappedStages)
+                                            expandedMaterialIndices.clear()
+                                            expandedMaterialIndices.addAll(remappedMaterials)
+                                            onConfigChange(config.copy(
+                                                plans = config.plans.toMutableList().also {
+                                                    it.removeAt(index)
+                                                },
+                                            ))
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
+            SettingActionButton(
+                title = stringResource(R.string.panel_depot_add_plan),
+                icon = Icons.Default.Add,
                 onClick = {
+                    val newIndex = config.plans.size
                     onConfigChange(config.copy(plans = config.plans + DepotMaintainPlan()))
+                    expandedIndices.add(newIndex)
                 },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.panel_depot_add_plan))
-            }
-            OutlinedButton(
-                onClick = { expandedIndices.clear() },
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(stringResource(R.string.panel_depot_collapse_all))
-            }
-        }
-
-        config.plans.forEachIndexed { index, plan ->
-            PlanCard(
-                index = index,
-                plan = plan,
-                expanded = index in expandedIndices,
-                onToggleExpand = {
-                    if (index in expandedIndices) expandedIndices.remove(index)
-                    else expandedIndices.add(index)
-                },
-                customStageCode = config.customStageCode,
-                stageGroups = stageGroups,
-                stageCodes = stageCodes,
-                itemIds = itemIds,
-                itemNameMap = itemNameMap,
-                onPlanChange = { updated ->
-                    onConfigChange(
-                        config.copy(
-                            plans = config.plans.toMutableList().also { it[index] = updated }
-                        )
-                    )
-                },
-                onRemove = {
-                    // 删除 index 后：>index 的展开下标整体 -1，==index 移除
-                    val remapped = expandedIndices
-                        .mapNotNull { i ->
-                            when {
-                                i < index -> i
-                                i == index -> null
-                                else -> i - 1
-                            }
-                        }
-                        .distinct()
-                    expandedIndices.clear()
-                    expandedIndices.addAll(remapped)
-                    onConfigChange(
-                        config.copy(
-                            plans = config.plans.toMutableList().also { it.removeAt(index) }
-                        )
-                    )
-                },
+                shape = animatedSegmentedItemShape(
+                    index = config.plans.size,
+                    itemCount = itemCount,
+                    expanded = false,
+                ),
             )
         }
     }
 }
 
 @Composable
-private fun PlanCard(
-    index: Int,
-    plan: DepotMaintainPlan,
-    expanded: Boolean,
-    onToggleExpand: () -> Unit,
-    customStageCode: Boolean,
-    stageGroups: List<StageGroup>,
-    stageCodes: List<String>,
+private fun SingleSelectItemTags(
+    selectedValue: String,
     itemIds: List<String>,
     itemNameMap: Map<String, String>,
-    onPlanChange: (DepotMaintainPlan) -> Unit,
-    onRemove: () -> Unit,
+    notSelectedLabel: String,
+    onItemSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val notSelectedLabel = stringResource(R.string.panel_depot_not_selected)
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        color = MaterialTheme.colorScheme.surface
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggleExpand() },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${index + 1}: ${stageDisplayOf(stageGroups, plan.stage)}" +
-                            " - ${itemNameMap[plan.dropId] ?: notSelectedLabel}" +
-                            " x${plan.dropCount}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (customStageCode) {
-                        StageRow(onRemove = null) {
-                            StageInputField(
-                                value = plan.stage,
-                                onValueChange = { onPlanChange(plan.copy(stage = it)) },
-                                label = stringResource(R.string.panel_fight_primary_stage_label),
-                                placeholder = stringResource(R.string.panel_fight_primary_stage_placeholder),
-                                stageCodes = stageCodes,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    } else {
-                        GroupedStageButtonGroup(
-                            label = stringResource(R.string.panel_fight_primary_stage_label),
-                            selectedValue = plan.stage,
-                            stageGroups = stageGroups,
-                            onItemSelected = { onPlanChange(plan.copy(stage = it)) }
-                        )
-                    }
-
-                    ItemButtonGroup(
-                        label = stringResource(R.string.panel_fight_material),
-                        selectedValue = plan.dropId,
-                        items = itemIds,
-                        onItemSelected = { onPlanChange(plan.copy(dropId = it)) },
-                        displayMapper = { id -> itemNameMap[id] ?: id }
+        itemIds.distinct().forEach { itemId ->
+            val selected = itemId == selectedValue
+            FilterChip(
+                selected = selected,
+                onClick = { onItemSelected(itemId) },
+                label = {
+                    Text(
+                        text = itemNameMap[itemId] ?: notSelectedLabel,
+                        style = MaterialTheme.typography.labelSmall,
                     )
-
-                    INumericField(
-                        value = plan.dropCount,
-                        onValueChange = { onPlanChange(plan.copy(dropCount = it)) },
-                        label = stringResource(R.string.panel_depot_target_inventory),
-                        minimum = 0,
-                        maximum = MAX_TARGET_INVENTORY,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    CheckBoxWithLabel(
-                        checked = plan.useMedicine,
-                        onCheckedChange = { onPlanChange(plan.copy(useMedicine = it)) },
-                        label = stringResource(R.string.panel_fight_use_medicine),
-                    )
-                    AnimatedVisibility(visible = plan.useMedicine) {
-                        INumericField(
-                            value = plan.medicineCount,
-                            onValueChange = { onPlanChange(plan.copy(medicineCount = it)) },
-                            label = stringResource(R.string.panel_fight_use_medicine_count),
-                            minimum = 0,
-                            maximum = 999,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    CheckBoxWithLabel(
-                        checked = plan.useStone,
-                        onCheckedChange = { onPlanChange(plan.copy(useStone = it)) },
-                        label = stringResource(R.string.panel_stone_use),
-                    )
-                    AnimatedVisibility(visible = plan.useStone) {
-                        INumericField(
-                            value = plan.stoneCount,
-                            onValueChange = { onPlanChange(plan.copy(stoneCount = it)) },
-                            label = stringResource(R.string.panel_depot_stone_count),
-                            minimum = 0,
-                            maximum = 999,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    HorizontalDivider()
-
-                    // 移动端无 hover，删除按钮在展开态底部常驻（上游为 hover 显示）
-                    OutlinedButton(
-                        onClick = onRemove,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
+                },
+                leadingIcon = if (selected) {
+                    {
                         Icon(
-                            Icons.Default.Delete,
+                            imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(14.dp),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.panel_depot_remove_plan))
                     }
-                }
-            }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                border = null,
+                modifier = Modifier.height(30.dp),
+            )
         }
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -33,7 +35,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -65,13 +65,17 @@ import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
+import com.aliothmoon.maameow.presentation.view.panel.LocalTaskPanelBottomPadding
 import com.aliothmoon.maameow.presentation.components.ITextFieldWithFocus
 import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.presentation.view.panel.common.StageInputField
+import com.aliothmoon.maameow.presentation.view.panel.common.StageOptionGroups
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -110,7 +114,9 @@ fun FightConfigPanel(
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
     ) {
         item {
             TodayStagesHint(
@@ -138,20 +144,12 @@ fun FightConfigPanel(
                             }
                         }
                         item {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceBright,
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    GroupedStageSelectionSection(
-                                        config = config,
-                                        onConfigChange = onConfigChange,
-                                        stageGroups = stageGroups,
-                                        activityManager = activityManager,
-                                    )
-                                }
-                            }
+                            GroupedStageSelectionSection(
+                                config = config,
+                                onConfigChange = onConfigChange,
+                                stageGroups = stageGroups,
+                                activityManager = activityManager,
+                            )
                         }
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
                         item {
@@ -443,69 +441,81 @@ private fun GroupedStageSelectionSection(
         else -> null
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Surface(
-            onClick = { detailsExpanded = !detailsExpanded },
-            modifier = Modifier
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = Color.Transparent,
-        ) {
-            Row(
-                modifier = Modifier.padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.panel_fight_stage_selection_title),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = RoundedCornerShape(6.dp),
-                ) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceBright,
+    ) {
+        Column {
+            SettingRow(
+                title = stringResource(R.string.panel_fight_stage_selection_title),
+                icon = null,
+                onClick = { detailsExpanded = !detailsExpanded },
+                titleContent = {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.panel_fight_current_execution_label),
-                            style = MaterialTheme.typography.labelMedium,
+                            text = stringResource(R.string.panel_fight_stage_selection_title),
+                            style = MaterialTheme.typography.titleMedium,
                         )
-                        StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            shape = RoundedCornerShape(6.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.panel_fight_current_execution_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                                StageBadge(text = executingStage.ifEmpty { defaultStageLabel })
+                            }
+                        }
+                        ExpandableTipIcon(
+                            expanded = tipExpanded,
+                            onExpandedChange = { tipExpanded = it },
+                        )
                     }
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                ExpandableTipIcon(
-                    expanded = tipExpanded,
-                    onExpandedChange = { tipExpanded = it },
-                )
-                Icon(
-                    imageVector = Icons.Rounded.ArrowDropDown,
-                    contentDescription = stringResource(
-                        if (detailsExpanded) R.string.common_collapse else R.string.common_expand,
-                    ),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .rotate(if (detailsExpanded) 180f else 0f),
-                )
-            }
-        }
-        ExpandableTipContent(
-            visible = tipExpanded,
-            tipText = stagePlanTipText,
-        )
+                },
+                trailing = {
+                    Icon(
+                        imageVector = Icons.Rounded.ArrowDropDown,
+                        contentDescription = stringResource(
+                            if (detailsExpanded) R.string.common_collapse else R.string.common_expand,
+                        ),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(if (detailsExpanded) 180f else 0f),
+                    )
+                },
+            )
+            ExpandableTipContent(
+                visible = tipExpanded,
+                tipText = stagePlanTipText,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
 
-        AnimatedVisibility(
-            visible = detailsExpanded,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AnimatedVisibility(
+                visible = detailsExpanded,
+                enter = expandVertically(),
+                exit = shrinkVertically(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 8.dp,
+                        bottom = 16.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                 if (stageWarning != null) {
                     Text(
                         text = "· $stageWarning",
@@ -589,6 +599,7 @@ private fun GroupedStageSelectionSection(
                     AddAlternateStageButton(
                         onClick = { onConfigChange(config.copy(alternateStages = config.alternateStages + "")) }
                     )
+                }
                 }
             }
         }
@@ -693,64 +704,6 @@ private fun GroupedStageButtonGroup(
     }
 }
 
-@Composable
-private fun StageOptionGroups(
-    selectedValue: String,
-    stageGroups: List<StageGroup>,
-    onItemSelected: (String) -> Unit,
-    annihilationDisplayName: String? = null,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        stageGroups.forEach { group ->
-            Text(
-                text = if (group.isPermanent) {
-                    stringResource(R.string.panel_fight_stage_group_permanent)
-                } else {
-                    group.title
-                },
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                group.stages.forEach { stage ->
-                    val isSelected = stage.code == selectedValue
-                    val isOpen = stage.isOpenToday
-                    Surface(
-                        onClick = { onItemSelected(stage.code) },
-                        color = when {
-                            isSelected -> MaterialTheme.colorScheme.primary
-                            !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        Text(
-                            text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
-                                annihilationDisplayName
-                            } else {
-                                stage.displayName
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = when {
-                                isSelected -> MaterialTheme.colorScheme.onPrimary
-                                !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                else -> MaterialTheme.colorScheme.onSurface
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 /**
  * 关卡行（自定义关卡代码文本输入模式用）：内容区 + 右侧删除按钮 / 等宽占位
  * onRemove 为空时（首选关卡）渲染等宽占位，保证与备选关卡左右宽度对齐
@@ -805,25 +758,11 @@ private fun StageRowTrailing(
 private fun AddAlternateStageButton(
     onClick: () -> Unit
 ) {
-    OutlinedButton(
+    SettingActionButton(
+        title = stringResource(R.string.panel_fight_add_alternate_stage),
+        icon = Icons.Default.Add,
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-        contentPadding = PaddingValues(vertical = 8.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = stringResource(R.string.panel_fight_add_alternate_stage),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+    )
 }
 
 /**

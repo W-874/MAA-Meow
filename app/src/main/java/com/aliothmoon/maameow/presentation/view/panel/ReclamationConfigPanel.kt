@@ -93,7 +93,9 @@ fun ReclamationConfigPanel(
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
     ) {
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
         item {
@@ -282,13 +284,16 @@ private fun ReclamationButtonGroup(
 @Composable
 private fun localizedReclamationThemeOptions(): List<Pair<Any, String>> {
     return ReclamationConfig.THEME_KEYS.map { theme ->
-        theme to when (theme) {
-            "Tales" -> stringResource(R.string.panel_reclamation_theme_tales)
-            "Fire" -> stringResource(R.string.panel_reclamation_theme_fire)
-            "RelaunchAnchor" -> stringResource(R.string.panel_reclamation_theme_relaunch_anchor)
-            else -> theme
-        }
+        theme to localizedReclamationThemeLabel(theme)
     }
+}
+
+@Composable
+internal fun localizedReclamationThemeLabel(theme: String): String = when (theme) {
+    "Tales" -> stringResource(R.string.panel_reclamation_theme_tales)
+    "Fire" -> stringResource(R.string.panel_reclamation_theme_fire)
+    "RelaunchAnchor" -> stringResource(R.string.panel_reclamation_theme_relaunch_anchor)
+    else -> theme
 }
 
 @Composable

@@ -38,8 +38,10 @@ import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import com.aliothmoon.maameow.presentation.components.ReorderableFlowRow
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
+import com.aliothmoon.maameow.presentation.view.panel.LocalTaskPanelBottomPadding
 import org.koin.compose.koinInject
 
 @Composable
@@ -51,7 +53,9 @@ fun MallConfigPanel(config: MallConfig, onConfigChange: (MallConfig) -> Unit) {
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
         userScrollEnabled = !isDraggingItem,
     ) {
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
@@ -253,15 +257,15 @@ private fun PriorityItemsSection(
                 )
             }
             item {
-                SettingRow(
+                SettingActionButton(
                     title = if (showAddPanel) {
                         stringResource(R.string.common_collapse)
                     } else {
                         stringResource(R.string.panel_mall_add_item)
                     },
                     icon = Icons.Rounded.Add,
-                    enabled = config.shopping,
                     onClick = { showAddPanel = !showAddPanel },
+                    enabled = config.shopping,
                 )
             }
         }
@@ -318,15 +322,15 @@ private fun BlacklistSection(
                 )
             }
             item {
-                SettingRow(
+                SettingActionButton(
                     title = if (showAddPanel) {
                         stringResource(R.string.common_collapse)
                     } else {
                         stringResource(R.string.panel_mall_add_blacklist)
                     },
                     icon = Icons.Rounded.Add,
-                    enabled = config.shopping,
                     onClick = { showAddPanel = !showAddPanel },
+                    enabled = config.shopping,
                 )
             }
         }

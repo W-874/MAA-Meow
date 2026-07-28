@@ -63,7 +63,7 @@ fun localizedRoguelikeSquadOptions(theme: String, mode: RoguelikeMode): List<Pai
 }
 
 @Composable
-private fun localizedRoguelikeThemeLabel(theme: String): String {
+internal fun localizedRoguelikeThemeLabel(theme: String): String {
     return when (theme) {
         "Phantom" -> stringResource(R.string.panel_roguelike_theme_phantom)
         "Mizuki" -> stringResource(R.string.panel_roguelike_theme_mizuki)

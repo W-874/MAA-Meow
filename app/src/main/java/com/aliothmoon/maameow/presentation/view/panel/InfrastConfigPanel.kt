@@ -95,7 +95,9 @@ fun InfrastConfigPanel(
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
     ) {
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
                         item { SegmentedSettingsGroup {
@@ -517,7 +519,7 @@ private fun PlanSelectButtonGroup(
 }
 
 @Composable
-private fun infrastModeLabel(mode: InfrastMode): String {
+internal fun infrastModeLabel(mode: InfrastMode): String {
     return when (mode) {
         InfrastMode.Normal -> stringResource(R.string.panel_infrast_mode_normal)
         InfrastMode.Custom -> stringResource(R.string.panel_infrast_mode_custom)

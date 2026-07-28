@@ -706,6 +706,13 @@
     <string name="panel_autobattle_tab_security">SSS</string>
     <string name="panel_autobattle_tab_paradox">Paradox Simulation</string>
     <string name="panel_autobattle_tab_other">Other Activities</string>
+    <string name="panel_autobattle_job_type">Copilot type</string>
+    <string name="panel_autobattle_source">Copilot source</string>
+    <string name="panel_autobattle_settings">Copilot settings</string>
+    <string name="panel_autobattle_execution">Execution settings</string>
+    <string name="panel_autobattle_formation">Squad slot</string>
+    <string name="panel_autobattle_support_strategy">Support strategy</string>
+    <string name="panel_autobattle_loop_count">Loop count</string>
     <string name="panel_autobattle_station_code_label">Copilot Code</string>
     <string name="panel_autobattle_station_code_placeholder">Enter prts://1234, prts://s1234 or 1234</string>
     <string name="panel_autobattle_waiting">Waiting for input…</string>
@@ -985,7 +992,7 @@
 
     <!-- panel: recruit calc -->
     <string name="panel_recruit_calc_auto_time">Auto-set recruit time</string>
-    <string name="panel_recruit_calc_auto_select_tags">Auto-select %1$d★ Tags</string>
+    <string name="panel_recruit_calc_auto_select_tags">Auto confirm %1$d★</string>
     <string name="panel_recruit_calc_detected_tags">Detected tags</string>
     <string name="panel_recruit_calc_empty_hint">Tap Start to recognize current recruitment tags and calculate possible operator combinations</string>
 
@@ -1034,6 +1041,9 @@
     <string name="panel_depot_update_before_start_tip">Runs depot recognition first to refresh inventory data; this run\'s deficits are still based on the inventory from before that recognition</string>
     <string name="panel_depot_skip_during_activity">Skip during event</string>
     <string name="panel_depot_skip_during_resource">Skip while the resource collection event is active</string>
+    <string name="panel_depot_plans">Inventory plans</string>
+    <string name="panel_depot_plan_title">Plan %1$d · %2$s</string>
+    <string name="panel_depot_plan_progress">%1$s · Current %2$s / target %3$d</string>
     <string name="panel_depot_add_plan">Add</string>
     <string name="panel_depot_collapse_all">Collapse</string>
     <string name="panel_depot_target_inventory">Target inventory</string>
@@ -1074,6 +1084,8 @@
     <string name="panel_recruit_choose_level3">Auto confirm 3★</string>
     <string name="panel_recruit_choose_level4">Auto confirm 4★</string>
     <string name="panel_recruit_choose_level5">Auto confirm 5★</string>
+    <string name="panel_recruit_confirm_time_label">Confirm time</string>
+    <string name="panel_recruit_edit_confirm_time">Edit confirm time</string>
     <string name="panel_recruit_duration_title">Confirmation duration</string>
     <string name="panel_recruit_duration_value">%1$d h %2$02d min</string>
     <string name="panel_recruit_duration_picker_title">Set confirmation duration</string>

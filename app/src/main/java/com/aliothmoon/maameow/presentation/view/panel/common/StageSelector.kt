@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -128,61 +132,86 @@ internal fun GroupedStageButtonGroup(
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                stageGroups.forEach { group ->
-                    // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-                    val displayTitle = if (group.isPermanent) {
-                        stringResource(R.string.panel_fight_stage_group_permanent)
-                    } else {
-                        group.title
-                    }
-                    // 分组标题
-                    Text(
-                        text = displayTitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        // TODO: i18n — 用 group.isPermanent 替代硬编码字符串比较
-                        color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+            StageOptionGroups(
+                selectedValue = selectedValue,
+                stageGroups = stageGroups,
+                onItemSelected = onItemSelected,
+                annihilationDisplayName = annihilationDisplayName,
+            )
+        }
+    }
+}
 
-                    // 分组内的关卡（自动换行平铺）
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        group.stages.forEach { stage ->
-                            val isSelected = stage.code == selectedValue
-                            val isOpen = stage.isOpenToday
-                            Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { onItemSelected(stage.code) },
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.primary
-                                    !isOpen -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-                                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+/** 与理智作战首选关卡共用的直接展开标签选择器。 */
+@Composable
+internal fun StageOptionGroups(
+    selectedValue: String,
+    stageGroups: List<StageGroup>,
+    onItemSelected: (String) -> Unit,
+    annihilationDisplayName: String? = null,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        stageGroups.forEach { group ->
+            Text(
+                text = if (group.isPermanent) {
+                    stringResource(R.string.panel_fight_stage_group_permanent)
+                } else {
+                    group.title
+                },
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = if (group.isPermanent) Color(0xFF388E3C) else Color(0xFFE65100),
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                group.stages.forEach { stage ->
+                    val isSelected = stage.code == selectedValue
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onItemSelected(stage.code) },
+                        enabled = stage.isOpenToday || isSelected,
+                        label = {
+                            Text(
+                                text = if (
+                                    stage.code == "Annihilation" &&
+                                    annihilationDisplayName != null
+                                ) {
+                                    annihilationDisplayName
+                                } else {
+                                    stage.displayName
                                 },
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Text(
-                                    text = if (stage.code == "Annihilation" && annihilationDisplayName != null) {
-                                        annihilationDisplayName
-                                    } else {
-                                        stage.displayName
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = when {
-                                        isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        !isOpen -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                        else -> MaterialTheme.colorScheme.onSurface
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        },
+                        leadingIcon = if (isSelected) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
                                 )
                             }
-                        }
-                    }
+                        } else null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            labelColor = MaterialTheme.colorScheme.onSurface,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                alpha = 0.38f,
+                            ),
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.25f,
+                            ),
+                        ),
+                        border = null,
+                        modifier = Modifier.height(30.dp),
+                    )
                 }
             }
         }

@@ -761,6 +761,13 @@
     <string name="panel_autobattle_tab_security">保全派驻</string>
     <string name="panel_autobattle_tab_paradox">悖论模拟</string>
     <string name="panel_autobattle_tab_other">其他活动</string>
+    <string name="panel_autobattle_job_type">作业类型</string>
+    <string name="panel_autobattle_source">作业来源</string>
+    <string name="panel_autobattle_settings">作业设置</string>
+    <string name="panel_autobattle_execution">执行设置</string>
+    <string name="panel_autobattle_formation">编队序号</string>
+    <string name="panel_autobattle_support_strategy">助战策略</string>
+    <string name="panel_autobattle_loop_count">循环次数</string>
     <string name="panel_autobattle_station_code_label">作业站神秘代码</string>
     <string name="panel_autobattle_station_code_placeholder">输入 prts://1234、prts://s1234 或 1234</string>
     <string name="panel_autobattle_waiting">等待操作…</string>
@@ -1040,7 +1047,7 @@
 
     <!-- panel: recruit calc -->
     <string name="panel_recruit_calc_auto_time">自动设置招募时间</string>
-    <string name="panel_recruit_calc_auto_select_tags">自动选择 %1$d★ Tags</string>
+    <string name="panel_recruit_calc_auto_select_tags">自动确认 %1$d★</string>
     <string name="panel_recruit_calc_detected_tags">检测到的标签</string>
     <string name="panel_recruit_calc_empty_hint">点击「开始任务」识别当前公招标签并计算可能的干员组合</string>
 
@@ -1090,6 +1097,9 @@
     <string name="panel_depot_update_before_start_tip">任务开始时先执行一次仓库识别刷新库存数据；本次的缺口仍按识别前的库存计算</string>
     <string name="panel_depot_skip_during_activity">活动期间跳过</string>
     <string name="panel_depot_skip_during_resource">资源收集限时全天开放期间跳过</string>
+    <string name="panel_depot_plans">库存计划</string>
+    <string name="panel_depot_plan_title">计划 %1$d · %2$s</string>
+    <string name="panel_depot_plan_progress">%1$s · 当前 %2$s / 目标 %3$d</string>
     <string name="panel_depot_add_plan">添加</string>
     <string name="panel_depot_collapse_all">折叠</string>
     <string name="panel_depot_target_inventory">目标库存</string>
@@ -1127,9 +1137,11 @@
     <string name="panel_recruit_force_refresh">无招聘许可时继续尝试刷新 Tags</string>
     <string name="panel_recruit_preserve_tag_enabled">保留指定词条</string>
     <string name="panel_recruit_preserve_tag_enabled_tip">识别到任一已选词条时跳过该次招募并保留该栏位；留空时不保留任何词条。</string>
-    <string name="panel_recruit_choose_level3">自动确认 3 星</string>
-    <string name="panel_recruit_choose_level4">自动确认 4 星</string>
-    <string name="panel_recruit_choose_level5">自动确认 5 星</string>
+    <string name="panel_recruit_choose_level3">自动确认 3★</string>
+    <string name="panel_recruit_choose_level4">自动确认 4★</string>
+    <string name="panel_recruit_choose_level5">自动确认 5★</string>
+    <string name="panel_recruit_confirm_time_label">确认时间</string>
+    <string name="panel_recruit_edit_confirm_time">修改确认时间</string>
     <string name="panel_recruit_duration_title">确认时长</string>
     <string name="panel_recruit_duration_value">%1$d 小时 %2$02d 分钟</string>
     <string name="panel_recruit_duration_picker_title">设置确认时长</string>

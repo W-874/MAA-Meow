@@ -1,5 +1,10 @@
 package com.aliothmoon.maameow.presentation.view.panel.roguelike
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,8 +24,11 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.enums.RoguelikeMode
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants.Roguelike as RoguelikeUi
 import com.aliothmoon.maameow.presentation.components.CoreCharSelector
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
+import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
+import com.aliothmoon.maameow.presentation.view.panel.LocalTaskPanelBottomPadding
 import org.koin.compose.koinInject
 
 @Composable
@@ -33,11 +41,12 @@ fun RoguelikeConfigPanel(
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
     ) {
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
         item { BasicRoguelikeSettings(config, onConfigChange) }
-        item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
         item { AdvancedRoguelikeSettings(config, onConfigChange) }
     }
 }
@@ -147,14 +156,71 @@ private fun BasicRoguelikeSettings(
             )
         }
         item {
-            Column(modifier = Modifier.padding(16.dp)) {
-                CoreCharSelector(
-                    value = config.coreChar,
-                    onValueChange = { onConfigChange(config.copy(coreChar = it)) },
-                    theme = config.theme,
-                    resourceDataManager = resourceDataManager,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            Column {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    CoreCharSelector(
+                        value = config.coreChar,
+                        onValueChange = { coreChar ->
+                            onConfigChange(
+                                if (coreChar.isEmpty()) {
+                                    config.copy(
+                                        coreChar = coreChar,
+                                        useSupport = false,
+                                        enableNonfriendSupport = false,
+                                    )
+                                } else {
+                                    config.copy(coreChar = coreChar)
+                                },
+                            )
+                        },
+                        theme = config.theme,
+                        resourceDataManager = resourceDataManager,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                AnimatedVisibility(
+                    visible = config.coreChar.isNotEmpty(),
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        CheckBoxWithExpandableTip(
+                            checked = config.useSupport,
+                            onCheckedChange = { checked ->
+                                val professional = RoguelikeUi.isSquadProfessional(
+                                    config.squad,
+                                    config.mode,
+                                    config.theme,
+                                )
+                                val updated = if (
+                                    checked && config.startWithEliteTwo && professional
+                                ) {
+                                    config.copy(useSupport = true, startWithEliteTwo = false)
+                                } else {
+                                    config.copy(useSupport = checked)
+                                }
+                                onConfigChange(updated)
+                            },
+                            label = stringResource(R.string.panel_roguelike_use_support),
+                            tipText = stringResource(R.string.panel_roguelike_use_support_tip),
+                        )
+                        AnimatedVisibility(
+                            visible = config.useSupport,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            CheckBoxWithLabel(
+                                checked = config.enableNonfriendSupport,
+                                onCheckedChange = {
+                                    onConfigChange(config.copy(enableNonfriendSupport = it))
+                                },
+                                label = stringResource(
+                                    R.string.panel_roguelike_nonfriend_support,
+                                ),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
