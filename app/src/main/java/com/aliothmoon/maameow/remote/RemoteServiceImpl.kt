@@ -84,6 +84,19 @@ class RemoteServiceImpl : RemoteService.Stub() {
 
     override fun exit() = destroy()
 
+    override fun setPackageNetworkingEnabled(packageName: String, enabled: Boolean): Boolean {
+        return runCatching {
+            val uid = RemoteUtils.getAppUid(packageName)
+            require(uid >= 0) { "Package not found: $packageName" }
+            val chain = 9
+            val rule = if (enabled) 0 else 2
+            if (!enabled) RemoteUtils.connectivityManager.setFirewallChainEnabled(chain, true)
+            RemoteUtils.connectivityManager.setUidFirewallRule(chain, uid, rule)
+            true
+        }.onFailure { Ln.e("$TAG: Failed to change networking for $packageName: ${it.message}") }
+            .getOrDefault(false)
+    }
+
     override fun getMaaCoreService(): MaaCoreService {
         return MaaCoreManager.maaService
     }

@@ -12,12 +12,18 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.os.Bundle
+import android.graphics.Color
+import android.graphics.drawable.Icon
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.manager.RemoteServiceManager
+import com.xzakota.hyper.notification.focus.FocusNotification
 import com.aliothmoon.maameow.maa.callback.TaskChainStatusTracker
 import com.aliothmoon.maameow.maa.callback.TaskRunInfo
 import com.aliothmoon.maameow.maa.callback.TaskRunStatus
@@ -32,6 +38,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.android.ext.android.inject
 import timber.log.Timber
 
@@ -44,6 +54,8 @@ class TaskExecutionService : Service() {
         private const val PROGRESS_STYLE_MAX = 1000
         private const val PERMISSION_POST_PROMOTED_NOTIFICATIONS =
             "android.permission.POST_PROMOTED_NOTIFICATIONS"
+        private const val ACTION_COMPLETE = "com.aliothmoon.maameow.action.TASK_NOTIFICATION_COMPLETE"
+        private const val EXTRA_COMPLETION_SUMMARY = "completion_summary"
 
         private const val PROGRESS_COLOR_COMPLETED = 0xFF4CAF50.toInt()
         private const val PROGRESS_COLOR_ACTIVE = 0xFF2196F3.toInt()
@@ -75,18 +87,42 @@ class TaskExecutionService : Service() {
         fun stop(context: Context) {
             context.stopService(Intent(context, TaskExecutionService::class.java))
         }
+
+        fun complete(context: Context, summary: String) {
+            val intent = Intent(context, TaskExecutionService::class.java).apply {
+                action = ACTION_COMPLETE
+                putExtra(EXTRA_COMPLETION_SUMMARY, summary)
+            }
+            context.startService(intent)
+        }
     }
 
     private val compositionService: MaaCompositionService by inject()
     private val sessionLogger: MaaSessionLogger by inject()
     private val taskChainStatusTracker: TaskChainStatusTracker by inject()
+    private val appSettingsManager: AppSettingsManager by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val miIslandNetworkMutex = Mutex()
+    @Volatile private var notificationSessionActive = false
+    private var stoppingRequested = false
+    private var keepTerminalNotification = false
+    private var completionFinalizing = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_COMPLETE) {
+            val summary = intent.getStringExtra(EXTRA_COMPLETION_SUMMARY)
+                ?: getString(R.string.notification_task_completed)
+            finalizeMiIslandCompletion(summary)
+        }
+        return START_NOT_STICKY
+    }
+
     override fun onCreate() {
         super.onCreate()
+        notificationSessionActive = true
         ensureNotificationChannel()
         val initial = TaskNotificationSnapshot(
             state = compositionService.state.value,
@@ -98,9 +134,10 @@ class TaskExecutionService : Service() {
     }
 
     override fun onDestroy() {
+        notificationSessionActive = false
         // 外部 stopService 与 StateFlow 收集存在竞态；此处兜底确保 Live Update 通知被清除。
         // observeProgress 的 collector 由 serviceScope.cancel() 结构化取消。
-        removeActiveNotification()
+        if (!keepTerminalNotification) removeActiveNotification()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -172,7 +209,7 @@ class TaskExecutionService : Service() {
                         MaaExecutionState.STOPPING -> forceUpdate(
                             snapshot.copy(
                                 statusText = getString(R.string.notification_task_stopping)
-                            )
+                            ).also { stoppingRequested = true }
                         )
 
                         MaaExecutionState.RUNNING -> throttledUpdate(
@@ -187,6 +224,16 @@ class TaskExecutionService : Service() {
     }
 
     private fun handleTerminalState(snapshot: TaskNotificationSnapshot) {
+        if (snapshot.state == MaaExecutionState.IDLE &&
+            !stoppingRequested &&
+            appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND
+        ) {
+            val summary = sessionLogger.logs.value.lastOrNull()?.content
+                ?: getString(R.string.notification_task_completed)
+            finalizeMiIslandCompletion(summary, snapshot)
+            return
+        }
+        notificationSessionActive = false
         Timber.i("TaskExecutionService: state=%s, stopping", snapshot.state)
         stopForeground(STOP_FOREGROUND_REMOVE)
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -196,6 +243,30 @@ class TaskExecutionService : Service() {
             Timber.w(e, "cancel blocked by POST_NOTIFICATIONS denial")
         }
         stopSelf()
+    }
+
+    private fun finalizeMiIslandCompletion(
+        summary: String,
+        snapshot: TaskNotificationSnapshot = TaskNotificationSnapshot(
+            state = MaaExecutionState.IDLE,
+            statusText = summary,
+            tasks = taskChainStatusTracker.tasks.value,
+        ),
+    ) {
+        if (completionFinalizing) return
+        completionFinalizing = true
+        keepTerminalNotification = true
+        serviceScope.launch {
+            delay(300L)
+            val completed = snapshot.copy(
+                state = MaaExecutionState.IDLE,
+                statusText = summary,
+            )
+            notifyMiIslandWithBypass(completed)
+            stopForeground(STOP_FOREGROUND_DETACH)
+            notificationSessionActive = false
+            stopSelf()
+        }
     }
 
     private fun ensureNotificationChannel() {
@@ -218,6 +289,10 @@ class TaskExecutionService : Service() {
     }
 
     private fun startAsForeground(notification: Notification) {
+        val shouldBypass = appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND &&
+            appSettingsManager.miIslandBypassRestriction.value
+        val remote = (RemoteServiceManager.state.value as? RemoteServiceManager.ServiceState.Connected)?.service
+        val blocked = shouldBypass && remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", false) == true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
@@ -226,6 +301,15 @@ class TaskExecutionService : Service() {
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)
+        }
+        if (blocked) {
+            serviceScope.launch(Dispatchers.IO) {
+                delay(100L)
+                withContext(NonCancellable) {
+                    runCatching { remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", true) }
+                        .onFailure { Timber.e(it, "Failed to restore XMSF networking after startForeground") }
+                }
+            }
         }
     }
 
@@ -236,12 +320,88 @@ class TaskExecutionService : Service() {
         val activeName = activeTaskName(snapshot)
         val title = activeName ?: getString(R.string.notification_task_running_title)
 
-        return buildCompatProgressNotification(
-            title = title,
-            contentText = contentText,
-            progressInfo = progressInfo,
-            activeTaskName = activeName,
-        )
+        return if (appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND) {
+            buildMiIslandNotification(snapshot, progressInfo, activeName)
+        } else {
+            buildCompatProgressNotification(
+                title = title,
+                contentText = contentText,
+                progressInfo = progressInfo,
+                activeTaskName = activeName,
+            )
+        }
+    }
+
+    private fun buildMiIslandNotification(
+        snapshot: TaskNotificationSnapshot,
+        progressInfo: TaskProgressInfo,
+        activeName: String?,
+    ): Notification {
+        val title = if (snapshot.state == MaaExecutionState.IDLE) {
+            getString(R.string.notification_task_completed)
+        } else activeName ?: getString(R.string.notification_task_running_title)
+        val currentContent = snapshot.statusText ?: getString(R.string.notification_task_running)
+        val isTerminal = snapshot.state == MaaExecutionState.IDLE
+        val builder = NotificationCompat.Builder(this, TASK_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_maa_logo)
+            .setContentTitle(title)
+            .setContentText(currentContent)
+            .setContentIntent(buildContentIntent())
+            .setOngoing(!isTerminal)
+            .setAutoCancel(isTerminal)
+            .setOnlyAlertOnce(!isTerminal)
+            .setSilent(!isTerminal)
+            .setCategory(if (isTerminal) NotificationCompat.CATEGORY_STATUS else NotificationCompat.CATEGORY_PROGRESS)
+        val extras = FocusNotification.buildV3 {
+            val logo = Icon.createWithResource(this@TaskExecutionService, R.mipmap.ic_launcher)
+            val logoKey = createPicture("maa_task_logo", logo)
+            business = "maa_task"
+            enableFloat = isTerminal
+            islandFirstFloat = isTerminal
+            updatable = true
+            ticker = title
+            tickerPic = logoKey
+            island {
+                islandProperty = 1
+                bigIslandArea {
+                    imageTextInfoLeft {
+                        type = 1
+                        picInfo { type = 1; pic = logoKey }
+                        textInfo { this.title = title }
+                    }
+                    progressTextInfo {
+                        progressInfo {
+                            progress = (progressInfo.progress * 100 / PROGRESS_STYLE_MAX)
+                            isCCW = false
+                        }
+                        textInfo {
+                            this.title = progressInfo.progressLabel ?: "0/0"
+                        }
+                    }
+                }
+                smallIslandArea { picInfo { type = 1; pic = logoKey } }
+            }
+            baseInfo {
+                type = 2
+                this.title = title
+                subTitle = progressInfo.progressLabel ?: "0/0"
+                colorSubTitle = "#2196F3"
+                colorSubTitleDark = "#2196F3"
+                content = currentContent
+            }
+            picInfo {
+                type = 1
+                pic = logoKey
+                picDark = logoKey
+            }
+            progressInfo {
+                progress = (progressInfo.progress * 100 / PROGRESS_STYLE_MAX)
+                colorProgress = "#2196F3"
+                colorProgressEnd = "#2196F3"
+            }
+        }
+        builder.addExtras(extras)
+        return builder.build()
     }
 
     private fun defaultStatusText(state: MaaExecutionState): String = when (state) {
@@ -395,6 +555,12 @@ class TaskExecutionService : Service() {
     }
 
     private fun updateNotification(snapshot: TaskNotificationSnapshot) {
+        if (appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND &&
+            appSettingsManager.miIslandBypassRestriction.value
+        ) {
+            serviceScope.launch(Dispatchers.IO) { notifyMiIslandWithBypass(snapshot) }
+            return
+        }
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         try {
             manager.notify(NOTIFICATION_ID, buildNotification(snapshot))
@@ -402,6 +568,33 @@ class TaskExecutionService : Service() {
             // API 33+ 用户拒绝 POST_NOTIFICATIONS 时 notify 会抛 SecurityException；
             // FGS 主线程不应被通知权限异常拖垮，对齐 MaaEventNotifier 的处理。
             Timber.w(e, "notify blocked by POST_NOTIFICATIONS denial")
+        }
+    }
+
+    private suspend fun notifyMiIslandWithBypass(snapshot: TaskNotificationSnapshot) {
+        miIslandNetworkMutex.withLock {
+            if (!notificationSessionActive) return@withLock
+            val remote = (RemoteServiceManager.state.value as? RemoteServiceManager.ServiceState.Connected)?.service
+            var blocked = false
+            try {
+                blocked = remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", false) == true
+                val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                if (notificationSessionActive) manager.notify(NOTIFICATION_ID, buildNotification(snapshot))
+                if (blocked) delay(100L)
+            } catch (e: Exception) {
+                Timber.w(e, "Mi Island bypass failed; notification sent without bypass when possible")
+                runCatching {
+                    val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    if (notificationSessionActive) manager.notify(NOTIFICATION_ID, buildNotification(snapshot))
+                }
+            } finally {
+                if (blocked) {
+                    withContext(NonCancellable) {
+                        runCatching { remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", true) }
+                            .onFailure { Timber.e(it, "Failed to restore XMSF networking") }
+                    }
+                }
+            }
         }
     }
 

@@ -212,6 +212,7 @@ dependencies {
     // Third-party
     implementation(libs.jna) { artifact { type = "aar" } }
     implementation(libs.fastjson2)
+    implementation(libs.focus.api)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
     implementation(libs.device.compat)

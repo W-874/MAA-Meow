@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.remote.internal
 import android.content.pm.IPackageManager
 import android.os.IDeviceIdleController
 import android.os.Process
+import android.net.IConnectivityManager
 import com.aliothmoon.maameow.third.FakeContext
 import com.aliothmoon.maameow.third.Ln
 import com.android.internal.app.IAppOpsService
@@ -24,6 +25,10 @@ object RemoteUtils {
     val deviceIdleController: IDeviceIdleController by lazy {
         val binder = SystemServiceHelper.getSystemService("deviceidle")
         IDeviceIdleController.Stub.asInterface(binder)
+    }
+
+    val connectivityManager: IConnectivityManager by lazy {
+        IConnectivityManager.Stub.asInterface(SystemServiceHelper.getSystemService("connectivity"))
     }
 
     fun getAppUid(packageName: String): Int = runCatching {

@@ -1579,6 +1579,10 @@
     <string name="notification_task_running">运行中</string>
     <string name="notification_task_completed">任务完成</string>
     <string name="notification_task_error">任务异常</string>
+    <string name="notification_task_style">任务实时通知样式</string>
+    <string name="notification_task_style_android">Android 原生</string>
+    <string name="notification_task_style_mi_island">小米超级岛</string>
+    <string name="notification_mi_island_bypass">绕过 HyperOS 超级岛限制</string>
     <string name="notification_channel_schedule">定时任务</string>
     <string name="notification_channel_schedule_desc">定时任务执行与结果通知</string>
     <string name="notification_schedule_title">定时任务</string>

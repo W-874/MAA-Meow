@@ -67,6 +67,8 @@ fun NotificationSettingsView(
 
     val appSettingsManager: AppSettingsManager = koinInject()
     val eventNotificationLevel by appSettingsManager.eventNotificationLevel.collectAsStateWithLifecycle()
+    val taskNotificationStyle by appSettingsManager.taskNotificationStyle.collectAsStateWithLifecycle()
+    val miIslandBypass by appSettingsManager.miIslandBypassRestriction.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val testMessage = stringResource(R.string.notification_test_message)
 
@@ -136,6 +138,40 @@ fun NotificationSettingsView(
                             ) {
                                 Text(stringResource(R.string.notification_send_test))
                             }
+                        }
+                    }
+                }
+            }
+
+            item {
+                SectionHeader(stringResource(R.string.notification_task_style))
+                SegmentedSettingsGroup {
+                    item {
+                        SettingRow(
+                            title = stringResource(
+                                if (taskNotificationStyle == AppSettingsManager.TaskNotificationStyle.MI_ISLAND)
+                                    R.string.notification_task_style_mi_island
+                                else R.string.notification_task_style_android
+                            ),
+                            titleColor = contentColor,
+                            onClick = {
+                                coroutineScope.launch {
+                                    appSettingsManager.setTaskNotificationStyle(
+                                        if (taskNotificationStyle == AppSettingsManager.TaskNotificationStyle.MI_ISLAND)
+                                            AppSettingsManager.TaskNotificationStyle.ANDROID
+                                        else AppSettingsManager.TaskNotificationStyle.MI_ISLAND
+                                    )
+                                }
+                            },
+                        )
+                    }
+                    if (taskNotificationStyle == AppSettingsManager.TaskNotificationStyle.MI_ISLAND) {
+                        item {
+                            SwitchItem(
+                                title = stringResource(R.string.notification_mi_island_bypass),
+                                checked = miIslandBypass,
+                                contentColor = contentColor,
+                            ) { enabled -> coroutineScope.launch { appSettingsManager.setMiIslandBypassRestriction(enabled) } }
                         }
                     }
                 }

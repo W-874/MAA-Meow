@@ -1,6 +1,8 @@
 package com.aliothmoon.maameow.domain.service
 
+import android.content.Context
 import com.aliothmoon.maameow.data.notification.NotificationSettingsManager
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 
 /**
  * 聚合系统通知 (MaaEventNotifier) 和外部推送 (ExternalNotificationService)，
@@ -10,11 +12,17 @@ class MaaNotificationCenter(
     private val eventNotifier: MaaEventNotifier,
     private val externalService: ExternalNotificationService,
     private val settings: NotificationSettingsManager,
+    private val appSettingsManager: AppSettingsManager,
+    private val context: Context,
 ) {
 
     /** 全部任务完成 */
     fun notifyAllTasksCompleted(summary: String) {
-        eventNotifier.notifyAllTasksCompleted(summary)
+        if (appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND) {
+            TaskExecutionService.complete(context, summary)
+        } else {
+            eventNotifier.notifyAllTasksCompleted(summary)
+        }
         if (settings.sendOnComplete.value) {
             externalService.sendWithLogs("所有任务已完成", summary)
         }

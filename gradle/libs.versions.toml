@@ -32,6 +32,7 @@ window = "1.5.1"
 # Third-party libraries
 jna = "5.18.1"
 fastjson2 = "2.0.62"
+focusApi = "1.4"
 shizuku = "13.1.5"
 floatingX = "2.3.7"
 sonner = "0.3.9"
@@ -91,6 +92,7 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 fastjson2 = { group = "com.alibaba.fastjson2", name = "fastjson2", version.ref = "fastjson2" }
+focus-api = { module = "com.xzakota.hyper.notification:focus-api", version.ref = "focusApi" }
 device-compat = { group = "com.github.getActivity", name = "DeviceCompat", version.ref = "deviceCompat" }
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoetKsp" }

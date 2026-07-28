@@ -398,6 +398,26 @@ class AppSettingsManager(
         }
     }
 
+    enum class TaskNotificationStyle { ANDROID, MI_ISLAND }
+
+    val taskNotificationStyle: StateFlow<TaskNotificationStyle> = settings
+        .map { runCatching { TaskNotificationStyle.valueOf(it.taskNotificationStyle) }.getOrDefault(TaskNotificationStyle.ANDROID) }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, runCatching { TaskNotificationStyle.valueOf(initialSettings.taskNotificationStyle) }.getOrDefault(TaskNotificationStyle.ANDROID))
+
+    suspend fun setTaskNotificationStyle(style: TaskNotificationStyle) {
+        with(AppSettingsSchema) { context.dataStore.edit { it[taskNotificationStyle] = style.name } }
+    }
+
+    val miIslandBypassRestriction: StateFlow<Boolean> = settings
+        .map { it.miIslandBypassRestriction.toBooleanStrictOrNull() ?: true }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.miIslandBypassRestriction.toBooleanStrictOrNull() ?: true)
+
+    suspend fun setMiIslandBypassRestriction(enabled: Boolean) {
+        with(AppSettingsSchema) { context.dataStore.edit { it[miIslandBypassRestriction] = enabled.toString() } }
+    }
+
     // 后台虚拟屏分辨率
     val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = settings
         .map {

@@ -1912,4 +1912,8 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="notification_task_style">Task live notification style</string>
+    <string name="notification_task_style_android">Android native</string>
+    <string name="notification_task_style_mi_island">Xiaomi Super Island</string>
+    <string name="notification_mi_island_bypass">Bypass HyperOS Super Island restriction</string>
 </resources>
