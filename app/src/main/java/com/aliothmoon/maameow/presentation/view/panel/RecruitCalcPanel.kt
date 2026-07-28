@@ -1,6 +1,10 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,15 +24,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,8 +51,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.INumericField
-import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
+import com.aliothmoon.maameow.presentation.components.LocalSettingItemShape
+import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
+import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
+import com.aliothmoon.maameow.presentation.components.RecruitConfirmationSettingRow
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
@@ -63,95 +75,64 @@ fun RecruitCalcPanel(
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val resolvedStatusMessage = statusMessage.asString()
     val config by viewModel.recruitConfig.collectAsStateWithLifecycle()
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = 2.dp,
+            bottom = mainBottomBarPadding + 4.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // 总开关：自动设置招募时间
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.panel_recruit_calc_auto_time),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Switch(
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                RecruitCalcSwitchSetting(
+                    index = 0,
+                    itemCount = 5,
+                    title = stringResource(R.string.panel_recruit_calc_auto_time),
                     checked = config.autoSetTime,
                     onCheckedChange = {
                         viewModel.onRecruitConfigChange(config.copy(autoSetTime = it))
                     },
-                    modifier = Modifier.height(24.dp)
                 )
-            }
-        }
-
-        // 星级配置行
-        val starLevels = listOf(3, 4, 5, 6)
-
-        items(starLevels) { level ->
-            val checked = when (level) {
-                3 -> config.chooseLevel3
-                4 -> config.chooseLevel4
-                5 -> config.chooseLevel5
-                else -> config.chooseLevel6
-            }
-            val time = when (level) {
-                3 -> config.level3Time
-                4 -> config.level4Time
-                5 -> config.level5Time
-                else -> 540
-            }
-            // 对齐上游 v6.13.0-beta.1：5/6 星时间固定 9:00
-            val timeEnabled = level < 5
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = {
-                        val newConfig = when (level) {
-                            3 -> config.copy(chooseLevel3 = it)
-                            4 -> config.copy(chooseLevel4 = it)
-                            5 -> config.copy(chooseLevel5 = it)
-                            else -> config.copy(chooseLevel6 = it)
-                        }
-                        viewModel.onRecruitConfigChange(newConfig)
-                    },
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text(
-                    text = stringResource(R.string.panel_recruit_calc_auto_select_tags, level),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (config.autoSetTime) {
-                    RecruitTimeSelector(
+                listOf(3, 4, 5, 6).forEachIndexed { index, level ->
+                    val checked = when (level) {
+                        3 -> config.chooseLevel3
+                        4 -> config.chooseLevel4
+                        5 -> config.chooseLevel5
+                        else -> config.chooseLevel6
+                    }
+                    val time = when (level) {
+                        3 -> config.level3Time
+                        4 -> config.level4Time
+                        else -> 540
+                    }
+                    RecruitCalcSwitchSetting(
+                        index = index + 1,
+                        itemCount = 5,
+                        title = stringResource(R.string.panel_recruit_calc_auto_select_tags, level),
+                        checked = checked,
+                        onCheckedChange = { nextChecked ->
+                            val nextConfig = when (level) {
+                                3 -> config.copy(chooseLevel3 = nextChecked)
+                                4 -> config.copy(chooseLevel4 = nextChecked)
+                                5 -> config.copy(chooseLevel5 = nextChecked)
+                                else -> config.copy(chooseLevel6 = nextChecked)
+                            }
+                            viewModel.onRecruitConfigChange(nextConfig)
+                        },
+                        showTime = config.autoSetTime,
+                        timeEditable = level < 5,
                         totalMinutes = time,
-                        enabled = timeEnabled,
-                        onTimeChange = {
-                            val newConfig = when (level) {
-                                3 -> config.copy(level3Time = it)
-                                4 -> config.copy(level4Time = it)
-                                5 -> config.copy(level5Time = it)
+                        onTimeChange = { totalMinutes ->
+                            val nextConfig = when (level) {
+                                3 -> config.copy(level3Time = totalMinutes)
+                                4 -> config.copy(level4Time = totalMinutes)
                                 else -> config
                             }
-                            if (timeEnabled) {
-                                viewModel.onRecruitConfigChange(newConfig)
-                            }
-                        }
+                            viewModel.onRecruitConfigChange(nextConfig)
+                        },
                     )
                 }
             }
@@ -222,6 +203,82 @@ fun RecruitCalcPanel(
                         .fillMaxWidth()
                         .padding(top = 4.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecruitCalcSwitchSetting(
+    index: Int,
+    itemCount: Int,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    showTime: Boolean = false,
+    timeEditable: Boolean = false,
+    totalMinutes: Int = 540,
+    onTimeChange: (Int) -> Unit = {},
+) {
+    val normalizedMinutes = totalMinutes.coerceIn(60, 540)
+    val hour = normalizedMinutes / 60
+    val minute = normalizedMinutes % 60
+    var durationExpanded by remember(checked, showTime, timeEditable) { mutableStateOf(false) }
+    val shape = animatedSegmentedItemShape(
+        index = index,
+        itemCount = itemCount,
+        expanded = checked && timeEditable && durationExpanded,
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceBright,
+        ) {
+            CompositionLocalProvider(LocalSettingItemShape provides shape) {
+                RecruitConfirmationSettingRow(
+                        title = title,
+                        checked = checked,
+                        onCheckedChange = onCheckedChange,
+                        totalMinutes = normalizedMinutes,
+                        showTime = showTime,
+                        timeEditable = timeEditable,
+                        editing = durationExpanded,
+                        onEditingChange = { durationExpanded = it },
+                    )
+            }
+        }
+        AnimatedVisibility(
+            visible = checked && timeEditable && durationExpanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            SegmentedSettingsGroup(modifier = Modifier.padding(start = 12.dp)) {
+                item {
+                    NumberStepperSettingRow(
+                        title = stringResource(R.string.panel_recruit_duration_hours),
+                        value = hour,
+                        range = 1..9,
+                        icon = null,
+                        onValueChange = { nextHour ->
+                            onTimeChange(nextHour * 60 + if (nextHour == 9) 0 else minute)
+                        },
+                    )
+                }
+                item {
+                    NumberStepperSettingRow(
+                        title = stringResource(R.string.panel_recruit_duration_minutes),
+                        value = minute,
+                        range = 0..55,
+                        step = 5,
+                        enabled = hour < 9,
+                        icon = null,
+                        onValueChange = { nextMinute ->
+                            onTimeChange(hour * 60 + nextMinute)
+                        },
+                    )
+                }
             }
         }
     }

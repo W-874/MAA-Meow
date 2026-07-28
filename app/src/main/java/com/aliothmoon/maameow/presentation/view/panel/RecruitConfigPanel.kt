@@ -1,5 +1,10 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +35,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,8 +57,10 @@ import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
-import com.aliothmoon.maameow.presentation.components.RecruitTimeSelector
+import com.aliothmoon.maameow.presentation.components.RecruitConfirmationSettingRow
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.LocalSettingItemShape
+import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
 import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import kotlinx.coroutines.launch
@@ -76,7 +84,9 @@ fun RecruitConfigPanel(
             .fillMaxSize()
             .padding(top = 2.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(
+            bottom = LocalTaskPanelBottomPadding.current,
+        ),
     ) {
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_general)) }
         item {
@@ -87,15 +97,17 @@ fun RecruitConfigPanel(
         }
         item { TaskSettingsSectionTitle(stringResource(R.string.common_tab_advanced)) }
         item {
-            SegmentedSettingsGroup {
-                item { SelectExtraTagsSection(config, onConfigChange) }
-                item { AutoRecruitFirstListSection(config, onConfigChange) }
-                item { RefreshLevel3Section(config, onConfigChange) }
-                item { ForceRefreshSection(config, onConfigChange) }
-                item { PreserveTagSection(config, onConfigChange) }
-                item { ChooseLevel3Section(config, onConfigChange) }
-                item { ChooseLevel4Section(config, onConfigChange) }
-                item { ChooseLevel5Section(config, onConfigChange) }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SegmentedSettingsGroup {
+                    item { SelectExtraTagsSection(config, onConfigChange) }
+                    item { AutoRecruitFirstListSection(config, onConfigChange) }
+                    item { RefreshLevel3Section(config, onConfigChange) }
+                    item { ForceRefreshSection(config, onConfigChange) }
+                    item(shape = RoundedCornerShape(5.dp)) {
+                        PreserveTagSection(config, onConfigChange)
+                    }
+                }
+                AutoConfirmSettings(config, onConfigChange)
             }
         }
     }
@@ -410,86 +422,123 @@ private fun PreserveTagSection(
     }
 }
 
-/**
- * 自动选择三星 + 时长设置
- * WPF: CheckBox + 两个NumericUpDown (Hour + Min)
- */
 @Composable
-private fun ChooseLevel3Section(
+private fun AutoConfirmSettings(
     config: RecruitConfig,
-    onConfigChange: (RecruitConfig) -> Unit
+    onConfigChange: (RecruitConfig) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        RecruitSwitchSetting(
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        AutoConfirmSetting(
+            index = 5,
+            itemCount = 8,
             title = stringResource(R.string.panel_recruit_choose_level3),
             checked = config.chooseLevel3,
             onCheckedChange = { onConfigChange(config.copy(chooseLevel3 = it)) },
-        )
-
-        // 时长选择器
-        RecruitTimeSelector(
-            enabled = config.chooseLevel3,
             totalMinutes = config.chooseLevel3Hour * 60 + config.chooseLevel3Min,
             onTimeChange = { total ->
                 onConfigChange(config.copy(
                     chooseLevel3Hour = total / 60,
-                    chooseLevel3Min = total % 60
+                    chooseLevel3Min = total % 60,
                 ))
-            }
+            },
         )
-    }
-}
-
-/**
- * 自动选择四星 + 时长设置
- * WPF: CheckBox + 两个NumericUpDown (Hour + Min)
- */
-@Composable
-private fun ChooseLevel4Section(
-    config: RecruitConfig,
-    onConfigChange: (RecruitConfig) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        RecruitSwitchSetting(
+        AutoConfirmSetting(
+            index = 6,
+            itemCount = 8,
             title = stringResource(R.string.panel_recruit_choose_level4),
             checked = config.chooseLevel4,
             onCheckedChange = { onConfigChange(config.copy(chooseLevel4 = it)) },
-        )
-
-        RecruitTimeSelector(
-            enabled = config.chooseLevel4,
             totalMinutes = config.chooseLevel4Hour * 60 + config.chooseLevel4Min,
             onTimeChange = { total ->
                 onConfigChange(config.copy(
                     chooseLevel4Hour = total / 60,
-                    chooseLevel4Min = total % 60
+                    chooseLevel4Min = total % 60,
                 ))
-            }
+            },
+        )
+        AutoConfirmSetting(
+            index = 7,
+            itemCount = 8,
+            title = stringResource(R.string.panel_recruit_choose_level5),
+            checked = config.chooseLevel5,
+            onCheckedChange = { onConfigChange(config.copy(chooseLevel5 = it)) },
+            timeEditable = false,
         )
     }
 }
 
-/**
- * 自动选择五星 + 时长设置
- * WPF: CheckBox + 两个NumericUpDown (Hour + Min)
- */
 @Composable
-private fun ChooseLevel5Section(
-    config: RecruitConfig,
-    onConfigChange: (RecruitConfig) -> Unit
+private fun AutoConfirmSetting(
+    index: Int,
+    itemCount: Int,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    totalMinutes: Int = 540,
+    onTimeChange: (Int) -> Unit = {},
+    showTime: Boolean = true,
+    timeEditable: Boolean = true,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        RecruitSwitchSetting(
-            title = stringResource(R.string.panel_recruit_choose_level5),
-            checked = config.chooseLevel5,
-            onCheckedChange = { onConfigChange(config.copy(chooseLevel5 = it)) },
-        )
+    val normalizedMinutes = totalMinutes.coerceIn(60, 540)
+    val hour = normalizedMinutes / 60
+    val minute = normalizedMinutes % 60
+    var durationExpanded by remember(checked) { mutableStateOf(false) }
+    val shape = animatedSegmentedItemShape(
+        index = index,
+        itemCount = itemCount,
+        expanded = checked && timeEditable && durationExpanded,
+    )
 
-        // 对齐上游 v6.13.0-beta.1：5 星时间锁死 9:00，不再允许编辑
-        RecruitTimeSelector(
-            enabled = false,
-            totalMinutes = 540,
-            onTimeChange = {}
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = MaterialTheme.colorScheme.surfaceBright,
+        ) {
+            CompositionLocalProvider(LocalSettingItemShape provides shape) {
+                RecruitConfirmationSettingRow(
+                        title = title,
+                        checked = checked,
+                        onCheckedChange = onCheckedChange,
+                        totalMinutes = normalizedMinutes,
+                        showTime = showTime,
+                        timeEditable = timeEditable,
+                        editing = durationExpanded,
+                        onEditingChange = { durationExpanded = it },
+                    )
+            }
+        }
+        AnimatedVisibility(
+            visible = checked && timeEditable && durationExpanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            SegmentedSettingsGroup(modifier = Modifier.padding(start = 12.dp)) {
+                item {
+                    NumberStepperSettingRow(
+                        title = stringResource(R.string.panel_recruit_duration_hours),
+                        value = hour,
+                        range = 1..9,
+                        icon = null,
+                        onValueChange = { nextHour ->
+                            onTimeChange(nextHour * 60 + if (nextHour == 9) 0 else minute)
+                        },
+                    )
+                }
+                item {
+                    NumberStepperSettingRow(
+                        title = stringResource(R.string.panel_recruit_duration_minutes),
+                        value = minute,
+                        range = 0..55,
+                        step = 5,
+                        enabled = hour < 9,
+                        icon = null,
+                        onValueChange = { nextMinute ->
+                            onTimeChange(hour * 60 + nextMinute)
+                        },
+                    )
+                }
+            }
+        }
     }
 }
