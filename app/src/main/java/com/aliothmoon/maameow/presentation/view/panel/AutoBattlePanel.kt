@@ -10,7 +10,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,17 +42,19 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,20 +72,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.data.resource.CopilotResourceProvider
 import com.aliothmoon.maameow.domain.service.OperatorDisplayItem
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
-import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
-import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
-import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
+import com.aliothmoon.maameow.presentation.components.LocalSettingItemShape
+import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
-import com.aliothmoon.maameow.theme.DenseTabTypography
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +111,7 @@ fun AutoBattlePanel(
     modifier: Modifier = Modifier,
     viewModel: CopilotViewModel = koinInject()
 ) {
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val maaState by viewModel.maaState.collectAsStateWithLifecycle()
     val isStarting = maaState == MaaExecutionState.STARTING
@@ -116,7 +120,7 @@ fun AutoBattlePanel(
     val scope = rememberCoroutineScope()
     val isInFloatingWindow = LocalFloatingWindowContext.current
     val statusMessage = state.statusMessage.asString()
-    val compactButtonShape = RoundedCornerShape(8.dp)
+    val compactButtonShape = RoundedCornerShape(12.dp)
     val compactButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
     val importFloatHint = stringResource(R.string.copilot_import_float_hint)
 
@@ -144,10 +148,6 @@ fun AutoBattlePanel(
             }
         }
     } else null
-    val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
-        lineHeight = 16.sp
-    )
-    val tabSubtitleTextStyle = DenseTabTypography.Subtitle
     val tabSpecs = listOf(
         CopilotTabUiSpec(
             index = 0,
@@ -179,6 +179,13 @@ fun AutoBattlePanel(
             supportsRegularOptions = true,
         )
     )
+    val tabLabels = listOf(
+        stringResource(R.string.panel_autobattle_tab_mainline) + " / " +
+            stringResource(R.string.panel_autobattle_tab_mainline_subtitle),
+        stringResource(R.string.panel_autobattle_tab_security),
+        stringResource(R.string.panel_autobattle_tab_paradox),
+        stringResource(R.string.panel_autobattle_tab_other),
+    )
     val current = tabSpecs.firstOrNull { it.index == state.tabIndex } ?: tabSpecs.first()
     val regularCopilotTab = current.supportsRegularOptions
     val loopCountSupportedTab = current.index == 1 || current.index == 3
@@ -190,145 +197,31 @@ fun AutoBattlePanel(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(top = 2.dp),
+            contentPadding = PaddingValues(bottom = mainBottomBarPadding + 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tabSpecs.chunked(2).forEach { rowSpecs ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            rowSpecs.forEach { spec ->
-                                val selected = state.tabIndex == spec.index
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (selected) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerLow
-                                    },
-                                    border = BorderStroke(
-                                        width = 1.dp,
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.outlineVariant
-                                        }
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .heightIn(min = 56.dp)
-                                        .clickable { viewModel.onTabChanged(spec.index) }
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = stringResource(spec.titleRes),
-                                            style = tabTitleTextStyle,
-                                            color = if (selected) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            },
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                        spec.subtitleRes?.let { subtitleRes ->
-                                            Spacer(modifier = Modifier.height(1.dp))
-                                            Text(
-                                                text = stringResource(subtitleRes),
-                                                style = tabSubtitleTextStyle,
-                                                color = if (selected) {
-                                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                                                        alpha = 0.8f
-                                                    )
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                                },
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            if (rowSpecs.size < 2) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                    HorizontalDivider()
-                }
-            }
-
-            item {
-                ITextField(
-                    value = state.inputText,
-                    onValueChange = viewModel::onInputChanged,
-                    label = stringResource(R.string.panel_autobattle_station_code_label),
-                    placeholder = stringResource(R.string.panel_autobattle_station_code_placeholder),
-                )
-            }
-
-            item {
-                BuiltinCopilotPicker(
-                    expanded = state.builtinPickerExpanded,
-                    loaded = state.builtinLoaded,
-                    tree = state.builtinTree,
-                    expandedFolders = state.builtinExpandedFolders,
-                    enabled = controlsEnabled,
-                    onToggle = viewModel::onToggleBuiltinPicker,
-                    onToggleFolder = viewModel::onToggleBuiltinFolder,
-                    onSelectFile = viewModel::onSelectBuiltinFile,
-                )
-            }
-
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        Text(
-                            text = statusMessage.ifBlank {
-                                stringResource(R.string.panel_autobattle_waiting)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
+                SegmentedSettingsGroup {
+                    item {
+                        SettingDropdown(
+                            title = stringResource(R.string.panel_autobattle_job_type),
+                            selected = current,
+                            options = tabSpecs,
+                            optionLabel = { spec -> tabLabels[spec.index] },
+                            onSelected = { viewModel.onTabChanged(it.index) },
+                            icon = null,
+                            singleLine = true,
                         )
                     }
                 }
             }
 
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // 读取类：实心主色
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         CopilotActionButton(
                             text = if (state.isLoading) {
@@ -339,6 +232,12 @@ fun AutoBattlePanel(
                             icon = Icons.Default.Search,
                             filled = true,
                             enabled = controlsEnabled,
+                            shape = RoundedCornerShape(
+                                topStart = 16.dp,
+                                topEnd = 5.dp,
+                                bottomStart = 5.dp,
+                                bottomEnd = 5.dp,
+                            ),
                             onClick = viewModel::onParseSingleInput,
                         )
                         CopilotActionButton(
@@ -346,24 +245,41 @@ fun AutoBattlePanel(
                             icon = Icons.Default.GridView,
                             filled = true,
                             enabled = controlsEnabled && setImportSupported,
+                            shape = RoundedCornerShape(
+                                topStart = 5.dp,
+                                topEnd = 16.dp,
+                                bottomStart = 5.dp,
+                                bottomEnd = 5.dp,
+                            ),
                             onClick = viewModel::onParseSetInput,
                         )
                     }
-                    // 导入 / 外链：描边次级
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         CopilotActionButton(
                             text = stringResource(R.string.copilot_import_file),
                             icon = Icons.Default.UploadFile,
                             filled = false,
                             enabled = controlsEnabled,
+                            shape = RoundedCornerShape(
+                                topStart = 5.dp,
+                                topEnd = 5.dp,
+                                bottomStart = 16.dp,
+                                bottomEnd = 5.dp,
+                            ),
                             onClick = {
                                 if (filePicker != null) {
-                                    filePicker.launch(arrayOf("application/json", "application/octet-stream"))
+                                    filePicker.launch(
+                                        arrayOf("application/json", "application/octet-stream"),
+                                    )
                                 } else {
-                                    Toast.makeText(context, importFloatHint, Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        importFloatHint,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                                 }
                             },
                         )
@@ -372,7 +288,66 @@ fun AutoBattlePanel(
                             icon = Icons.Default.Public,
                             filled = false,
                             enabled = true,
+                            shape = RoundedCornerShape(
+                                topStart = 5.dp,
+                                topEnd = 5.dp,
+                                bottomStart = 5.dp,
+                                bottomEnd = 16.dp,
+                            ),
                             onClick = { Misc.openUriSafely(context, "https://zoot.plus") },
+                        )
+                    }
+                }
+            }
+
+            item {
+                val pickerShape = animatedSegmentedItemShape(
+                    index = 1,
+                    itemCount = 3,
+                    expanded = state.builtinPickerExpanded,
+                )
+                SegmentedSettingsGroup {
+                    item {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            ITextField(
+                                value = state.inputText,
+                                onValueChange = viewModel::onInputChanged,
+                                label = stringResource(R.string.panel_autobattle_station_code_label),
+                                placeholder = stringResource(
+                                    R.string.panel_autobattle_station_code_placeholder,
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                        }
+                    }
+                    item(shape = pickerShape) {
+                        CompositionLocalProvider(LocalSettingItemShape provides pickerShape) {
+                            BuiltinCopilotPicker(
+                                expanded = state.builtinPickerExpanded,
+                                loaded = state.builtinLoaded,
+                                tree = state.builtinTree,
+                                expandedFolders = state.builtinExpandedFolders,
+                                enabled = controlsEnabled,
+                                onToggle = viewModel::onToggleBuiltinPicker,
+                                onToggleFolder = viewModel::onToggleBuiltinFolder,
+                                onSelectFile = viewModel::onSelectBuiltinFile,
+                            )
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            title = statusMessage.ifBlank {
+                                stringResource(R.string.panel_autobattle_waiting)
+                            },
+                            icon = null,
+                            trailing = if (state.isLoading) {
+                                {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
+                            } else null,
                         )
                     }
                 }
@@ -388,8 +363,8 @@ fun AutoBattlePanel(
                     item {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceBright,
                         ) {
                             Column(
                                 modifier = Modifier
@@ -404,14 +379,14 @@ fun AutoBattlePanel(
                                                 text = doc.title,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                         if (doc.details.isNotBlank()) {
                                             Text(
                                                 text = doc.details,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -420,7 +395,7 @@ fun AutoBattlePanel(
                                 if (summary != null && !summary.isEmpty) {
                                     if (doc.title.isNotBlank() || doc.details.isNotBlank()) {
                                         HorizontalDivider(
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(
                                                 alpha = 0.2f
                                             )
                                         )
@@ -447,7 +422,7 @@ fun AutoBattlePanel(
                                                     text = stringResource(R.string.panel_autobattle_operator_header),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 summary.operators.forEach { oper ->
                                                     OperatorRow(oper, nameWidth = nameWidth)
@@ -464,7 +439,7 @@ fun AutoBattlePanel(
                                                     ),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 opers.forEach { oper ->
                                                     OperatorRow(oper, nameWidth = nameWidth)
@@ -478,7 +453,7 @@ fun AutoBattlePanel(
                                                 summary.totalCount
                                             ),
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                                 alpha = 0.6f
                                             )
                                         )
@@ -506,173 +481,170 @@ fun AutoBattlePanel(
 
             if (regularCopilotTab) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CheckBoxWithExpandableTip(
+                    TaskSettingsSectionTitle(stringResource(R.string.panel_autobattle_settings))
+                }
+                item {
+                    SegmentedSettingsGroup {
+                        item {
+                            CopilotSwitchRow(
+                                title = stringResource(R.string.panel_autobattle_auto_formation),
                                 checked = state.config.formation,
                                 onCheckedChange = {
                                     viewModel.onConfigChanged(state.config.copy(formation = it))
                                 },
-                                label = stringResource(R.string.panel_autobattle_auto_formation),
-                                tipText = stringResource(R.string.panel_autobattle_auto_formation_tip)
                             )
+                        }
                         if (state.config.formation) {
-                            CheckBoxWithLabel(
-                                checked = state.config.useFormation,
-                                onCheckedChange = { enabled ->
-                                    viewModel.onConfigChanged(
-                                        state.config.copy(
-                                            useFormation = enabled,
-                                            formationIndex = state.config.formationIndex.coerceIn(
-                                                1,
-                                                4
-                                            )
+                            item {
+                                CopilotSwitchRow(
+                                    title = stringResource(R.string.panel_autobattle_use_formation),
+                                    checked = state.config.useFormation,
+                                    onCheckedChange = { enabled ->
+                                        viewModel.onConfigChanged(
+                                            state.config.copy(
+                                                useFormation = enabled,
+                                                formationIndex = state.config.formationIndex.coerceIn(1, 4),
+                                            ),
                                         )
-                                    )
-                                },
-                                label = stringResource(R.string.panel_autobattle_use_formation)
-                            )
-
+                                    },
+                                )
+                            }
                             if (state.config.useFormation) {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(1, 2, 3, 4).forEach { index ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
-                                                viewModel.onConfigChanged(
-                                                    state.config.copy(
-                                                        formationIndex = index
-                                                    )
-                                                )
-                                            }
-                                        ) {
-                                            RadioButton(
-                                                selected = state.config.formationIndex == index,
-                                                onClick = {
-                                                    viewModel.onConfigChanged(
-                                                        state.config.copy(
-                                                            formationIndex = index
-                                                        )
-                                                    )
-                                                }
+                                item {
+                                    SettingDropdown(
+                                        title = stringResource(R.string.panel_autobattle_formation),
+                                        selected = state.config.formationIndex,
+                                        options = listOf(1, 2, 3, 4),
+                                        optionLabel = { it.toString() },
+                                        onSelected = {
+                                            viewModel.onConfigChanged(
+                                                state.config.copy(formationIndex = it),
                                             )
-                                            Text(index.toString())
-                                        }
-                                    }
-                                }
-                            }
-
-                            CheckBoxWithExpandableTip(
-                                checked = state.config.ignoreRequirements,
-                                onCheckedChange = {
-                                    viewModel.onConfigChanged(state.config.copy(ignoreRequirements = it))
-                                },
-                                label = stringResource(R.string.panel_autobattle_ignore_requirements),
-                                tipText = stringResource(R.string.panel_autobattle_ignore_requirements_tip)
-                            )
-
-                            CheckBoxWithExpandableTip(
-                                checked = state.config.useSupportUnit,
-                                onCheckedChange = {
-                                    viewModel.onConfigChanged(state.config.copy(useSupportUnit = it))
-                                },
-                                label = stringResource(R.string.panel_autobattle_support_unit),
-                                tipText = stringResource(R.string.panel_autobattle_support_unit_tip)
-                            )
-
-                            if (state.config.useSupportUnit) {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf(
-                                        1 to stringResource(R.string.panel_autobattle_support_fill_gaps),
-                                        3 to stringResource(R.string.panel_autobattle_support_random)
-                                    ).forEach { (value, label) ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
-                                                viewModel.onConfigChanged(
-                                                    state.config.copy(
-                                                        supportUnitUsage = value
-                                                    )
-                                                )
-                                            }
-                                        ) {
-                                            RadioButton(
-                                                selected = state.config.supportUnitUsage == value,
-                                                onClick = {
-                                                    viewModel.onConfigChanged(
-                                                        state.config.copy(
-                                                            supportUnitUsage = value
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                            Text(label)
-                                        }
-                                    }
-                                }
-                            }
-
-                            CheckBoxWithLabel(
-                                checked = state.config.addTrust,
-                                onCheckedChange = {
-                                    viewModel.onConfigChanged(
-                                        state.config.copy(
-                                            addTrust = it
-                                        )
+                                        },
+                                        icon = null,
+                                        singleLine = true,
                                     )
-                                },
-                                label = stringResource(R.string.panel_autobattle_add_trust)
-                            )
+                                }
+                            }
+                            item {
+                                CopilotSwitchRow(
+                                    title = stringResource(
+                                        R.string.panel_autobattle_ignore_requirements,
+                                    ),
+                                    checked = state.config.ignoreRequirements,
+                                    onCheckedChange = {
+                                        viewModel.onConfigChanged(
+                                            state.config.copy(ignoreRequirements = it),
+                                        )
+                                    },
+                                )
+                            }
+                            item {
+                                CopilotSwitchRow(
+                                    title = stringResource(R.string.panel_autobattle_support_unit),
+                                    checked = state.config.useSupportUnit,
+                                    onCheckedChange = {
+                                        viewModel.onConfigChanged(
+                                            state.config.copy(useSupportUnit = it),
+                                        )
+                                    },
+                                )
+                            }
+                            if (state.config.useSupportUnit) {
+                                item {
+                                    val supportLabels = mapOf(
+                                        1 to stringResource(
+                                            R.string.panel_autobattle_support_fill_gaps,
+                                        ),
+                                        3 to stringResource(R.string.panel_autobattle_support_random),
+                                    )
+                                    SettingDropdown(
+                                        title = stringResource(
+                                            R.string.panel_autobattle_support_strategy,
+                                        ),
+                                        selected = state.config.supportUnitUsage,
+                                        options = listOf(1, 3),
+                                        optionLabel = { supportLabels[it].orEmpty() },
+                                        onSelected = {
+                                            viewModel.onConfigChanged(
+                                                state.config.copy(supportUnitUsage = it),
+                                            )
+                                        },
+                                        icon = null,
+                                        singleLine = true,
+                                    )
+                                }
+                            }
+                            item {
+                                CopilotSwitchRow(
+                                    title = stringResource(R.string.panel_autobattle_add_trust),
+                                    checked = state.config.addTrust,
+                                    onCheckedChange = {
+                                        viewModel.onConfigChanged(state.config.copy(addTrust = it))
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
 
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TaskSettingsSectionTitle(stringResource(R.string.panel_autobattle_execution))
+            }
+
+            item {
+                SegmentedSettingsGroup {
                     if (battleListSupportedTab) {
-                        CheckBoxWithExpandableTip(
-                            checked = state.useCopilotList,
-                            onCheckedChange = viewModel::onToggleListMode,
-                            label = stringResource(R.string.panel_autobattle_battle_list),
-                            tipText = stringResource(R.string.panel_autobattle_battle_list_tip)
-                        )
+                        item {
+                            CopilotSwitchRow(
+                                title = stringResource(R.string.panel_autobattle_battle_list),
+                                checked = state.useCopilotList,
+                                onCheckedChange = viewModel::onToggleListMode,
+                            )
+                        }
                     }
 
                     if (state.useCopilotList && state.tabIndex == 0) {
-                        CheckBoxWithLabel(
-                            checked = state.config.useSanityPotion,
-                            onCheckedChange = {
-                                viewModel.onConfigChanged(state.config.copy(useSanityPotion = it))
-                            },
-                            label = stringResource(R.string.panel_autobattle_use_sanity_potion)
-                        )
+                        item {
+                            CopilotSwitchRow(
+                                title = stringResource(
+                                    R.string.panel_autobattle_use_sanity_potion,
+                                ),
+                                checked = state.config.useSanityPotion,
+                                onCheckedChange = {
+                                    viewModel.onConfigChanged(
+                                        state.config.copy(useSanityPotion = it),
+                                    )
+                                },
+                            )
+                        }
                     }
 
                     if (!state.useCopilotList && loopCountSupportedTab) {
-                        CheckBoxWithLabel(
-                            checked = state.config.loop,
-                            onCheckedChange = {
-                                viewModel.onConfigChanged(state.config.copy(loop = it))
-                            },
-                            label = stringResource(R.string.panel_autobattle_loop)
-                        )
-                        if (state.config.loop) {
-                            ITextField(
-                                value = state.config.loopTimes.toString(),
-                                onValueChange = { text ->
-                                    text.toIntOrNull()?.let {
-                                        viewModel.onConfigChanged(
-                                            state.config.copy(
-                                                loopTimes = it.coerceAtLeast(
-                                                    1
-                                                )
-                                            )
-                                        )
-                                    }
+                        item {
+                            CopilotSwitchRow(
+                                title = stringResource(R.string.panel_autobattle_loop),
+                                checked = state.config.loop,
+                                onCheckedChange = {
+                                    viewModel.onConfigChanged(state.config.copy(loop = it))
                                 },
-                                label = stringResource(R.string.panel_autobattle_loop),
-                                placeholder = "1"
                             )
+                        }
+                        if (state.config.loop) {
+                            item {
+                                NumberStepperSettingRow(
+                                    title = stringResource(R.string.panel_autobattle_loop_count),
+                                    value = state.config.loopTimes.coerceAtLeast(1),
+                                    range = 1..999,
+                                    icon = null,
+                                    onValueChange = {
+                                        viewModel.onConfigChanged(
+                                            state.config.copy(loopTimes = it),
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -681,133 +653,170 @@ fun AutoBattlePanel(
 
             item {
                 if (state.useCopilotList && battleListSupportedTab) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            stringResource(R.string.panel_autobattle_battle_list),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
+                    TaskSettingsSectionTitle(
+                        stringResource(R.string.panel_autobattle_battle_list),
+                    )
+                    if (state.taskList.isEmpty()) {
+                        SegmentedSettingsGroup {
+                            item {
+                                SettingRow(
+                                    title = stringResource(
+                                        R.string.panel_autobattle_empty_entries,
+                                    ),
+                                    icon = null,
+                                    enabled = false,
+                                )
+                            }
+                        }
+                    } else {
+                        val lazyListState = rememberLazyListState()
+                        val reorderableState = rememberReorderableLazyListState(
+                            lazyListState = lazyListState,
+                            onMove = { from, to ->
+                                viewModel.onReorderList(from.index, to.index)
+                            },
                         )
-                        var sequenceTipExpanded by remember { mutableStateOf(false) }
-                        ExpandableTipIcon(
-                            expanded = sequenceTipExpanded,
-                            onExpandedChange = { sequenceTipExpanded = it })
-                        ExpandableTipContent(
-                            visible = sequenceTipExpanded,
-                            tipText = stringResource(R.string.panel_autobattle_sequence_tip)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 300.dp)
-                    ) {
-                        if (state.taskList.isEmpty()) {
-                            Text(
-                                stringResource(R.string.panel_autobattle_empty_entries),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        } else {
-                            val lazyListState = rememberLazyListState()
-                            val reorderableState = rememberReorderableLazyListState(
-                                lazyListState = lazyListState,
-                                onMove = { from, to ->
-                                    viewModel.onReorderList(from.index, to.index)
-                                }
-                            )
-                            LazyColumn(
-                                state = lazyListState,
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                itemsIndexed(
-                                    state.taskList,
-                                    key = { index, item -> "${item.filePath}-${item.name}-$index" }
-                                ) { index, item ->
-                                    ReorderableItem(
-                                        reorderableState,
-                                        key = "${item.filePath}-${item.name}-$index"
-                                    ) { isDragging ->
-                                        Surface(
-                                            tonalElevation = if (isDragging) 4.dp else 0.dp,
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            modifier = Modifier
-                                                .longPressDraggableHandle()
-                                                .fillMaxWidth()
+                        LazyColumn(
+                            state = lazyListState,
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 320.dp),
+                        ) {
+                            itemsIndexed(
+                                state.taskList,
+                                key = { index, item ->
+                                    val duplicateIndex = state.taskList
+                                        .take(index)
+                                        .count {
+                                            it.filePath == item.filePath &&
+                                                it.name == item.name &&
+                                                it.isRaid == item.isRaid
+                                        }
+                                    "${item.filePath}|${item.name}|${item.isRaid}|$duplicateIndex"
+                                },
+                            ) { index, item ->
+                                val duplicateIndex = state.taskList
+                                    .take(index)
+                                    .count {
+                                        it.filePath == item.filePath &&
+                                            it.name == item.name &&
+                                            it.isRaid == item.isRaid
+                                    }
+                                val itemKey =
+                                    "${item.filePath}|${item.name}|${item.isRaid}|$duplicateIndex"
+                                ReorderableItem(
+                                    reorderableState,
+                                    key = itemKey,
+                                ) { isDragging ->
+                                    val itemShape = when {
+                                        state.taskList.size == 1 -> RoundedCornerShape(16.dp)
+                                        index == 0 -> RoundedCornerShape(
+                                            topStart = 16.dp,
+                                            topEnd = 16.dp,
+                                            bottomStart = 5.dp,
+                                            bottomEnd = 5.dp,
+                                        )
+                                        index == state.taskList.lastIndex -> RoundedCornerShape(
+                                            topStart = 5.dp,
+                                            topEnd = 5.dp,
+                                            bottomStart = 16.dp,
+                                            bottomEnd = 16.dp,
+                                        )
+                                        else -> RoundedCornerShape(5.dp)
+                                    }
+                                    Surface(
+                                        onClick = { viewModel.onToggleListItem(index) },
+                                        tonalElevation = if (isDragging) 2.dp else 0.dp,
+                                        shape = itemShape,
+                                        color = MaterialTheme.colorScheme.surfaceBright,
+                                        modifier = Modifier
+                                            .longPressDraggableHandle()
+                                            .fillMaxWidth(),
+                                    ) {
+                                        CompositionLocalProvider(
+                                            LocalSettingItemShape provides itemShape,
                                         ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(
-                                                        start = 8.dp,
-                                                        end = 4.dp,
-                                                        top = 2.dp,
-                                                        bottom = 2.dp
-                                                    ),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                CheckBoxWithLabel(
-                                                    checked = item.isChecked,
-                                                    onCheckedChange = {
-                                                        viewModel.onToggleListItem(
-                                                            index
-                                                        )
-                                                    },
-                                                    label = item.name + if (item.isRaid) {
-                                                        stringResource(R.string.panel_autobattle_raid_suffix)
-                                                    } else {
-                                                        ""
-                                                    },
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                OutlinedButton(
-                                                    onClick = { viewModel.onSelectListItem(index) },
-                                                    shape = compactButtonShape,
-                                                    contentPadding = compactButtonPadding
-                                                ) { Text(stringResource(R.string.common_load)) }
-                                                IconButton(
-                                                    onClick = { viewModel.onRemoveFromList(index) },
-                                                    modifier = Modifier.size(32.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Delete,
-                                                        contentDescription = stringResource(R.string.common_delete),
-                                                        tint = MaterialTheme.colorScheme.error,
-                                                        modifier = Modifier.size(18.dp)
+                                            SettingRow(
+                                                title = item.name + if (item.isRaid) {
+                                                    stringResource(
+                                                        R.string.panel_autobattle_raid_suffix,
                                                     )
-                                                }
-                                            }
+                                                } else {
+                                                    ""
+                                                },
+                                                icon = null,
+                                                trailing = {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (item.isChecked) {
+                                                                Icons.Outlined.CheckCircle
+                                                            } else {
+                                                                Icons.Outlined.RadioButtonUnchecked
+                                                            },
+                                                            contentDescription = null,
+                                                            tint = if (item.isChecked) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                            },
+                                                        )
+                                                        IconButton(
+                                                            onClick = {
+                                                                viewModel.onSelectListItem(index)
+                                                            },
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.Search,
+                                                                contentDescription = stringResource(
+                                                                    R.string.common_load,
+                                                                ),
+                                                            )
+                                                        }
+                                                        IconButton(
+                                                            onClick = {
+                                                                viewModel.onRemoveFromList(index)
+                                                            },
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.Delete,
+                                                                contentDescription = stringResource(
+                                                                    R.string.common_delete,
+                                                                ),
+                                                                tint = MaterialTheme.colorScheme.error,
+                                                            )
+                                                        }
+                                                    }
+                                                },
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    // TODO: 恢复手动输入关卡名 + 添加普通/添加突袭功能
-                    Spacer(modifier = Modifier.height(6.dp))
-                    FlowRow(
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        Button(
                             onClick = viewModel::onCleanUnchecked,
+                            enabled = state.taskList.any { !it.isChecked },
                             shape = compactButtonShape,
-                            contentPadding = compactButtonPadding
+                            contentPadding = compactButtonPadding,
+                            modifier = Modifier.weight(1f).height(48.dp),
                         ) { Text(stringResource(R.string.panel_autobattle_clear_unchecked)) }
-                        OutlinedButton(
+                        Button(
                             onClick = viewModel::onClearList,
+                            enabled = state.taskList.isNotEmpty(),
                             shape = compactButtonShape,
-                            contentPadding = compactButtonPadding
+                            contentPadding = compactButtonPadding,
+                            modifier = Modifier.weight(1f).height(48.dp),
                         ) { Text(stringResource(R.string.panel_autobattle_clear_list)) }
                     }
                 }
@@ -818,19 +827,50 @@ fun AutoBattlePanel(
 
             item {
                 var expanded by remember { mutableStateOf(true) }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            stringResource(R.string.panel_autobattle_tips_title),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        ExpandableTipIcon(expanded = expanded, onExpandedChange = { expanded = it })
+                Surface(
+                    onClick = { expanded = !expanded },
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(R.string.panel_autobattle_tips_title),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                imageVector = if (expanded) {
+                                    Icons.Default.ExpandLess
+                                } else {
+                                    Icons.Default.ExpandMore
+                                },
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = expanded,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.panel_autobattle_tips_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 14.dp,
+                                ),
+                            )
+                        }
                     }
-                    ExpandableTipContent(
-                        visible = expanded,
-                        tipText = stringResource(R.string.panel_autobattle_tips_body)
-                    )
                 }
             }
         }
@@ -896,9 +936,9 @@ private fun RowScope.CopilotActionButton(
     icon: ImageVector,
     filled: Boolean,
     enabled: Boolean,
+    shape: RoundedCornerShape,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(8.dp)
     val padding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
     val content: @Composable RowScope.() -> Unit = {
         Icon(
@@ -915,16 +955,20 @@ private fun RowScope.CopilotActionButton(
             enabled = enabled,
             shape = shape,
             contentPadding = padding,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).height(48.dp),
             content = content,
         )
     } else {
-        OutlinedButton(
+        Button(
             onClick = onClick,
             enabled = enabled,
             shape = shape,
             contentPadding = padding,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
             content = content,
         )
     }
@@ -934,6 +978,25 @@ private data class BuiltinVisibleEntry(
     val node: CopilotResourceProvider.Node,
     val depth: Int,
 )
+
+@Composable
+private fun CopilotSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    SettingRow(
+        title = title,
+        icon = null,
+        onClick = { onCheckedChange(!checked) },
+        trailing = {
+            ExpressiveSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    )
+}
 
 @Composable
 private fun BuiltinCopilotPicker(
@@ -948,23 +1011,22 @@ private fun BuiltinCopilotPicker(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        OutlinedButton(
-            onClick = onToggle,
+        SettingRow(
+            title = stringResource(R.string.copilot_builtin_picker),
+            icon = null,
             enabled = enabled,
-            shape = RoundedCornerShape(8.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = stringResource(R.string.copilot_builtin_picker),
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        }
+            onClick = onToggle,
+            trailing = {
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
+                    contentDescription = null,
+                )
+            },
+        )
 
         AnimatedVisibility(
             visible = expanded,
@@ -975,11 +1037,11 @@ private fun BuiltinCopilotPicker(
                 flattenVisibleNodes(tree, expandedFolders)
             }
             Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .heightIn(max = 320.dp)
                     .animateContentSize()
             ) {
