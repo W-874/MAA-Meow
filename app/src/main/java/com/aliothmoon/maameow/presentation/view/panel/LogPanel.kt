@@ -2,6 +2,7 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +64,7 @@ import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.theme.LocalLogPalette
 import com.aliothmoon.maameow.theme.themedColor
+import kotlinx.coroutines.launch
 
 /** 浮层形式的任务执行日志面板。 */
 @Composable
@@ -72,6 +75,8 @@ fun LogPanel(
 ) {
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val isUserDragging by listState.interactionSource.collectIsDraggedAsState()
     var isAutoScroll by remember { mutableStateOf(true) }
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
 
@@ -81,8 +86,8 @@ fun LogPanel(
         }
     }
 
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
+    LaunchedEffect(isUserDragging) {
+        if (isUserDragging) {
             isAutoScroll = false
         }
     }
@@ -128,7 +133,7 @@ fun LogPanel(
                     start = 16.dp,
                     top = 8.dp,
                     end = 16.dp,
-                    bottom = mainBottomBarPadding + 8.dp,
+                    bottom = mainBottomBarPadding + 56.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -143,22 +148,35 @@ fun LogPanel(
                 }
             }
 
-            if (listState.canScrollForward && logs.isNotEmpty()) {
+            if (logs.isNotEmpty()) {
                 IconButton(
-                    onClick = { isAutoScroll = true },
+                    onClick = {
+                        isAutoScroll = true
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(logs.lastIndex)
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp)
                         .size(40.dp)
                         .background(
-                            MaterialTheme.colorScheme.primaryContainer,
+                            if (isAutoScroll) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.primaryContainer
+                            },
                             CircleShape
                         )
                 ) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardArrowDown,
                         contentDescription = stringResource(R.string.panel_log_resume_auto_scroll),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = if (isAutoScroll) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
                         modifier = Modifier.size(20.dp)
                     )
                 }
