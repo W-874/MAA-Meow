@@ -613,11 +613,6 @@ fun SettingsView(
             item {
                 SectionHeader(stringResource(R.string.settings_section_other))
                 SegmentedSettingsGroup {
-                    item { SettingRemoteBackendItem(
-                        contentColor = contentColor,
-                        selectedBackend = startupBackend,
-                        onBackendSelected = { viewModel.setStartupBackend(it) }
-                    ) }
                     if (startupBackend == RemoteBackend.SHIZUKU) {
                         item { SettingSwitchItem(
                             title = stringResource(R.string.settings_shizuku_launch_mode_title),
@@ -1075,23 +1070,6 @@ private fun SettingLanguageItem(
         icon = Icons.Rounded.Language,
     )
 }
-
-@Composable
-private fun SettingRemoteBackendItem(
-    contentColor: Color,
-    selectedBackend: RemoteBackend,
-    onBackendSelected: (RemoteBackend) -> Unit
-) {
-    SettingDropdown(
-        title = stringResource(R.string.settings_startup_backend_title),
-        selected = selectedBackend,
-        options = RemoteBackend.entries,
-        optionLabel = { it.display },
-        onSelected = onBackendSelected,
-        icon = Icons.Rounded.Security,
-    )
-}
-
 
 private data class ShizukuLaunchAppOption(
     val label: String,

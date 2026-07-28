@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
@@ -51,6 +52,7 @@ import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
 import com.aliothmoon.maameow.data.permission.PermissionState
+import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
@@ -90,11 +92,13 @@ fun HomeView(
     viewModel: HomeViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
     permissionManager: PermissionManager = koinInject(),
+    appSettingsManager: AppSettingsManager = koinInject(),
 ) {
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
+    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val (width, height) = Misc.getScreenSize(context)
 
@@ -271,6 +275,8 @@ fun HomeView(
                         onRequestShizukuAccess = { viewModel.onRequestShizukuAccess() },
                         remoteServiceActive = uiState.remoteServiceActive,
                         isLoading = uiState.isLoading,
+                        shizukuShortcutEnabled = shizukuShortcutEnabled,
+                        onOpenShizuku = { viewModel.onOpenShizuku() },
                         onCloseRemoteService = { viewModel.onToggleRemoteService() },
                     )
                 }
@@ -405,6 +411,8 @@ private fun RuntimeInfoSection(
     onRequestShizukuAccess: () -> Unit,
     remoteServiceActive: Boolean,
     isLoading: Boolean,
+    shizukuShortcutEnabled: Boolean,
+    onOpenShizuku: () -> Unit,
     onCloseRemoteService: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -464,6 +472,16 @@ private fun RuntimeInfoSection(
                         }
                     },
                 )
+            }
+            if (shizukuShortcutEnabled) {
+                item {
+                    SettingActionButton(
+                        title = stringResource(R.string.home_btn_open_shizuku),
+                        icon = Icons.Rounded.PhoneAndroid,
+                        onClick = onOpenShizuku,
+                        enabled = !isLoading,
+                    )
+                }
             }
             item {
                 SettingActionButton(
