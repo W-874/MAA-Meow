@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
 import com.aliothmoon.maameow.utils.i18n.asString
 
@@ -50,6 +51,7 @@ fun MiniGamePanel(
     val tip = currentGame?.tip.asString().ifBlank { MiniGameTextRegistry.EMPTY_TIP.asString() }
     val isUnsupported = currentGame?.isUnsupported == true
     val currentGameDisplay = currentGame?.display.asString()
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
         lineHeight = 16.sp
@@ -58,7 +60,11 @@ fun MiniGamePanel(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp)),
+            .padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(
+            top = 2.dp,
+            bottom = mainBottomBarPadding + 4.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {

@@ -59,6 +59,7 @@ import com.aliothmoon.maameow.data.model.LogItem
 import com.aliothmoon.maameow.data.model.LogLevel
 import com.aliothmoon.maameow.data.model.RecruitCombination
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.theme.LocalLogPalette
 import com.aliothmoon.maameow.theme.themedColor
 
@@ -69,6 +70,7 @@ fun LogPanel(
     logs: List<LogItem>,
     onClearLogs: () -> Unit,
 ) {
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val listState = rememberLazyListState()
     var isAutoScroll by remember { mutableStateOf(true) }
     var selectedLog by remember { mutableStateOf<LogItem?>(null) }
@@ -122,7 +124,12 @@ fun LogPanel(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 8.dp,
+                    end = 16.dp,
+                    bottom = mainBottomBarPadding + 8.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(

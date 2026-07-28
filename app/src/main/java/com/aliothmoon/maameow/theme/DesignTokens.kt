@@ -35,6 +35,16 @@ object MaaDesignTokens {
         val inset: Dp = 16.dp
     }
 
+    object ListItem {
+        val singleLine: Dp = 56.dp
+        val singleLineCompact: Dp = 52.dp
+        val singleLineDense: Dp = 48.dp
+        val minimumTouchTarget: Dp = 48.dp
+
+        const val compactHeightThresholdDp: Int = 720
+        const val denseHeightThresholdDp: Int = 600
+    }
+
     object Card {
         val elevation: Dp = 1.dp
         val innerPadding: Dp = 20.dp

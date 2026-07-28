@@ -88,6 +88,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.constant.OFFICIAL_SHIZUKU_PACKAGE
 import com.aliothmoon.maameow.constant.Routes
@@ -133,6 +134,7 @@ fun SettingsView(
     resourceInitService: ResourceInitService = koinInject(),
     permissionManager: PermissionManager = koinInject(),
 ) {
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
@@ -394,7 +396,8 @@ fun SettingsView(
                 start = MaaDesignTokens.Spacing.listHorizontal,
                 end = MaaDesignTokens.Spacing.listHorizontal,
                 top = paddingValues.calculateTopPadding() + MaaDesignTokens.Spacing.sm,
-                bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                bottom = paddingValues.calculateBottomPadding() +
+                    mainBottomBarPadding + 16.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sectionGap),
         ) {

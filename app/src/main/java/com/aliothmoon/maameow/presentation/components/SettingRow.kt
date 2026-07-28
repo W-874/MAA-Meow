@@ -2,12 +2,15 @@ package com.aliothmoon.maameow.presentation.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +22,8 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
@@ -46,9 +51,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 internal val LocalSettingItemShape = compositionLocalOf<Shape> { RoundedCornerShape(16.dp) }
+
+@Composable
+fun SettingActionButton(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+    shape: Shape? = null,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        shape = shape ?: LocalSettingItemShape.current,
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = containerColor.copy(alpha = 0.38f),
+            disabledContentColor = contentColor.copy(alpha = 0.72f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -62,13 +115,31 @@ fun SettingRow(
     leadingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     icon: ImageVector? = Icons.Rounded.Settings,
     enabled: Boolean = true,
+    titleContent: (@Composable () -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
     headlineOverlay: @Composable BoxScope.() -> Unit = {},
     onClick: (() -> Unit)? = null,
 ) {
     val shape = LocalSettingItemShape.current
     val disabledAlpha = if (enabled) 1f else 0.38f
-    val dynamicPadding = (4 * LocalDensity.current.fontScale).dp
+    val density = LocalDensity.current
+    val dynamicPadding = (4 * density.fontScale).dp
+    val isSingleLine = description == null
+    val configuration = LocalConfiguration.current
+    val baseSingleLineHeight = when {
+        configuration.screenHeightDp < MaaDesignTokens.ListItem.denseHeightThresholdDp ->
+            MaaDesignTokens.ListItem.singleLineDense
+        configuration.screenHeightDp < MaaDesignTokens.ListItem.compactHeightThresholdDp ->
+            MaaDesignTokens.ListItem.singleLineCompact
+        else -> MaaDesignTokens.ListItem.singleLine
+    }
+    val singleLineHeight = maxOf(
+        baseSingleLineHeight,
+        MaaDesignTokens.ListItem.minimumTouchTarget * density.fontScale,
+    )
+    val rowModifier = modifier
+        .fillMaxWidth()
+        .then(if (isSingleLine) Modifier.height(singleLineHeight) else Modifier)
     val colors = ListItemDefaults.colors(
         containerColor = containerColor,
         contentColor = titleColor,
@@ -110,12 +181,14 @@ fun SettingRow(
         Box(
             modifier = Modifier
                 .alpha(disabledAlpha)
-                .padding(
-                    top = dynamicPadding,
-                    bottom = if (description == null) dynamicPadding else 0.dp,
+                .then(
+                    if (isSingleLine) Modifier else Modifier.padding(top = dynamicPadding)
                 ),
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            titleContent?.invoke() ?: Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
             headlineOverlay()
         }
     }
@@ -128,7 +201,7 @@ fun SettingRow(
     if (onClick != null) {
         ListItem(
             selected = false,
-            modifier = modifier.fillMaxWidth(),
+            modifier = rowModifier,
             onClick = onClick,
             enabled = enabled,
             colors = colors,
@@ -141,7 +214,7 @@ fun SettingRow(
         )
     } else {
         ListItem(
-            modifier = modifier.fillMaxWidth().clip(shape),
+            modifier = rowModifier.clip(shape),
             colors = colors,
             leadingContent = leadingContent,
             supportingContent = supportingContent,
@@ -163,6 +236,7 @@ fun <T> SettingDropdown(
     icon: ImageVector? = Icons.Rounded.Settings,
     enabled: Boolean = true,
     singleLine: Boolean = false,
+    singleLineActionStyle: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val menu: @Composable () -> Unit = {
@@ -199,11 +273,27 @@ fun <T> SettingDropdown(
         onClick = { expanded = !expanded },
         trailing = if (singleLine) {
             {
-                Box(contentAlignment = Alignment.CenterEnd) {
+                Box(
+                    modifier = if (singleLineActionStyle) {
+                        Modifier.widthIn(min = 64.dp)
+                    } else {
+                        Modifier
+                    },
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
                     Text(
                         text = optionLabel(selected),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = if (singleLineActionStyle) {
+                            MaterialTheme.typography.labelLarge
+                        } else {
+                            MaterialTheme.typography.bodyMedium
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = if (singleLineActionStyle) {
+                            Modifier.padding(horizontal = 8.dp)
+                        } else {
+                            Modifier
+                        },
                     )
                     menu()
                 }

@@ -9,7 +9,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +20,8 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
@@ -30,6 +34,7 @@ import com.aliothmoon.maameow.theme.MaaAnimations
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+internal val LocalMainBottomBarPadding = compositionLocalOf<Dp> { 0.dp }
 
 @Composable
 fun MainScreen(
@@ -102,26 +107,29 @@ fun MainScreen(
     ) { paddingValues ->
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = paddingValues.calculateBottomPadding()),
+            modifier = Modifier.fillMaxSize(),
             key = { BottomNavTab.all[it].route },
             userScrollEnabled = !fullscreen,
         ) { page ->
             val tab = BottomNavTab.all[page]
             tabStateHolder.SaveableStateProvider(tab.route) {
-                when (BottomNavTab.all[page]) {
-                    BottomNavTab.HOME -> HomeView(
-                        navController = navController,
-                        onViewAnnouncement = onViewAnnouncement,
-                    )
-                    BottomNavTab.BACKGROUND -> BackgroundTaskView(
-                        navController = navController,
-                        viewModel = backgroundTaskViewModel,
-                    )
+                CompositionLocalProvider(
+                    LocalMainBottomBarPadding provides
+                        paddingValues.calculateBottomPadding(),
+                ) {
+                    when (BottomNavTab.all[page]) {
+                        BottomNavTab.HOME -> HomeView(
+                            navController = navController,
+                            onViewAnnouncement = onViewAnnouncement,
+                        )
+                        BottomNavTab.BACKGROUND -> BackgroundTaskView(
+                            navController = navController,
+                            viewModel = backgroundTaskViewModel,
+                        )
 
-                    BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
-                    BottomNavTab.SETTINGS -> SettingsView(navController = navController)
+                        BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
+                        BottomNavTab.SETTINGS -> SettingsView(navController = navController)
+                    }
                 }
             }
         }

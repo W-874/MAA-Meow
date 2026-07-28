@@ -28,7 +28,10 @@ fun AwardConfigPanel(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(top = 2.dp, bottom = 4.dp),
+            .padding(
+                top = 2.dp,
+                bottom = LocalTaskPanelBottomPadding.current,
+            ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SegmentedSettingsGroup {

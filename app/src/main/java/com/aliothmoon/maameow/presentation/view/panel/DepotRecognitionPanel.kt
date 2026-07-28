@@ -53,6 +53,7 @@ import com.aliothmoon.maameow.data.repository.toSortedItems
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ItemIconLoader
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
@@ -75,6 +76,7 @@ fun DepotRecognitionPanel(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val exporter = LocalToolboxFileExporter.current
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val copyPenguinToast = stringResource(R.string.panel_depot_copy_penguin)
     val copyToolboxToast = stringResource(R.string.panel_depot_copy_toolbox)
     val doCopy: (String, String) -> Unit = { text, toast ->
@@ -95,7 +97,10 @@ fun DepotRecognitionPanel(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp),
-        contentPadding = PaddingValues(top = 6.dp, bottom = 4.dp),
+        contentPadding = PaddingValues(
+            top = 6.dp,
+            bottom = mainBottomBarPadding + 4.dp,
+        ),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {

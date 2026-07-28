@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
@@ -55,15 +56,16 @@ import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
-import com.aliothmoon.maameow.presentation.components.PermissionStatusRow
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
 import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.viewmodel.HomeViewModel
@@ -89,6 +91,7 @@ fun HomeView(
     updateViewModel: UpdateViewModel = koinViewModel(),
     permissionManager: PermissionManager = koinInject(),
 ) {
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
@@ -237,7 +240,8 @@ fun HomeView(
                     start = 16.dp,
                     end = 16.dp,
                     top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                    bottom = paddingValues.calculateBottomPadding() +
+                        mainBottomBarPadding + 16.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -417,25 +421,58 @@ private fun RuntimeInfoSection(
                     icon = null,
                     enabled = changeEnabled,
                     singleLine = true,
-                )
-            }
-            item {
-                PermissionStatusRow(
-                    title = stringResource(R.string.home_shizuku_status_title),
-                    granted = permissionState.shizuku,
-                    onClick = onRequestShizukuAccess,
-                    isLoading = isGranting,
+                    singleLineActionStyle = true,
                 )
             }
             item {
                 SettingRow(
+                    title = stringResource(R.string.home_shizuku_status_title),
+                    icon = null,
+                    onClick = if (!permissionState.shizuku && !isGranting) {
+                        onRequestShizukuAccess
+                    } else {
+                        null
+                    },
+                    trailing = {
+                        Box(
+                            modifier = Modifier.widthIn(min = 64.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            if (isGranting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(
+                                        if (permissionState.shizuku) {
+                                            R.string.home_permission_granted
+                                        } else {
+                                            R.string.home_permission_request
+                                        },
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (permissionState.shizuku) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    } else {
+                                        MaterialTheme.colorScheme.primary
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                )
+                            }
+                        }
+                    },
+                )
+            }
+            item {
+                SettingActionButton(
                     title = stringResource(R.string.home_btn_close_service),
-                    titleColor = MaterialTheme.colorScheme.onError,
-                    containerColor = MaterialTheme.colorScheme.error,
-                    leadingColor = MaterialTheme.colorScheme.onError,
                     icon = Icons.Rounded.Refresh,
-                    enabled = remoteServiceActive && !isLoading,
                     onClick = onCloseRemoteService,
+                    enabled = remoteServiceActive && !isLoading,
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
                 )
             }
         }

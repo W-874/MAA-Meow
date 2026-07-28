@@ -52,6 +52,7 @@ import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportFormatter
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxExportLabels
 import com.aliothmoon.maameow.data.model.toolbox.OperBoxOperator
 import com.aliothmoon.maameow.domain.service.ToolboxExportFileType
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
@@ -72,6 +73,7 @@ fun OperBoxPanel(
     val fileExporter = LocalToolboxFileExporter.current
     val copyToastMessage = stringResource(R.string.panel_operbox_copy_toast)
     val exportLabels = rememberOperBoxExportLabels()
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     // 0 = 已拥有, 1 = 未拥有
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -88,7 +90,10 @@ fun OperBoxPanel(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp),
-        contentPadding = PaddingValues(top = 6.dp, bottom = 4.dp),
+        contentPadding = PaddingValues(
+            top = 6.dp,
+            bottom = mainBottomBarPadding + 4.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // 顶部：Tab 切换 + 导出（复制 / 导出文件可展开选格式）

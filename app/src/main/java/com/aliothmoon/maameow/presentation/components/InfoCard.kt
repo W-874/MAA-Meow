@@ -1,5 +1,7 @@
 package com.aliothmoon.maameow.presentation.components
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -16,8 +18,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
@@ -69,10 +73,18 @@ fun InfoCard(
 }
 
 class SegmentedSettingsScope internal constructor() {
-    internal val items = mutableListOf<@Composable () -> Unit>()
+    internal data class Item(
+        val shape: Shape?,
+        val content: @Composable () -> Unit,
+    )
 
-    fun item(content: @Composable () -> Unit) {
-        items += content
+    internal val items = mutableListOf<Item>()
+
+    fun item(
+        shape: Shape? = null,
+        content: @Composable () -> Unit,
+    ) {
+        items += Item(shape, content)
     }
 }
 
@@ -94,6 +106,34 @@ private fun segmentedItemShape(index: Int, lastIndex: Int) = when {
 }
 
 @Composable
+fun animatedSegmentedItemShape(
+    index: Int,
+    itemCount: Int,
+    expanded: Boolean,
+): RoundedCornerShape {
+    val lastIndex = itemCount - 1
+    val collapsedTopRadius = if (itemCount <= 1 || index == 0) 16.dp else 5.dp
+    val collapsedBottomRadius = if (itemCount <= 1 || index == lastIndex) 16.dp else 5.dp
+    val animationSpec = tween<androidx.compose.ui.unit.Dp>(durationMillis = 220)
+    val topRadius by animateDpAsState(
+        targetValue = if (expanded) 16.dp else collapsedTopRadius,
+        animationSpec = animationSpec,
+        label = "segmentedItemTopRadius",
+    )
+    val bottomRadius by animateDpAsState(
+        targetValue = if (expanded) 16.dp else collapsedBottomRadius,
+        animationSpec = animationSpec,
+        label = "segmentedItemBottomRadius",
+    )
+    return RoundedCornerShape(
+        topStart = topRadius,
+        topEnd = topRadius,
+        bottomStart = bottomRadius,
+        bottomEnd = bottomRadius,
+    )
+}
+
+@Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun SegmentedSettingsGroup(
     modifier: Modifier = Modifier,
@@ -105,15 +145,15 @@ fun SegmentedSettingsGroup(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) {
-        items.forEachIndexed { index, itemContent ->
-            val shape = segmentedItemShape(index, items.lastIndex)
+        items.forEachIndexed { index, item ->
+            val shape = item.shape ?: segmentedItemShape(index, items.lastIndex)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = shape,
                 color = containerColor,
             ) {
                 CompositionLocalProvider(LocalSettingItemShape provides shape) {
-                    itemContent()
+                    item.content()
                 }
             }
         }

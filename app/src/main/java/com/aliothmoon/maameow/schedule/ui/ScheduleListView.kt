@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.schedule.model.ExecutionResult
 import com.aliothmoon.maameow.schedule.model.ScheduleStrategy
 import com.aliothmoon.maameow.schedule.service.AutoStartHelper
@@ -69,6 +70,7 @@ fun ScheduleListView(
     navController: NavController,
     viewModel: ScheduleListViewModel = koinViewModel(),
 ) {
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var deleteConfirmId by remember { mutableStateOf<String?>(null) }
@@ -119,7 +121,8 @@ fun ScheduleListView(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("schedule_edit/new") }
+                onClick = { navController.navigate("schedule_edit/new") },
+                modifier = Modifier.padding(bottom = mainBottomBarPadding),
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.schedule_create_strategy))
             }
@@ -163,7 +166,8 @@ fun ScheduleListView(
                     start = 16.dp,
                     end = 16.dp,
                     top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 16.dp,
+                    bottom = padding.calculateBottomPadding() +
+                        mainBottomBarPadding + 16.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
