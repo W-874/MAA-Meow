@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
@@ -35,6 +36,8 @@ import com.aliothmoon.maameow.data.model.TaskParamProvider
 import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.data.model.UserDataUpdateConfig
 import com.aliothmoon.maameow.data.model.WakeUpConfig
+import com.aliothmoon.maameow.presentation.view.panel.roguelike.localizedRoguelikeThemeLabel
+import com.aliothmoon.maameow.utils.i18n.wakeUpClientTypeDisplayName
 
 @Composable
 fun TaskSettingsSectionTitle(
@@ -99,7 +102,7 @@ fun taskTypeDescription(typeInfo: TaskTypeInfo): String = stringResource(
 fun taskConfigSummary(config: TaskParamProvider): String = when (config) {
     is WakeUpConfig -> stringResource(
         R.string.panel_task_summary_wakeup,
-        config.clientType,
+        LocalContext.current.wakeUpClientTypeDisplayName(config.clientType),
     )
     is RecruitConfig -> stringResource(
         R.string.panel_task_summary_recruit,
@@ -107,7 +110,7 @@ fun taskConfigSummary(config: TaskParamProvider): String = when (config) {
     )
     is InfrastConfig -> stringResource(
         R.string.panel_task_summary_infrast,
-        config.mode.name,
+        infrastModeLabel(config.mode),
     )
     is FightConfig -> if (config.hasTimesLimited) {
         stringResource(R.string.panel_task_summary_fight_limited, config.maxTimes)
@@ -131,11 +134,11 @@ fun taskConfigSummary(config: TaskParamProvider): String = when (config) {
     )
     is RoguelikeConfig -> stringResource(
         R.string.panel_task_summary_roguelike,
-        config.theme,
+        localizedRoguelikeThemeLabel(config.theme),
     )
     is ReclamationConfig -> stringResource(
         R.string.panel_task_summary_reclamation,
-        config.theme,
+        localizedReclamationThemeLabel(config.theme),
     )
     is UserDataUpdateConfig -> stringResource(
         R.string.panel_task_summary_user_data_update,

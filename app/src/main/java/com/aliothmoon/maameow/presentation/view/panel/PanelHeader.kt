@@ -4,9 +4,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
@@ -15,6 +19,7 @@ import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -104,29 +109,93 @@ fun PanelHeader(
             }
         } else {
             Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                tabContent()
-            }
-            onLogClick?.let { onClick ->
-                IconButton(
-                    onClick = onClick,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ReceiptLong,
-                        contentDescription = stringResource(R.string.panel_tab_log),
-                        tint = if (selectedTab == PanelTab.LOG) {
-                            MaterialTheme.colorScheme.primary
+                tabs.forEachIndexed { index, tab ->
+                    val selected = selectedTab == tab
+                    Surface(
+                        onClick = { onTabSelected(tab) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp),
+                        shape = horizontalSegmentShape(index, tabs.lastIndex),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                        contentColor = if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                        modifier = Modifier.size(20.dp),
-                    )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(tab.labelRes),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        }
+                    }
+                }
+            }
+            onLogClick?.let { onClick ->
+                Surface(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(40.dp),
+                    shape = CircleShape,
+                    color = if (selectedTab == PanelTab.LOG) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                    contentColor = if (selectedTab == PanelTab.LOG) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ReceiptLong,
+                            contentDescription = stringResource(R.string.panel_tab_log),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+private fun horizontalSegmentShape(index: Int, lastIndex: Int) = when {
+    lastIndex <= 0 -> RoundedCornerShape(20.dp)
+    index == 0 -> RoundedCornerShape(
+        topStart = 20.dp,
+        bottomStart = 20.dp,
+        topEnd = 6.dp,
+        bottomEnd = 6.dp,
+    )
+    index == lastIndex -> RoundedCornerShape(
+        topStart = 6.dp,
+        bottomStart = 6.dp,
+        topEnd = 20.dp,
+        bottomEnd = 20.dp,
+    )
+    else -> RoundedCornerShape(6.dp)
 }

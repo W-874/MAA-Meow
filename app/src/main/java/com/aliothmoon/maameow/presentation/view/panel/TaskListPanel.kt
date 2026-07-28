@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskChainNode
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -69,6 +70,7 @@ fun TaskListPanel(
     onToggleAddingTask: () -> Unit,
     onToggleProfileMode: () -> Unit,
     showManagementActions: Boolean = true,
+    showAddTaskItem: Boolean = false,
     useIntrinsicWidth: Boolean = true,
     expressiveStyle: Boolean = false,
     modifier: Modifier = Modifier,
@@ -81,7 +83,11 @@ fun TaskListPanel(
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = lazyListState,
-        onMove = { from, to -> onNodeMove(from.index, to.index) },
+        onMove = { from, to ->
+            if (from.index in nodes.indices && to.index in nodes.indices) {
+                onNodeMove(from.index, to.index)
+            }
+        },
     )
 
     Column(modifier = modifier.then(widthModifier)) {
@@ -218,10 +224,20 @@ fun TaskListPanel(
                         isEditMode = isEditMode,
                         expressiveStyle = expressiveStyle,
                         itemIndex = index,
-                        itemCount = nodes.size,
+                        itemCount = nodes.size + if (showAddTaskItem) 1 else 0,
                         onEnabledChange = { enabled -> onNodeEnabledChange(node.id, enabled) },
                         onSelected = { onNodeSelected(node.id) },
                         modifier = Modifier.longPressDraggableHandle(),
+                    )
+                }
+            }
+            if (showAddTaskItem) {
+                item(key = "add-task") {
+                    SettingActionButton(
+                        title = stringResource(R.string.panel_task_list_add),
+                        icon = Icons.Default.Add,
+                        onClick = onToggleAddingTask,
+                        shape = expressiveSegmentedShape(nodes.size, nodes.size + 1),
                     )
                 }
             }
@@ -241,23 +257,9 @@ private fun TaskNodeRow(
     onSelected: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val showSelection = isSelected && !expressiveStyle
     val itemShape = if (expressiveStyle) {
-        when {
-            itemCount <= 1 -> RoundedCornerShape(16.dp)
-            itemIndex == 0 -> RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = 5.dp,
-                bottomEnd = 5.dp,
-            )
-            itemIndex == itemCount - 1 -> RoundedCornerShape(
-                topStart = 5.dp,
-                topEnd = 5.dp,
-                bottomStart = 16.dp,
-                bottomEnd = 16.dp,
-            )
-            else -> RoundedCornerShape(5.dp)
-        }
+        expressiveSegmentedShape(itemIndex, itemCount)
     } else {
         RoundedCornerShape(4.dp)
     }
@@ -266,7 +268,7 @@ private fun TaskNodeRow(
             .fillMaxWidth(),
         shape = itemShape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
+            containerColor = if (showSelection) {
                 MaterialTheme.colorScheme.primaryContainer
             } else if (expressiveStyle) {
                 MaterialTheme.colorScheme.surfaceBright
@@ -274,7 +276,10 @@ private fun TaskNodeRow(
                 MaterialTheme.colorScheme.surfaceContainerLow
             }
         ),
-        border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
+        border = if (showSelection) BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+        ) else null,
     ) {
         Row(
             modifier = Modifier
@@ -298,19 +303,19 @@ private fun TaskNodeRow(
                     Text(
                         text = node.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (isSelected) {
+                        color = if (showSelection) {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         },
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = if (showSelection) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = taskConfigSummary(node.config),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) {
+                        color = if (showSelection) {
                             MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.76f)
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -335,8 +340,8 @@ private fun TaskNodeRow(
                 Text(
                     text = node.name,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    color = if (showSelection) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (showSelection) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -350,4 +355,21 @@ private fun TaskNodeRow(
             }
         }
     }
+}
+
+private fun expressiveSegmentedShape(index: Int, itemCount: Int) = when {
+    itemCount <= 1 -> RoundedCornerShape(16.dp)
+    index == 0 -> RoundedCornerShape(
+        topStart = 16.dp,
+        topEnd = 16.dp,
+        bottomStart = 5.dp,
+        bottomEnd = 5.dp,
+    )
+    index == itemCount - 1 -> RoundedCornerShape(
+        topStart = 5.dp,
+        topEnd = 5.dp,
+        bottomStart = 16.dp,
+        bottomEnd = 16.dp,
+    )
+    else -> RoundedCornerShape(5.dp)
 }

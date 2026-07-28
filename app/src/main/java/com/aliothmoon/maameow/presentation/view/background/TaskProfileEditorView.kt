@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,6 +68,7 @@ import com.aliothmoon.maameow.data.model.TaskTypeInfo
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
 import com.aliothmoon.maameow.presentation.view.panel.TaskConfigPanel
+import com.aliothmoon.maameow.presentation.view.panel.LocalTaskPanelBottomPadding
 import com.aliothmoon.maameow.presentation.view.panel.TaskListPanel
 import com.aliothmoon.maameow.presentation.view.panel.taskTypeLabel
 import com.aliothmoon.maameow.presentation.view.panel.taskTypeDescription
@@ -87,7 +89,6 @@ fun TaskProfileEditorView(
     val activeProfile = profiles.find { it.id == activeProfileId }
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val clientType = remember(nodes) { viewModel.chainState.getClientType() }
-
     var showDetail by rememberSaveable { mutableStateOf(false) }
     var showTaskPicker by rememberSaveable { mutableStateOf(false) }
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -269,15 +270,15 @@ fun TaskProfileEditorView(
             )
         },
     ) { paddingValues ->
+        val bottomContentPadding = paddingValues.calculateBottomPadding() + 16.dp
         if (detailVisible) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .navigationBarsPadding()
                     .padding(
-                        horizontal = MaaDesignTokens.Spacing.listHorizontal,
-                        vertical = MaaDesignTokens.Spacing.sm,
+                        start = MaaDesignTokens.Spacing.listHorizontal,
+                        top = paddingValues.calculateTopPadding() + MaaDesignTokens.Spacing.sm,
+                        end = MaaDesignTokens.Spacing.listHorizontal,
                     )
                     .graphicsLayer {
                         translationX = size.width * (
@@ -287,7 +288,10 @@ fun TaskProfileEditorView(
                             (1f - predictiveBackProgress * 0.15f)
                     },
             ) {
-                TaskConfigPanel(
+                CompositionLocalProvider(
+                    LocalTaskPanelBottomPadding provides bottomContentPadding,
+                ) {
+                    TaskConfigPanel(
                         selectedNode = selectedNode,
                         isEditMode = false,
                         isAddingTask = false,
@@ -311,16 +315,19 @@ fun TaskProfileEditorView(
                         onDeleteProfile = viewModel::onDeleteProfile,
                         onCreateProfile = viewModel::onCreateProfile,
                         onReorderProfile = viewModel::onReorderProfile,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .navigationBarsPadding()
-                    .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal)
+                    .padding(
+                        start = MaaDesignTokens.Spacing.listHorizontal,
+                        top = paddingValues.calculateTopPadding(),
+                        end = MaaDesignTokens.Spacing.listHorizontal,
+                    )
                     .graphicsLayer {
                         translationX = -size.width * pageEnterProgress.value / 12f
                         alpha = 1f - pageEnterProgress.value * 0.2f
@@ -361,33 +368,13 @@ fun TaskProfileEditorView(
                     onToggleAddingTask = { showTaskPicker = true },
                     onToggleProfileMode = viewModel::onToggleProfileMode,
                     showManagementActions = false,
+                    showAddTaskItem = true,
                     useIntrinsicWidth = false,
                     expressiveStyle = true,
                 )
-
-                Spacer(modifier = Modifier.height(MaaDesignTokens.Spacing.sm))
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showTaskPicker = true },
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.size(12.dp))
-                        Text(
-                            text = stringResource(R.string.panel_task_list_add),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(MaaDesignTokens.Spacing.sm))
+                Spacer(
+                    modifier = Modifier.height(bottomContentPadding),
+                )
             }
         }
     }

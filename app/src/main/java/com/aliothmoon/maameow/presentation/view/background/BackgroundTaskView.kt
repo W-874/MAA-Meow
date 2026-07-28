@@ -10,23 +10,23 @@ import android.view.SurfaceView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,30 +39,27 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsPaused
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.StayCurrentPortrait
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +80,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -103,6 +100,9 @@ import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.view.panel.AutoBattlePanel
 import com.aliothmoon.maameow.presentation.view.panel.LocalToolboxFileExporter
@@ -116,7 +116,6 @@ import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.theme.MaaAnimations
-import com.aliothmoon.maameow.theme.MaaThemeAlphas
 import com.aliothmoon.maameow.utils.i18n.asString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -144,6 +143,11 @@ fun BackgroundTaskView(
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
     val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
+    val displayAspectRatio = if (displayResolution.width > 0 && displayResolution.height > 0) {
+        displayResolution.width.toFloat() / displayResolution.height.toFloat()
+    } else {
+        DefaultDisplayConfig.ASPECT_RATIO
+    }
     val isChainLoaded by viewModel.chainState.isLoaded.collectAsStateWithLifecycle()
     var hasInitialized by rememberSaveable { mutableStateOf(false) }
     if (isChainLoaded) {
@@ -184,8 +188,19 @@ fun BackgroundTaskView(
         }
     }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
     val appDiedMessage = stringResource(R.string.bg_toast_app_died)
+    val foregroundBlocked = runMode == RunMode.FOREGROUND
+    val backendBlocked =
+        !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
+    val startBlocked = foregroundBlocked || backendBlocked
+    val switchBackgroundModeMessage =
+        stringResource(R.string.navigation_toast_switch_background_mode)
+    val backendUnavailableMessage = stringResource(
+        R.string.home_toast_backend_unavailable,
+        permissionState.startupBackend.display,
+    )
 
     ShizukuReadinessGate()
 
@@ -220,11 +235,8 @@ fun BackgroundTaskView(
         }
     }
 
-    val shouldHideMoreActions by remember {
-        derivedStateOf {
-            !canShowTaskActions || showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
-        }
-    }
+    val shouldHideMoreActions =
+        !canShowTaskActions || showCloseConfirm || state.isFullscreenMonitor || state.dialog != null
     LaunchedEffect(shouldHideMoreActions) {
         if (shouldHideMoreActions) showMoreActions = false
     }
@@ -240,7 +252,13 @@ fun BackgroundTaskView(
             Box(
                 modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.aspectRatio(DefaultDisplayConfig.ASPECT_RATIO)) {
+                val resolution = currentResolution
+                val surfaceAspectRatio = if (resolution.width > 0 && resolution.height > 0) {
+                    resolution.width.toFloat() / resolution.height.toFloat()
+                } else {
+                    DefaultDisplayConfig.ASPECT_RATIO
+                }
+                Box(modifier = Modifier.aspectRatio(surfaceAspectRatio)) {
                     AndroidView(
                         factory = { ctx ->
                             SurfaceView(ctx).apply {
@@ -294,21 +312,141 @@ fun BackgroundTaskView(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 8.dp)
+                .padding(top = 8.dp, bottom = 2.dp)
         ) {
             // --- 预览图区域：实时加载 ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(3f)
+                    .aspectRatio(displayAspectRatio)
             ) {
                 if (!state.isFullscreenMonitor) {
                     VirtualDisplayPreview(
                         modifier = Modifier.fillMaxSize(),
+                        aspectRatio = displayAspectRatio,
                         isRunning = maaState == MaaExecutionState.RUNNING,
                         isSurfaceAvailable = isSurfaceAvailable,
                         onClick = { viewModel.onToggleFullscreenMonitor() }) {
                         previewContent()
+                    }
+                    if (isInitialized && canShowTaskActions) {
+                        val isStopping = maaState == MaaExecutionState.RUNNING ||
+                            maaState == MaaExecutionState.STOPPING
+                        val isTransitioning = maaState == MaaExecutionState.STARTING ||
+                            maaState == MaaExecutionState.STOPPING
+                        val actionContainerColor = when {
+                            isStopping -> MaterialTheme.colorScheme.error
+                            startBlocked -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                        val actionContentColor = when {
+                            isStopping -> MaterialTheme.colorScheme.onError
+                            startBlocked -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.onPrimary
+                        }
+
+                        Surface(
+                            onClick = {
+                                focusManager.clearFocus()
+                                if (maaState == MaaExecutionState.RUNNING) {
+                                    when (state.current) {
+                                        PanelTab.TASKS -> viewModel.onStopTasks()
+                                        PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
+                                        PanelTab.TOOLS -> toolboxViewModel.onStop()
+                                        else -> Unit
+                                    }
+                                } else {
+                                    when {
+                                        foregroundBlocked -> Toast.makeText(
+                                            context,
+                                            switchBackgroundModeMessage,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                        backendBlocked -> Toast.makeText(
+                                            context,
+                                            backendUnavailableMessage,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                        else -> when (state.current) {
+                                            PanelTab.TASKS -> viewModel.onStartTasks()
+                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
+                                            PanelTab.TOOLS -> toolboxViewModel.onStart()
+                                            else -> Unit
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isTransitioning,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(10.dp)
+                                .size(48.dp),
+                            shape = CircleShape,
+                            color = actionContainerColor,
+                            contentColor = actionContentColor,
+                            shadowElevation = 3.dp,
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isTransitioning) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(22.dp),
+                                        color = actionContentColor,
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = if (isStopping) {
+                                            Icons.Filled.Stop
+                                        } else {
+                                            Icons.Filled.PlayArrow
+                                        },
+                                        contentDescription = stringResource(
+                                            if (isStopping) {
+                                                R.string.task_btn_stop
+                                            } else {
+                                                R.string.task_btn_start
+                                            },
+                                        ),
+                                        modifier = Modifier.size(26.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        Surface(
+                            onClick = { showMoreActions = !showMoreActions },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(10.dp)
+                                .size(48.dp),
+                            shape = CircleShape,
+                            color = if (showMoreActions) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            },
+                            contentColor = if (showMoreActions) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            shadowElevation = 3.dp,
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = stringResource(
+                                        R.string.task_more_actions_cd,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 } else {
                     Spacer(modifier = Modifier.fillMaxSize())
@@ -321,7 +459,7 @@ fun BackgroundTaskView(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(7f)
+                    .weight(1f)
             ) {
                 PanelHeader(
                     selectedTab = state.current,
@@ -363,6 +501,7 @@ fun BackgroundTaskView(
                                         navController.navigate(Routes.TASK_PROFILE_EDITOR)
                                     },
                                     onCreateProfile = viewModel::onCreateProfile,
+                                    onReorderProfile = viewModel::onReorderProfile,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                                 1 -> AutoBattlePanel(modifier = Modifier.fillMaxSize())
@@ -379,127 +518,6 @@ fun BackgroundTaskView(
                                         onClearLogs = { viewModel.onClearLogs() },
                                     )
                                 }
-                            }
-                        }
-
-                        if (canShowTaskActions) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            val focusManager = LocalFocusManager.current
-                            // 启动按钮的两种「禁用态」：① 前台模式不从后台任务页启动；
-                            // ② 远程后端（Shizuku/Root）不可用。两者均显示为禁用态但仍可点击，
-                            // 点击给出对应提示（防呆），与领域层 checkPreconditions 守卫一致。
-                            val foregroundBlocked = runMode == RunMode.FOREGROUND
-                            val backendBlocked =
-                                !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
-                            val startBlocked = foregroundBlocked || backendBlocked
-                            val switchBackgroundModeMessage =
-                                stringResource(R.string.navigation_toast_switch_background_mode)
-                            val backendUnavailableMessage = stringResource(
-                                R.string.home_toast_backend_unavailable,
-                                permissionState.startupBackend.display
-                            )
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.large,
-                                color = MaterialTheme.colorScheme.surfaceBright,
-                                tonalElevation = 1.dp,
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                Button(
-                                    onClick = {
-                                        focusManager.clearFocus()
-                                        if (foregroundBlocked) {
-                                            Toast.makeText(
-                                                context,
-                                                switchBackgroundModeMessage,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            return@Button
-                                        }
-                                        if (backendBlocked) {
-                                            Toast.makeText(
-                                                context,
-                                                backendUnavailableMessage,
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            return@Button
-                                        }
-                                        when (state.current) {
-                                            PanelTab.TASKS -> viewModel.onStartTasks()
-                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
-                                            PanelTab.TOOLS -> toolboxViewModel.onStart()
-                                            else -> {}
-                                        }
-                                    },
-                                    enabled = maaState != MaaExecutionState.RUNNING && maaState != MaaExecutionState.STARTING && maaState != MaaExecutionState.STOPPING,
-                                    colors = if (startBlocked) {
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = 0.12f
-                                            ),
-                                            contentColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                alpha = MaaThemeAlphas.DISABLED
-                                            ),
-                                        )
-                                    } else {
-                                        ButtonDefaults.buttonColors()
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium,
-                                ) {
-                                    if (maaState == MaaExecutionState.STARTING) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(stringResource(R.string.task_btn_start))
-                                    }
-                                }
-
-                                Button(
-                                    onClick = {
-                                        when (state.current) {
-                                            PanelTab.TASKS -> viewModel.onStopTasks()
-                                            PanelTab.AUTO_BATTLE -> copilotViewModel.onStop()
-                                            PanelTab.TOOLS -> toolboxViewModel.onStop()
-                                            else -> {}
-                                        }
-                                    },
-                                    enabled = maaState == MaaExecutionState.RUNNING,
-                                    modifier = Modifier.weight(1f),
-                                    shape = MaterialTheme.shapes.medium,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError,
-                                    ),
-                                ) {
-                                    if (maaState == MaaExecutionState.STOPPING) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.onError,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(stringResource(R.string.task_btn_stop))
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = { showMoreActions = !showMoreActions },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.MoreVert,
-                                        contentDescription = stringResource(R.string.task_more_actions_cd)
-                                    )
-                                }
-                            }
                             }
                         }
                     }
@@ -711,6 +729,7 @@ private inline fun viewToVirtualDisplay(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BackgroundMoreActionsOverlay(
     onDismissRequest: () -> Unit,
@@ -729,153 +748,177 @@ private fun BackgroundMoreActionsOverlay(
     val showTouchPreview by appSettingsManager.showTouchPreview.collectAsStateWithLifecycle()
     val debugMode by appSettingsManager.debugMode.collectAsStateWithLifecycle()
     var showHardwareScreenOffConfirm by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val overlayInteractionSource = remember { MutableInteractionSource() }
-    val cardInteractionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = overlayInteractionSource,
-                indication = null,
-                onClick = onDismissRequest
-            )
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Card(
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 64.dp)
-                .clickable(
-                    interactionSource = cardInteractionSource, indication = null, onClick = {}),
-            shape = RoundedCornerShape(4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                // 标题与快速操作组
-                Text(
-                    text = stringResource(R.string.bg_actions_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.task_more_actions_cd),
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Text(
+                text = stringResource(R.string.bg_actions_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 18.dp, bottom = 8.dp),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                SheetActionButton(
+                    icon = Icons.Filled.PowerSettingsNew,
+                    label = stringResource(R.string.bg_action_screen_off),
+                    onClick = {
+                        if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = sheetActionGridShape(
+                        rowIndex = 0,
+                        rowCount = 2,
+                        columnIndex = 0,
+                        columnCount = 2,
+                    ),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
+                SheetActionButton(
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    label = stringResource(R.string.bg_action_close_game),
+                    onClick = onCloseApp,
+                    modifier = Modifier.weight(1f),
+                    shape = sheetActionGridShape(
+                        rowIndex = 0,
+                        rowCount = 2,
+                        columnIndex = 1,
+                        columnCount = 2,
+                    ),
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                )
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    ActionTile(
-                        icon = Icons.Filled.PowerSettingsNew,
-                        label = stringResource(R.string.bg_action_screen_off),
-                        onClick = {
-                            if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
-                        },
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                    ActionTile(
-                        icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        label = stringResource(R.string.bg_action_close_game),
-                        onClick = onCloseApp,
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    ActionTile(
-                        icon = if (isGameMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                        label = if (isGameMuted) stringResource(R.string.bg_action_game_muted)
-                        else stringResource(R.string.bg_action_mute_game),
-                        onClick = onToggleGameSound,
-                        modifier = Modifier.weight(1f),
-                        containerColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
-                        contentColor = if (isGameMuted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // 调试模式：截图按钮，保存到 {rootDir}/debug/screenshots
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                val lastIndex = if (debugMode) 1 else 0
+                SheetActionButton(
+                    icon = if (isGameMuted) {
+                        Icons.AutoMirrored.Filled.VolumeOff
+                    } else {
+                        Icons.AutoMirrored.Filled.VolumeUp
+                    },
+                    label = if (isGameMuted) {
+                        stringResource(R.string.bg_action_game_muted)
+                    } else {
+                        stringResource(R.string.bg_action_mute_game)
+                    },
+                    onClick = onToggleGameSound,
+                    modifier = Modifier.weight(1f),
+                    shape = sheetActionGridShape(
+                        rowIndex = 1,
+                        rowCount = 2,
+                        columnIndex = 0,
+                        columnCount = lastIndex + 1,
+                    ),
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                )
                 if (debugMode) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        ActionTile(
-                            icon = Icons.Filled.Screenshot,
-                            label = stringResource(R.string.bg_action_screenshot),
-                            onClick = onCaptureScreenshot,
-                            modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    SheetActionButton(
+                        icon = Icons.Filled.Screenshot,
+                        label = stringResource(R.string.bg_action_screenshot),
+                        onClick = onCaptureScreenshot,
+                        modifier = Modifier.weight(1f),
+                        shape = sheetActionGridShape(
+                            rowIndex = 1,
+                            rowCount = 2,
+                            columnIndex = 1,
+                            columnCount = lastIndex + 1,
+                        ),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.bg_auto_settings_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 18.dp, bottom = 8.dp),
+            )
 
-                Text(
-                    text = stringResource(R.string.bg_auto_settings_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                SettingSwitchRow(
-                    icon = Icons.Filled.NotificationsPaused,
-                    label = stringResource(R.string.bg_auto_mute_on_launch),
-                    checked = muteOnGameLaunch,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(it) }
-                    })
-                SettingSwitchRow(
-                    icon = Icons.Filled.Cancel,
-                    label = stringResource(R.string.bg_auto_close_on_end),
-                    checked = closeAppOnTaskEnd,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
-                    })
-                SettingSwitchRow(
-                    icon = Icons.Filled.StayCurrentPortrait,
-                    label = stringResource(R.string.bg_auto_hardware_screen_off),
-                    checked = useHardwareScreenOff,
-                    onCheckedChange = { checked ->
-                        if (checked) {
-                            showHardwareScreenOffConfirm = true
-                        } else {
-                            coroutineScope.launch {
-                                appSettingsManager.setUseHardwareScreenOff(
-                                    false
-                                )
+            SegmentedSettingsGroup {
+                item {
+                    SheetSwitchRow(
+                        icon = Icons.Filled.NotificationsPaused,
+                        label = stringResource(R.string.bg_auto_mute_on_launch),
+                        checked = muteOnGameLaunch,
+                        onCheckedChange = {
+                            coroutineScope.launch { appSettingsManager.setMuteOnGameLaunch(it) }
+                        },
+                    )
+                }
+                item {
+                    SheetSwitchRow(
+                        icon = Icons.Filled.Cancel,
+                        label = stringResource(R.string.bg_auto_close_on_end),
+                        checked = closeAppOnTaskEnd,
+                        onCheckedChange = {
+                            coroutineScope.launch { appSettingsManager.setCloseAppOnTaskEnd(it) }
+                        },
+                    )
+                }
+                item {
+                    SheetSwitchRow(
+                        icon = Icons.Filled.StayCurrentPortrait,
+                        label = stringResource(R.string.bg_auto_hardware_screen_off),
+                        checked = useHardwareScreenOff,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                showHardwareScreenOffConfirm = true
+                            } else {
+                                coroutineScope.launch {
+                                    appSettingsManager.setUseHardwareScreenOff(false)
+                                }
                             }
-                        }
-                    })
-                SettingSwitchRow(
-                    icon = Icons.Filled.TouchApp,
-                    label = stringResource(R.string.bg_auto_show_touch_preview),
-                    checked = showTouchPreview,
-                    onCheckedChange = {
-                        coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
-                    })
+                        },
+                    )
+                }
+                item {
+                    SheetSwitchRow(
+                        icon = Icons.Filled.TouchApp,
+                        label = stringResource(R.string.bg_auto_show_touch_preview),
+                        checked = showTouchPreview,
+                        onCheckedChange = {
+                            coroutineScope.launch { appSettingsManager.setShowTouchPreview(it) }
+                        },
+                    )
+                }
             }
         }
     }
@@ -900,74 +943,69 @@ private fun BackgroundMoreActionsOverlay(
 }
 
 @Composable
-private fun ActionTile(
+private fun SheetActionButton(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    shape: RoundedCornerShape,
     containerColor: Color,
-    contentColor: Color
+    contentColor: Color,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(36.dp),
-        shape = RoundedCornerShape(4.dp),
-        color = containerColor.copy(alpha = 0.08f),
+        modifier = modifier.fillMaxHeight(),
+        shape = shape,
+        color = containerColor,
         contentColor = contentColor,
-        border = BorderStroke(0.5.dp, containerColor.copy(alpha = 0.2f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = containerColor.copy(alpha = 0.8f)
+                modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
 }
 
 @Composable
-private fun SettingSwitchRow(
+private fun SheetSwitchRow(
     icon: ImageVector, label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(32.dp)
-            .clickable { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-            Checkbox(
+    SettingRow(
+        title = label,
+        icon = icon,
+        trailing = {
+            ExpressiveSwitch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.size(20.dp)
+                onCheckedChange = null,
             )
-        }
-    }
+        },
+        onClick = { onCheckedChange(!checked) },
+    )
 }
+
+private fun sheetActionGridShape(
+    rowIndex: Int,
+    rowCount: Int,
+    columnIndex: Int,
+    columnCount: Int,
+) = RoundedCornerShape(
+    topStart = if (rowIndex == 0 && columnIndex == 0) 16.dp else 5.dp,
+    topEnd = if (rowIndex == 0 && columnIndex == columnCount - 1) 16.dp else 5.dp,
+    bottomStart = if (rowIndex == rowCount - 1 && columnIndex == 0) 16.dp else 5.dp,
+    bottomEnd = if (
+        rowIndex == rowCount - 1 && columnIndex == columnCount - 1
+    ) 16.dp else 5.dp,
+)

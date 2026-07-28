@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,14 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun TaskProfileSelectorPanel(
@@ -42,56 +47,72 @@ fun TaskProfileSelectorPanel(
     onSwitchProfile: (String) -> Unit,
     onEditProfile: (String) -> Unit,
     onCreateProfile: () -> Unit,
+    onReorderProfile: (Int, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = modifier) {
-        item {
-            Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
-                Text(
-                    text = stringResource(R.string.panel_profile_selector_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringResource(R.string.panel_profile_selector_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
+    val lazyListState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(
+        lazyListState = lazyListState,
+        onMove = { from, to ->
+            if (from.index in profiles.indices && to.index in profiles.indices) {
+                onReorderProfile(from.index, to.index)
             }
+        },
+    )
+
+    Column(modifier = modifier) {
+        Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
+            Text(
+                text = stringResource(R.string.panel_profile_selector_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.panel_profile_selector_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
 
-        item {
-            val itemCount = profiles.size + 1
-            Column(
-                modifier = Modifier.padding(top = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                profiles.forEachIndexed { index, profile ->
+        Spacer(modifier = Modifier.size(10.dp))
+        val itemCount = profiles.size + 1
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            contentPadding = PaddingValues(bottom = mainBottomBarPadding + 8.dp),
+        ) {
+            itemsIndexed(
+                items = profiles,
+                key = { _, profile -> profile.id },
+            ) { index, profile ->
+                ReorderableItem(reorderableState, key = profile.id) {
                     val isActive = profile.id == activeProfileId
                     val enabledCount = profile.chain.count { it.enabled }
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
+                    Surface(
+                        onClick = { onSwitchProfile(profile.id) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .longPressDraggableHandle(),
                         shape = segmentedShape(index, itemCount),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isActive) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceBright
-                            },
-                        ),
+                        color = if (isActive) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceBright
+                        },
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                                .padding(horizontal = 14.dp, vertical = 11.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onSwitchProfile(profile.id) }
-                                    .padding(vertical = 4.dp),
+                                modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Surface(
@@ -122,27 +143,22 @@ fun TaskProfileSelectorPanel(
                                 }
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = profile.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = if (isActive) {
-                                                FontWeight.SemiBold
-                                            } else {
-                                                FontWeight.Medium
-                                            },
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        if (isActive) {
-                                            Text(
-                                                text = stringResource(R.string.panel_profile_active),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    }
+                                    Text(
+                                        text = profile.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (isActive) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                        fontWeight = if (isActive) {
+                                            FontWeight.SemiBold
+                                        } else {
+                                            FontWeight.Medium
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                     Text(
                                         text = stringResource(
                                             R.string.panel_profile_task_count,
@@ -150,8 +166,13 @@ fun TaskProfileSelectorPanel(
                                             enabledCount,
                                         ),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 2.dp),
+                                        color = if (isActive) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                                alpha = 0.76f,
+                                            )
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                     )
                                 }
                             }
@@ -166,52 +187,16 @@ fun TaskProfileSelectorPanel(
                         }
                     }
                 }
+            }
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = profiles.size < 10,
-                            onClick = onCreateProfile,
-                        ),
+            item(key = "create-profile") {
+                SettingActionButton(
+                    title = stringResource(R.string.panel_new_profile),
+                    icon = Icons.Default.Add,
+                    onClick = onCreateProfile,
+                    enabled = profiles.size < 10,
                     shape = segmentedShape(itemCount - 1, itemCount),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (profiles.size < 10) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHighest
-                        },
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = if (profiles.size < 10) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = stringResource(R.string.panel_new_profile),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (profiles.size < 10) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
-                }
+                )
             }
         }
     }

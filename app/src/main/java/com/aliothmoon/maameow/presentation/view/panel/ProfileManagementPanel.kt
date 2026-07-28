@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +52,7 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.TaskProfile
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ITextField
+import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -80,15 +80,12 @@ fun ProfileManagementPanel(
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        FilledTonalButton(
+        SettingActionButton(
+            title = stringResource(R.string.panel_new_profile),
+            icon = Icons.Default.Add,
             onClick = onCreate,
             enabled = profiles.size < 10,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.panel_new_profile))
-        }
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 

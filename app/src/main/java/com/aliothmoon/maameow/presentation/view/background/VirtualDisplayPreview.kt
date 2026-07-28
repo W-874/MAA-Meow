@@ -33,6 +33,7 @@ import org.koin.compose.koinInject
 @Composable
 fun VirtualDisplayPreview(
     modifier: Modifier = Modifier,
+    aspectRatio: Float,
     isRunning: Boolean,
     isSurfaceAvailable: Boolean,
     onClick: () -> Unit,
@@ -47,7 +48,6 @@ fun VirtualDisplayPreview(
         val maxWidth = maxWidth
         val maxHeight = maxHeight
 
-        val aspectRatio = 16f / 9f
         val widthFromHeight = maxHeight * aspectRatio
         val heightFromWidth = maxWidth / aspectRatio
 
