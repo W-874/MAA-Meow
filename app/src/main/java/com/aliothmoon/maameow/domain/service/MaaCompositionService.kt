@@ -92,10 +92,10 @@ class MaaCompositionService(
             MaaExecutionState.STARTING ->
                 TaskExecutionService.start(context)
 
-            MaaExecutionState.IDLE, MaaExecutionState.ERROR ->
-                TaskExecutionService.stop(context)
-
-            MaaExecutionState.STOPPING, MaaExecutionState.RUNNING -> {}
+            MaaExecutionState.IDLE,
+            MaaExecutionState.ERROR,
+            MaaExecutionState.STOPPING,
+            MaaExecutionState.RUNNING -> {}
         }
     }
 

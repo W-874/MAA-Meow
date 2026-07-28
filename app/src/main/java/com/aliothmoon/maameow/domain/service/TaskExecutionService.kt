@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -49,9 +50,12 @@ class TaskExecutionService : Service() {
 
     companion object {
         private const val TASK_CHANNEL_ID = "task_execution_live"
-        private const val NOTIFICATION_ID = 9003
+        const val NOTIFICATION_ID = 9003
+        const val EXTRA_DISMISS_ON_OPEN = "dismiss_task_notification_on_open"
         private const val MIN_UPDATE_INTERVAL_MS = 1000L
+        private const val COMPLETION_TIMEOUT_MS = 15_000L
         private const val PROGRESS_STYLE_MAX = 1000
+        private const val SUMMARY_PROGRESS_TRAILING_GAP = "\u202F"
         private const val PERMISSION_POST_PROMOTED_NOTIFICATIONS =
             "android.permission.POST_PROMOTED_NOTIFICATIONS"
         private const val ACTION_COMPLETE = "com.aliothmoon.maameow.action.TASK_NOTIFICATION_COMPLETE"
@@ -108,6 +112,7 @@ class TaskExecutionService : Service() {
     private var stoppingRequested = false
     private var keepTerminalNotification = false
     private var completionFinalizing = false
+    private var lastTaskSnapshot: TaskNotificationSnapshot? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -193,6 +198,12 @@ class TaskExecutionService : Service() {
             }
                 .distinctUntilChanged()
                 .collect { snapshot ->
+                    if (snapshot.tasks.isNotEmpty() &&
+                        snapshot.state != MaaExecutionState.IDLE &&
+                        snapshot.state != MaaExecutionState.ERROR
+                    ) {
+                        lastTaskSnapshot = snapshot
+                    }
                     when (snapshot.state) {
                         MaaExecutionState.IDLE,
                         MaaExecutionState.ERROR -> {
@@ -230,7 +241,7 @@ class TaskExecutionService : Service() {
         ) {
             val summary = sessionLogger.logs.value.lastOrNull()?.content
                 ?: getString(R.string.notification_task_completed)
-            finalizeMiIslandCompletion(summary, snapshot)
+            finalizeMiIslandCompletion(summary, lastTaskSnapshot ?: snapshot)
             return
         }
         notificationSessionActive = false
@@ -247,11 +258,11 @@ class TaskExecutionService : Service() {
 
     private fun finalizeMiIslandCompletion(
         summary: String,
-        snapshot: TaskNotificationSnapshot = TaskNotificationSnapshot(
-            state = MaaExecutionState.IDLE,
-            statusText = summary,
-            tasks = taskChainStatusTracker.tasks.value,
-        ),
+        snapshot: TaskNotificationSnapshot = lastTaskSnapshot ?: TaskNotificationSnapshot(
+                state = MaaExecutionState.IDLE,
+                statusText = summary,
+                tasks = taskChainStatusTracker.tasks.value,
+            ),
     ) {
         if (completionFinalizing) return
         completionFinalizing = true
@@ -262,8 +273,8 @@ class TaskExecutionService : Service() {
                 state = MaaExecutionState.IDLE,
                 statusText = summary,
             )
-            notifyMiIslandWithBypass(completed)
             stopForeground(STOP_FOREGROUND_DETACH)
+            notifyMiIslandWithBypass(completed)
             notificationSessionActive = false
             stopSelf()
         }
@@ -291,8 +302,30 @@ class TaskExecutionService : Service() {
     private fun startAsForeground(notification: Notification) {
         val shouldBypass = appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND &&
             appSettingsManager.miIslandBypassRestriction.value
-        val remote = (RemoteServiceManager.state.value as? RemoteServiceManager.ServiceState.Connected)?.service
-        val blocked = shouldBypass && remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", false) == true
+        if (!shouldBypass) {
+            postForegroundNotification(notification)
+            return
+        }
+        runBlocking(Dispatchers.IO) {
+            miIslandNetworkMutex.withLock {
+                val remote = (RemoteServiceManager.state.value as? RemoteServiceManager.ServiceState.Connected)?.service
+                val blocked = remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", false) == true
+                try {
+                    postForegroundNotification(notification)
+                    if (blocked) delay(100L)
+                } finally {
+                    if (blocked) {
+                        withContext(NonCancellable) {
+                            runCatching { remote.setPackageNetworkingEnabled("com.xiaomi.xmsf", true) }
+                                .onFailure { Timber.e(it, "Failed to restore XMSF networking after startForeground") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun postForegroundNotification(notification: Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
@@ -301,15 +334,6 @@ class TaskExecutionService : Service() {
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)
-        }
-        if (blocked) {
-            serviceScope.launch(Dispatchers.IO) {
-                delay(100L)
-                withContext(NonCancellable) {
-                    runCatching { remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", true) }
-                        .onFailure { Timber.e(it, "Failed to restore XMSF networking after startForeground") }
-                }
-            }
         }
     }
 
@@ -346,12 +370,15 @@ class TaskExecutionService : Service() {
             .setSmallIcon(R.drawable.ic_maa_logo)
             .setContentTitle(title)
             .setContentText(currentContent)
-            .setContentIntent(buildContentIntent())
+            .setContentIntent(buildContentIntent(dismissOnOpen = isTerminal))
             .setOngoing(!isTerminal)
             .setAutoCancel(isTerminal)
             .setOnlyAlertOnce(!isTerminal)
             .setSilent(!isTerminal)
             .setCategory(if (isTerminal) NotificationCompat.CATEGORY_STATUS else NotificationCompat.CATEGORY_PROGRESS)
+            .apply {
+                if (isTerminal) setTimeoutAfter(COMPLETION_TIMEOUT_MS)
+            }
         val extras = FocusNotification.buildV3 {
             val logo = Icon.createWithResource(this@TaskExecutionService, R.mipmap.ic_launcher)
             val logoKey = createPicture("maa_task_logo", logo)
@@ -375,7 +402,8 @@ class TaskExecutionService : Service() {
                             isCCW = false
                         }
                         textInfo {
-                            this.title = progressInfo.progressLabel ?: "0/0"
+                            this.title =
+                                (progressInfo.progressLabel ?: "0/0") + SUMMARY_PROGRESS_TRAILING_GAP
                         }
                     }
                 }
@@ -608,9 +636,10 @@ class TaskExecutionService : Service() {
         }
     }
 
-    private fun buildContentIntent(): PendingIntent {
+    private fun buildContentIntent(dismissOnOpen: Boolean = false): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_DISMISS_ON_OPEN, dismissOnOpen)
         }
         return PendingIntent.getActivity(
             this,

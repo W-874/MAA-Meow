@@ -133,6 +133,7 @@ fun SettingsView(
     updateViewModel: UpdateViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     permissionManager: PermissionManager = koinInject(),
+    appSettingsManager: AppSettingsManager = koinInject(),
 ) {
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
@@ -140,6 +141,8 @@ fun SettingsView(
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
+    val taskNotificationStyle by appSettingsManager.taskNotificationStyle.collectAsStateWithLifecycle()
+    val miIslandBypass by appSettingsManager.miIslandBypassRestriction.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
@@ -759,6 +762,44 @@ fun SettingsView(
             item {
                 SectionHeader(stringResource(R.string.settings_section_notification))
                 SegmentedSettingsGroup {
+                    item {
+                        SettingDropdown(
+                            title = stringResource(R.string.notification_task_style),
+                            selected = taskNotificationStyle,
+                            options = AppSettingsManager.TaskNotificationStyle.entries,
+                            optionLabel = {
+                                stringResource(
+                                    when (it) {
+                                        AppSettingsManager.TaskNotificationStyle.ANDROID ->
+                                            R.string.notification_task_style_android
+                                        AppSettingsManager.TaskNotificationStyle.MI_ISLAND ->
+                                            R.string.notification_task_style_mi_island
+                                    }
+                                )
+                            },
+                            onSelected = { style ->
+                                coroutineScope.launch {
+                                    appSettingsManager.setTaskNotificationStyle(style)
+                                }
+                            },
+                            icon = Icons.Rounded.Notifications,
+                        )
+                    }
+                    if (taskNotificationStyle == AppSettingsManager.TaskNotificationStyle.MI_ISLAND) {
+                        item {
+                            SettingSwitchItem(
+                                title = stringResource(R.string.notification_mi_island_bypass),
+                                contentColor = contentColor,
+                                checked = miIslandBypass,
+                                icon = Icons.Rounded.Security,
+                                onCheckedChange = { enabled ->
+                                    coroutineScope.launch {
+                                        appSettingsManager.setMiIslandBypassRestriction(enabled)
+                                    }
+                                },
+                            )
+                        }
+                    }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_notification_title),
                         description = stringResource(R.string.settings_notification_desc),

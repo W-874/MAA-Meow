@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'build-*'
+      - 'v*'
   workflow_dispatch:
     inputs:
       maa_repo:

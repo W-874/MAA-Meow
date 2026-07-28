@@ -1,5 +1,6 @@
 package com.aliothmoon.maameow
 
+import android.app.NotificationManager
 import android.content.Intent
 import android.os.Bundle
 import android.view.ViewTreeObserver
@@ -21,6 +22,7 @@ import com.aliothmoon.maameow.data.achievement.AchievementEvents
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.service.TaskExecutionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
@@ -49,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !isUiReady }
         super.onCreate(savedInstanceState)
+        dismissTaskNotificationIfRequested(intent)
         dispatchScheduledLaunchIntent(intent)
         enableEdgeToEdge()
         lifecycleScope.launch {
@@ -87,7 +90,15 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        dismissTaskNotificationIfRequested(intent)
         dispatchScheduledLaunchIntent(intent)
+    }
+
+    private fun dismissTaskNotificationIfRequested(intent: Intent?) {
+        if (intent?.getBooleanExtra(TaskExecutionService.EXTRA_DISMISS_ON_OPEN, false) != true) return
+        getSystemService(NotificationManager::class.java)
+            .cancel(TaskExecutionService.NOTIFICATION_ID)
+        intent.removeExtra(TaskExecutionService.EXTRA_DISMISS_ON_OPEN)
     }
 
     private fun dispatchScheduledLaunchIntent(intent: Intent?) {
