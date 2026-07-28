@@ -787,7 +787,11 @@ private fun BackgroundMoreActionsOverlay(
                     icon = Icons.Filled.PowerSettingsNew,
                     label = stringResource(R.string.bg_action_screen_off),
                     onClick = {
-                        if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
+                        coroutineScope.launch {
+                            sheetState.hide()
+                            onDismissRequest()
+                            if (useHardwareScreenOff) onScreenOff() else onShowScreenSaver()
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = sheetActionGridShape(
