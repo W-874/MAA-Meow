@@ -42,6 +42,7 @@ class DepotRepositoryTest {
 
     @Before
     fun setUp() {
+        activeProfileId.value = PROFILE_A
         store = FakePreferencesDataStore()
         repository = DepotRepository(store, fakeChainState())
     }
