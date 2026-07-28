@@ -28,8 +28,20 @@ val gitVersionCode: Int by lazy {
 }
 
 val gitVersionName: String by lazy {
+    val commitHash = providers.exec {
+        commandLine("git", "rev-parse", "--short=6", "HEAD")
+    }.standardOutput.asText.get().trim()
     val desc = providers.exec {
-        commandLine("git", "describe", "--tags", "--always")
+        commandLine(
+            "git",
+            "describe",
+            "--tags",
+            "--match",
+            "v[0-9]*",
+            "--exclude",
+            "build-*",
+            "--always"
+        )
         isIgnoreExitValue = true
     }.standardOutput.asText.get().trim()
     val match =
@@ -41,7 +53,7 @@ val gitVersionName: String by lazy {
         when {
             distance.isEmpty() && pre.isEmpty() -> "$major.$minor.$patch"
             distance.isEmpty() -> "$major.$minor.$patch-$pre"
-            else -> "$major.$minor.${patch.toInt() + 1}-alpha.$distance"
+            else -> "$major.$minor.${patch.toInt() + 1}-alpha-$commitHash"
         }
     } else {
         desc.removePrefix("v").ifEmpty { "0.0.0-dev" }
