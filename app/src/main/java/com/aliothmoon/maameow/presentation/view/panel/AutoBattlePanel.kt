@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -317,6 +318,21 @@ fun AutoBattlePanel(
                                     R.string.panel_autobattle_station_code_placeholder,
                                 ),
                                 shape = RoundedCornerShape(16.dp),
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = viewModel::onPasteAndParse,
+                                        enabled = controlsEnabled,
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentPaste,
+                                            contentDescription = stringResource(
+                                                R.string.copilot_paste_parse,
+                                            ),
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                },
                             )
                         }
                     }

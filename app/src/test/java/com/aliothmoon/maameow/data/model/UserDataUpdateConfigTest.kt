@@ -10,7 +10,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -36,8 +35,7 @@ class UserDataUpdateConfigTest {
     fun bothSwitchesOff_producesNothing() {
         val result = UserDataUpdateConfig(updateOperBox = false, updateDepot = false)
             .toTaskParams(ctx())
-        assertTrue(result.params.isEmpty())
-        assertFalse(result.unlockDoubleSync)
+        assertTrue(result.isEmpty())
     }
 
     @Test
@@ -45,17 +43,15 @@ class UserDataUpdateConfigTest {
         val result = UserDataUpdateConfig().toTaskParams(ctx())
         assertEquals(
             listOf(MaaTaskType.OPER_BOX, MaaTaskType.DEPOT),
-            result.params.map { it.type },
+            result.map { it.type },
         )
-        assertTrue(result.unlockDoubleSync)
     }
 
     @Test
     fun onlyDepot_producesDepotOnly() {
         val result = UserDataUpdateConfig(updateOperBox = false, updateDepot = true)
             .toTaskParams(ctx())
-        assertEquals(listOf(MaaTaskType.DEPOT), result.params.map { it.type })
-        assertFalse(result.unlockDoubleSync)
+        assertEquals(listOf(MaaTaskType.DEPOT), result.map { it.type })
     }
 
     @Test
@@ -64,6 +60,6 @@ class UserDataUpdateConfigTest {
         val result = UserDataUpdateConfig(
             triggerInterval = UserDataUpdateTriggerInterval.DAILY,
         ).toTaskParams(ctx(operSync = now, depotSync = now))
-        assertTrue(result.params.isEmpty())
+        assertTrue(result.isEmpty())
     }
 }

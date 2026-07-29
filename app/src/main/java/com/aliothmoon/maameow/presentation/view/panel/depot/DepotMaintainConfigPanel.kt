@@ -121,6 +121,14 @@ fun DepotMaintainConfigPanel(
                 )
             }
             item {
+                CheckBoxWithExpandableTip(
+                    checked = config.useAutoSeries,
+                    onCheckedChange = { onConfigChange(config.copy(useAutoSeries = it)) },
+                    label = stringResource(R.string.panel_depot_use_auto_series),
+                    tipText = stringResource(R.string.panel_depot_use_auto_series_tip),
+                )
+            }
+            item {
                 CheckBoxWithLabel(
                     checked = config.skipDuringActivity,
                     onCheckedChange = { onConfigChange(config.copy(skipDuringActivity = it)) },
@@ -409,7 +417,7 @@ fun DepotMaintainConfigPanel(
                                             label = stringResource(
                                                 R.string.panel_depot_target_inventory,
                                             ),
-                                            minimum = 0,
+                                            minimum = 1,
                                             maximum = MAX_TARGET_INVENTORY,
                                             modifier = Modifier.fillMaxWidth(),
                                         )

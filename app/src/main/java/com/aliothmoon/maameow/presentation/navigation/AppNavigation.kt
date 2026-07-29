@@ -36,6 +36,7 @@ import com.aliothmoon.maameow.presentation.LocalToaster
 import com.aliothmoon.maameow.presentation.enableBenchmarkTestTags
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
+import com.aliothmoon.maameow.presentation.components.clearFocusOnBlankTap
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.state.BackgroundChromeState
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
@@ -117,6 +118,7 @@ fun AppNavigation(
         modifier = Modifier
             .fillMaxSize()
             .enableBenchmarkTestTags()
+            .clearFocusOnBlankTap()
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         // MainScreen with HorizontalPager for smooth tab switching

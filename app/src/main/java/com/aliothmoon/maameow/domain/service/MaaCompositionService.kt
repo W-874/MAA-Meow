@@ -7,6 +7,7 @@ import com.aliothmoon.maameow.MaaCoreCallback
 import com.aliothmoon.maameow.MaaCoreService
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.constant.DefaultDisplayConfig
+import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.model.LogLevel
 
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -30,6 +31,7 @@ import com.aliothmoon.maameow.maa.task.visibleTaskCount
 import com.aliothmoon.maameow.manager.RemoteAccessCoordinator
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
+import com.aliothmoon.maameow.remote.PermissionGrantRequest
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
@@ -182,7 +184,7 @@ class MaaCompositionService(
 
     fun handleCallback(msg: Int, json: String?) {
         if (onAsyncConnectCallback(msg, json)) return
-        callbackDispatcher.dispatch(msg, json)
+        callbackDispatcher.onEvent(msg, json)
     }
 
     val callback = object : MaaCoreCallback.Stub() {
@@ -206,8 +208,6 @@ class MaaCompositionService(
         clientType: String,
         isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
-        /** 更新数据双识别到期：启动成功后 arm，两侧识别成功再报 DoubleSync */
-        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null
     ): StartResult = executeStart(
         tasks = tasks,
@@ -216,13 +216,12 @@ class MaaCompositionService(
         startMessage = context.getString(R.string.runlog_task_start, tasks.visibleTaskCount()),
         successMessage = context.getString(R.string.runlog_task_started),
         preflightLogs = preflightLogs,
-        expectDoubleSync = expectDoubleSync,
         onSessionStarted = onSessionStarted,
     )
 
     suspend fun startCopilot(
         tasks: List<MaaTaskParams>,
-        clientType: String = taskChainState.getClientType()
+        clientType: String = taskChainState.clientType
     ): StartResult = executeStart(
         tasks = tasks,
         clientType = clientType,
@@ -361,7 +360,7 @@ class MaaCompositionService(
         }
         // 在 MAA 连接（含 force_stop 重启游戏）之前提前授予电池优化豁免与后台不受限权限，
         // 让新进程一启动就处于受保护状态
-        taskChainState.grantGameBatteryExemption(clientType)
+        grantGameBatteryExemption(clientType)
         // 每次连接前同步「干员部署按住-暂停」开关 (对应 Core ControlFeat::SWIPE_WITH_PAUSE),
         // 用户改了设置下次启动任务即生效
         val pauseEnabled = appSettings.deploymentWithPause.value
@@ -369,21 +368,19 @@ class MaaCompositionService(
         return asyncConnect(maa, config)
     }
 
-    /**
-     * 运行中改写已排队任务的参数（MaaCore AsstSetTaskParams）。
-     * 仅供 [FightDropsRefresher] 在 TaskChainStart 回调内同步调用。
-     *
-     * 注意：调用方在 MaaCore 回调线程上同步执行，本方法内不得再切线程，
-     * 否则参数可能来不及在 core 进入关卡前生效。
-     */
-    fun setTaskParams(taskId: Int, params: String): Boolean {
-        val maa = RemoteServiceManager.getInstanceOrNull()?.maaCoreService ?: run {
-            Timber.w("SetTaskParams 时 MaaCore 服务不可用，taskId=%d", taskId)
-            return false
+    private fun grantGameBatteryExemption(clientType: String) {
+        val pkg = Packages[clientType] ?: return
+        runCatching {
+            RemoteServiceManager.getInstanceOrNull()?.grantPermissions(
+                PermissionGrantRequest(
+                    packageName = pkg,
+                    permissions = PermissionGrantRequest.PERM_BATTERY or PermissionGrantRequest.PERM_BACKGROUND
+                )
+            )
+            Timber.d("Battery exemption granted for game: %s", pkg)
+        }.onFailure { e ->
+            Timber.w(e, "Failed to grant battery exemption for game")
         }
-        return runCatching { maa.SetTaskParams(taskId, params) }
-            .onFailure { Timber.e(it, "SetTaskParams 失败 taskId=%d", taskId) }
-            .getOrDefault(false)
     }
 
     private suspend fun appendTasksAndStart(
@@ -393,13 +390,13 @@ class MaaCompositionService(
         mode: RunMode,
     ): StartResult {
         taskChainStatusTracker.clear()
-        dropsRefresher.clear()
+        // 不清 dropsRefresher：stage 已在 Analyze 完成，会话结束/下次 Analyze 再清
         tasks.forEach { t ->
             sessionLogger.appendToFileOnly("[TaskParams] ${t.type.value}: ${t.params}")
             val taskId = maa.AppendTask(t.type.value, t.params)
             if (taskId > 0) {
-                taskChainStatusTracker.register(taskId, t.type.value, t.nodeId)
-                t.dropTarget?.let { dropsRefresher.register(taskId, it) }
+                taskChainStatusTracker.register(taskId, t.type.value, t.slot)
+                t.slot?.let { dropsRefresher.bind(it, taskId) }
             }
         }
         if (!maa.Start()) {
@@ -424,13 +421,12 @@ class MaaCompositionService(
         successMessage: String,
         isScheduled: Boolean = false,
         preflightLogs: List<Pair<UiText, LogLevel>> = emptyList(),
-        expectDoubleSync: Boolean = false,
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
         sessionLogger.startSession(tasks.map { it.type.value })
         subTaskHandler.resetSessionState()
-        toolboxResultCollector.clearDoubleSyncSession()
+        toolboxResultCollector.onSessionStart()
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
         preflightLogs.forEach { (text, level) ->
@@ -456,9 +452,6 @@ class MaaCompositionService(
                     val result = appendTasksAndStart(maa, tasks, successMessage, mode)
                     if (result is StartResult.Success) {
                         taskChainState.saveLastUsedClientType(clientType)
-                        if (expectDoubleSync) {
-                            toolboxResultCollector.armDoubleSyncSession()
-                        }
                     }
                     result
                 }

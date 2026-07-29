@@ -8,9 +8,9 @@ class MaaTaskParamsTest {
     @Test
     fun visibleTaskCountGroupsParamsFromSameNode() {
         val tasks = listOf(
-            MaaTaskParams(MaaTaskType.START_UP, "{}", nodeId = "wake-up"),
-            MaaTaskParams(MaaTaskType.OPER_BOX, "{}", nodeId = "user-data"),
-            MaaTaskParams(MaaTaskType.DEPOT, "{}", nodeId = "user-data"),
+            MaaTaskParams(MaaTaskType.START_UP, "{}", slot = TaskSlot("wake-up")),
+            MaaTaskParams(MaaTaskType.OPER_BOX, "{}", slot = TaskSlot("user-data", 0)),
+            MaaTaskParams(MaaTaskType.DEPOT, "{}", slot = TaskSlot("user-data", 1)),
         )
 
         assertEquals(2, tasks.visibleTaskCount())
@@ -29,7 +29,7 @@ class MaaTaskParamsTest {
     @Test
     fun visibleTaskCountKeepsUnassociatedTasksSeparate() {
         val tasks = listOf(
-            MaaTaskParams(MaaTaskType.START_UP, "{}", nodeId = "wake-up"),
+            MaaTaskParams(MaaTaskType.START_UP, "{}", slot = TaskSlot("wake-up")),
             MaaTaskParams(MaaTaskType.COPILOT, "{}"),
         )
 

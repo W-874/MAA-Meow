@@ -7,12 +7,7 @@ import com.aliothmoon.maameow.maa.task.MaaTaskParams
 import com.aliothmoon.maameow.maa.task.MaaTaskType
 import kotlinx.serialization.Serializable
 
-/**
- * 更新数据任务：按触发间隔在任务链中追加干员识别 / 仓库识别。
- *
- * 容器型任务，本身不对应单一 MaaCore 类型；展开为 0~2 个识别任务。
- * 迁移自 WPF UserDataUpdateTask + UserDataUpdateSettingsUserControlModel.Serialize。
- */
+/** 更新数据：按间隔展开为 0~2 个识别任务。 */
 @Serializable
 data class UserDataUpdateConfig(
     val updateOperBox: Boolean = true,
@@ -20,9 +15,9 @@ data class UserDataUpdateConfig(
     val triggerInterval: UserDataUpdateTriggerInterval = UserDataUpdateTriggerInterval.EVERY_TIME,
 ) : TaskParamProvider {
 
-    override fun toTaskParams(ctx: TaskParamContext): TaskParamResult {
+    override fun toTaskParams(ctx: TaskParamContext): List<MaaTaskParams> {
         if (!updateOperBox && !updateDepot) {
-            return TaskParamResult(emptyList())
+            return emptyList()
         }
 
         val yjToday = ServerTimezone.getYjDate(ctx.clientType)
@@ -40,18 +35,13 @@ data class UserDataUpdateConfig(
             yjZone = yjZone,
         )
         if (!operDue && !depotDue) {
-            return TaskParamResult(emptyList())
+            return emptyList()
         }
 
-        val params = buildList {
-            // 对齐上游：先干员后仓库
+        // 对齐上游：先干员后仓库（串行）。
+        return buildList {
             if (operDue) add(MaaTaskParams(MaaTaskType.OPER_BOX, "{}"))
             if (depotDue) add(MaaTaskParams(MaaTaskType.DEPOT, "{}"))
         }
-        return TaskParamResult(
-            params = params,
-            // 双 due 时由 UseCase 解锁 DoubleSync（对齐上游 Serialize 时机）
-            unlockDoubleSync = operDue && depotDue,
-        )
     }
 }

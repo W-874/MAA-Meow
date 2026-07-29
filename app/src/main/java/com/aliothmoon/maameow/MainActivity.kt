@@ -26,6 +26,7 @@ import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.TaskExecutionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
@@ -94,7 +95,9 @@ class MainActivity : AppCompatActivity() {
                         fontScale = baseDensity.fontScale
                     )
                 ) {
-                    AppNavigation()
+                    ProvideInputFocusManager {
+                        AppNavigation()
+                    }
                 }
             }
         }

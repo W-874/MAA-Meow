@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Point
 import android.graphics.Rect
 import android.text.InputType
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.appcompat.widget.AppCompatEditText
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -55,6 +57,7 @@ fun FloatWindowEditText(
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     outlineColor: Color = MaterialTheme.colorScheme.outline,
     focusedOutlineColor: Color = MaterialTheme.colorScheme.primary,
+    trailingIcon: @Composable (() -> Unit)? = null,
     onImeAction: (() -> Unit)? = null,
     onFocusChange: ((Boolean) -> Unit)? = null
 ) {
@@ -73,6 +76,7 @@ fun FloatWindowEditText(
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     val currentOnImeAction by rememberUpdatedState(onImeAction)
     val currentOnFocusChange by rememberUpdatedState(onFocusChange)
+    val currentSingleLine by rememberUpdatedState(singleLine)
 
     LaunchedEffect(value) {
         editTextRef?.let { et ->
@@ -108,66 +112,66 @@ fun FloatWindowEditText(
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .defaultMinSize(minHeight = minHeight),
+                    .defaultMinSize(minHeight = minHeight)
+                    .then(
+                        if (trailingIcon != null) {
+                            Modifier.padding(end = 40.dp)
+                        } else {
+                            Modifier
+                        }
+                    ),
                 factory = { ctx ->
                     ExtractModeEditText(ctx).apply {
                         background = null
-
-                        // 悬浮窗焦点配置
                         isFocusable = true
                         isFocusableInTouchMode = true
                         isCursorVisible = true
-
-                        // 文本样式
                         setTextColor(textColorInt)
                         setHintTextColor(hintColorInt)
                         textSize = 16f
                         setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
-
-                        // 输入配置
+                        // imeOptions 须在 inputType 之后设置, 否则会被冲掉
                         this.inputType = inputType
                         this.isSingleLine = singleLine
                         this.isEnabled = enabled
                         this.hint = hint
-                        this.imeOptions = EditorInfo.IME_ACTION_DONE
-
+                        applyDoneImeOptions(singleLine)
                         setText(value)
-
-                        // 文本变化监听
                         doAfterTextChanged { editable ->
                             val newText = editable?.toString() ?: ""
                             if (newText != currentValue) {
                                 currentOnValueChange(newText)
                             }
                         }
-
-                        // IME 动作监听
-                        setOnEditorActionListener { _, actionId, _ ->
-                            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                        setOnEditorActionListener { _, actionId, event ->
+                            if (!currentSingleLine) return@setOnEditorActionListener false
+                            val isEnterKey = event != null &&
+                                event.keyCode == KeyEvent.KEYCODE_ENTER &&
+                                event.action == KeyEvent.ACTION_DOWN
+                            if (isImeDoneAction(actionId) || isEnterKey) {
                                 currentOnImeAction?.invoke()
                                 clearFocus()
                                 keyboardController?.hide()
                                 true
-                            } else false
+                            } else {
+                                false
+                            }
                         }
-
-                        // 焦点变化监听
                         setOnFocusChangeListener { _, hasFocus ->
                             isFocused = hasFocus
                             currentOnFocusChange?.invoke(hasFocus)
                             if (hasFocus) {
                                 keyboardController?.show()
+                            } else {
+                                keyboardController?.hide()
                             }
                         }
-
-                        // 点击时请求焦点并显示键盘
                         setOnClickListener {
                             if (!hasFocus()) {
                                 requestFocus()
                             }
                             keyboardController?.show()
                         }
-
                         editTextRef = this
                     }
                 },
@@ -180,13 +184,42 @@ fun FloatWindowEditText(
                     }
                     if (et.inputType != inputType) {
                         et.inputType = inputType
+                        // setInputType 会重置 imeOptions, 需重设
+                        et.applyDoneImeOptions(singleLine)
+                    }
+                    if (et.isSingleLine != singleLine) {
+                        et.isSingleLine = singleLine
+                        et.applyDoneImeOptions(singleLine)
                     }
                     et.setTextColor(textColorInt)
                     et.setHintTextColor(hintColorInt)
                 }
             )
+            if (trailingIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp)
+                ) {
+                    trailingIcon()
+                }
+            }
         }
     }
+}
+
+private fun AppCompatEditText.applyDoneImeOptions(singleLine: Boolean) {
+    imeOptions = if (singleLine) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NONE
+}
+
+private fun isImeDoneAction(actionId: Int): Boolean = when (actionId) {
+    EditorInfo.IME_ACTION_DONE,
+    EditorInfo.IME_ACTION_GO,
+    EditorInfo.IME_ACTION_SEARCH,
+    EditorInfo.IME_ACTION_SEND,
+    EditorInfo.IME_ACTION_NEXT,
+    EditorInfo.IME_NULL -> true
+    else -> false
 }
 
 

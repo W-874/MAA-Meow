@@ -76,7 +76,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -101,6 +100,7 @@ import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
+import com.aliothmoon.maameow.presentation.LocalInputFocusManager
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
@@ -168,7 +168,7 @@ fun BackgroundTaskView(
     val toolboxDialog by toolboxViewModel.dialog.collectAsStateWithLifecycle()
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
-    val activeProfileId by viewModel.chainState.activeProfileId.collectAsStateWithLifecycle()
+    val activeProfileId by viewModel.chainState.profileId.collectAsStateWithLifecycle()
     val selectedNode = nodes.find { it.id == state.selectedNodeId }
     val canShowTaskActions = PanelTab.canShowTaskActions(state.current)
 
@@ -194,7 +194,7 @@ fun BackgroundTaskView(
         }
     }
     val context = LocalContext.current
-    val focusManager = LocalFocusManager.current
+    val inputFocusManager = LocalInputFocusManager.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
     val appDiedMessage = stringResource(R.string.bg_toast_app_died)
     val foregroundBlocked = runMode == RunMode.FOREGROUND
@@ -370,7 +370,7 @@ fun BackgroundTaskView(
 
                         Surface(
                             onClick = {
-                                focusManager.clearFocus()
+                                inputFocusManager.clear()
                                 if (maaState == MaaExecutionState.RUNNING) {
                                     when (state.current) {
                                         PanelTab.TASKS -> viewModel.onStopTasks()

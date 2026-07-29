@@ -297,7 +297,6 @@ fun FightConfigPanel(
                         }
     }
 }
-
 /**
  * 代理倍率选择区域
  * 使用 RadioButton 单选按钮组，FlowRow 自动换行

@@ -328,7 +328,7 @@ class BackgroundTaskViewModel(
 
     fun onDeleteProfile(profileId: String) {
         viewModelScope.launch {
-            chainState.deleteProfile(profileId)
+            chainState.removeProfile(profileId)
             _state.update { it.copy(selectedNodeId = null) }
         }
     }
@@ -458,7 +458,7 @@ class BackgroundTaskViewModel(
     }
 
     private suspend fun doSwitchProfile(request: ScheduledExecutionRequest?) {
-        if (request != null && chainState.activeProfileId.value != request.profileId) {
+        if (request != null && chainState.profileId.value != request.profileId) {
             chainState.switchProfile(request.profileId)
         }
     }
@@ -510,8 +510,7 @@ class BackgroundTaskViewModel(
             tasks = plan.params,
             clientType = plan.clientType,
             isScheduled = context.mode == TaskStartMode.SCHEDULED,
-            preflightLogs = plan.preflightLogs,
-            expectDoubleSync = plan.unlockDoubleSync,
+            preflightLogs = plan.logs,
         ) {
             if (request != null) {
                 sessionLogger.appendAndWait(
@@ -528,7 +527,6 @@ class BackgroundTaskViewModel(
                 launchesGame = plan.launchesGame,
                 gameAliveBeforeStart = plan.gameAliveBeforeStart,
             )
-            chainState.grantGameBatteryExemption(plan.clientType)
         }
 
         val message = application.resolveTaskStartFailureMessage(result)
@@ -555,7 +553,7 @@ class BackgroundTaskViewModel(
 
     fun onToggleGameSound() {
         viewModelScope.launch {
-            val ok = gameMuteCoordinator.toggle(chainState.getClientTypeOrNull())
+            val ok = gameMuteCoordinator.toggle(chainState.clientType)
             if (!ok) {
                 _effects.send(UiEffect.toast(R.string.bg_toast_mute_failed))
             }

@@ -32,12 +32,13 @@ import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.MallConfig
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.data.resource.ActivityManager
-import com.aliothmoon.maameow.domain.models.resolveMallCreditFightAvailability
+import com.aliothmoon.maameow.domain.models.MallCreditFightAvailability
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SettingRow
+import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import com.aliothmoon.maameow.presentation.components.ReorderableFlowRow
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
@@ -122,7 +123,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
     val activityManager: ActivityManager = koinInject()
     val chain by taskChainState.chain.collectAsStateWithLifecycle()
     val creditFightAvailability = remember(chain, activityManager) {
-        resolveMallCreditFightAvailability(chain, activityManager)
+        MallCreditFightAvailability.resolve(chain, activityManager)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -174,7 +175,7 @@ private fun BasicMallSettings(config: MallConfig, onConfigChange: (MallConfig) -
 
         if (config.creditFight && !creditFightAvailability.isAvailable) {
             MallNotice(
-                text = creditFightAvailability.warningMessage
+                text = creditFightAvailability.message?.asString()?.takeIf { it.isNotEmpty() }
                     ?: stringResource(R.string.panel_mall_credit_fight_unavailable),
                 warning = true,
             )

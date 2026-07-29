@@ -67,7 +67,7 @@ class MaaResourceLoader(
 
     val state: StateFlow<State> = stateStore.state
 
-    suspend fun load(clientType: String = chainState.getClientType()): Result<Unit> =
+    suspend fun load(clientType: String = chainState.clientType): Result<Unit> =
         loadMutex.withLock {
             loadLocked(clientType)
         }
@@ -186,7 +186,7 @@ class MaaResourceLoader(
     suspend fun ensureTaskMetadataReady(
         clientType: String? = null,
     ): Result<Unit> {
-        val resolvedClientType = clientType ?: chainState.getClientType()
+        val resolvedClientType = clientType ?: chainState.clientType
         val job = synchronized(metadataJobs) {
             metadataJobs.getOrPut(resolvedClientType) {
                 metadataScope.async { loadTaskMetadata(resolvedClientType) }
@@ -221,7 +221,7 @@ class MaaResourceLoader(
         }
     }
 
-    suspend fun ensureLoaded(): Result<Unit> = ensureLoaded(chainState.getClientType())
+    suspend fun ensureLoaded(): Result<Unit> = ensureLoaded(chainState.clientType)
 
     suspend fun ensureLoaded(clientType: String): Result<Unit> {
         return when (val s = state.value) {
