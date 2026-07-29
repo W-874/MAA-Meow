@@ -2,179 +2,212 @@ package com.aliothmoon.maameow.data.datasource
 
 import android.content.Context
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.data.model.AssetArchiveDescriptor
 import com.aliothmoon.maameow.data.model.AssetManifest
 import com.aliothmoon.maameow.utils.JsonUtils
 import com.aliothmoon.maameow.utils.i18n.LocalizedException
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.io.OutputStream
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.atomic.AtomicInteger
-
+import java.security.MessageDigest
+import java.util.HashSet
+import java.util.concurrent.Executors
+import java.util.zip.ZipInputStream
 
 class AssetExtractor(private val context: Context) {
 
     companion object {
+        const val CORE_ARCHIVE_ID = "core"
         private const val MANIFEST_FILE_NAME = "MaaSync/asset_manifest.json"
-        val PERMIT = Runtime.getRuntime().availableProcessors()
+        private const val BUFFER_SIZE = 128 * 1024
+        private const val PROGRESS_INTERVAL_MS = 100L
+        private const val FILE_OPEN_ATTEMPTS = 3
+        private const val FILE_OPEN_RETRY_DELAY_MS = 40L
     }
 
     class ExtractFailedException(
         failedFile: String,
         attempts: Int,
-        cause: Throwable
+        cause: Throwable,
     ) : LocalizedException(uiTextOf(R.string.resource_extract_failed, failedFile, attempts), cause)
-
-    private val json = JsonUtils.common
-
 
     data class ExtractProgress(
         val extractedCount: Int,
         val totalCount: Int,
-        val currentFile: String
+        val currentFile: String,
     )
 
-    private object BufferPool {
-        private const val BUFFER_SIZE = 128 * 1024
-        private val POOL_SIZE = PERMIT
-        private val pool = ArrayBlockingQueue<ByteArray>(POOL_SIZE)
+    private val json = JsonUtils.common
+    private val extractionDispatcher = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "maa-resource-extractor").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
 
-        init {
-            repeat(POOL_SIZE) {
-                pool.offer(ByteArray(BUFFER_SIZE))
+    suspend fun extractArchive(
+        archiveId: String,
+        destDir: File,
+        onProgress: (ExtractProgress) -> Unit,
+    ): Result<Int> = withContext(extractionDispatcher) {
+        runCatching {
+            val descriptor = loadAssetManifest().archives.firstOrNull { it.id == archiveId }
+                ?: error("Assets 归档不存在: $archiveId")
+            val expectedDestination = if (archiveId == CORE_ARCHIVE_ID) "" else "global/$archiveId"
+            check(descriptor.destination == expectedDestination) {
+                "归档目标目录不匹配: ${descriptor.destination}/$expectedDestination"
             }
-        }
-
-        fun acquire(): ByteArray = pool.poll() ?: ByteArray(BUFFER_SIZE)
-
-        fun release(buffer: ByteArray) {
-            if (buffer.size == BUFFER_SIZE) {
-                pool.offer(buffer)
-            }
-        }
-
-        inline fun <T> use(block: (ByteArray) -> T): T {
-            val buffer = acquire()
-            return try {
-                block(buffer)
-            } finally {
-                release(buffer)
-            }
-        }
+            destDir.mkdirs()
+            extractVerifiedArchive(
+                openArchive = { context.assets.open(descriptor.assetPath) },
+                descriptor = descriptor,
+                destDir = destDir,
+                onProgress = onProgress,
+            )
+        }.onFailure { Timber.e(it, "资源归档提取失败: $archiveId") }
     }
 
-
-    suspend fun extract(
-        assetDir: String,
+    internal fun extractVerifiedArchive(
+        openArchive: () -> InputStream,
+        descriptor: AssetArchiveDescriptor,
         destDir: File,
-        onProgress: (ExtractProgress) -> Unit
-    ): Result<Int> {
-        return try {
-            val startTime = System.currentTimeMillis()
-            val extractedCount = AtomicInteger(0)
-            val semaphore = Semaphore(PERMIT)
+        onProgress: (ExtractProgress) -> Unit = {},
+    ): Int {
+        require(descriptor.fileCount >= 0) { "归档文件数非法" }
+        require(descriptor.uncompressedSize >= 0L) { "归档展开大小非法" }
+        require(descriptor.sha256.matches(Regex("[0-9a-f]{64}"))) { "归档摘要格式非法" }
+        require(descriptor.versionSha256.matches(Regex("[0-9a-f]{64}"))) { "资源版本摘要格式非法" }
+        check(openArchive().use(::sha256) == descriptor.sha256) { "归档摘要校验失败" }
 
-            val manifest = loadAssetManifest()
-                ?: throw IllegalStateException("Assets 清单文件不存在，请重新构建项目")
-            val allFiles = manifest.files.filter { it.startsWith("$assetDir/") }
-            val totalFiles = allFiles.size
+        val extractedFiles = HashSet<String>(descriptor.fileCount)
+        val destinationRoot = destDir.canonicalFile
+        var extractedCount = 0
+        var extractedBytes = 0L
+        var lastProgressAt = 0L
+        var lastPercent = -1
+        val buffer = ByteArray(BUFFER_SIZE)
 
-            Timber.d("待复制文件数: $totalFiles")
-            onProgress(ExtractProgress(0, totalFiles, ""))
-
-            withContext(Dispatchers.IO) {
-                coroutineScope {
-                    for (assetPath in allFiles) {
-                        val relativePath = assetPath.removePrefix("$assetDir/")
-
-                        launch {
-                            semaphore.withPermit {
-                                try {
-                                    retryWithBackoff(maxRetries = 3, initialDelayMs = 120) {
-                                        val targetFile = File(destDir, relativePath)
-                                        targetFile.parentFile?.mkdirs()
-                                        BufferPool.use { buffer ->
-                                            context.assets.open(assetPath).use { input ->
-                                                FileOutputStream(targetFile).use { output ->
-                                                    input.copyToWithBuffer(output, buffer)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    val count = extractedCount.incrementAndGet()
-                                    onProgress(ExtractProgress(count, totalFiles, relativePath))
-                                } catch (e: Exception) {
-                                    Timber.e(e, "文件复制最终失败: $assetPath")
-                                    throw ExtractFailedException(assetPath, 3, e)
+        onProgress(ExtractProgress(0, descriptor.fileCount, ""))
+        openArchive().use { rawInput ->
+            ZipInputStream(BufferedInputStream(rawInput, BUFFER_SIZE)).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    if (entry.isDirectory) continue
+                    val relativePath = entry.name.replace('\\', '/')
+                    val pathSegments = relativePath.split('/')
+                    require(
+                        relativePath.isNotBlank() &&
+                            !relativePath.startsWith('/') &&
+                            pathSegments.none { it.isBlank() || it == "." || it == ".." } &&
+                            extractedFiles.add(relativePath)
+                    ) {
+                        "归档包含非法路径或重复文件: $relativePath"
+                    }
+                    val targetFile = File(destinationRoot, relativePath).canonicalFile
+                    require(targetFile.path.startsWith(destinationRoot.path + File.separator)) {
+                        "非法资源路径: $relativePath"
+                    }
+                    try {
+                        openTargetFile(targetFile, relativePath).use { output ->
+                            while (true) {
+                                val count = zip.read(buffer)
+                                if (count < 0) break
+                                output.write(buffer, 0, count)
+                                extractedBytes += count
+                                check(extractedBytes <= descriptor.uncompressedSize) {
+                                    "归档展开大小超过清单"
                                 }
                             }
                         }
+                    } catch (error: Exception) {
+                        targetFile.delete()
+                        throw if (error is ExtractFailedException) {
+                            error
+                        } else {
+                            ExtractFailedException(relativePath, 1, error)
+                        }
+                    }
+                    extractedCount++
+                    check(extractedCount <= descriptor.fileCount) { "归档文件数超过清单" }
+                    val now = System.currentTimeMillis()
+                    val percent = if (descriptor.fileCount == 0) 100
+                    else extractedCount * 100 / descriptor.fileCount
+                    if (now - lastProgressAt >= PROGRESS_INTERVAL_MS || percent != lastPercent) {
+                        onProgress(
+                            ExtractProgress(extractedCount, descriptor.fileCount, relativePath)
+                        )
+                        lastProgressAt = now
+                        lastPercent = percent
                     }
                 }
             }
-
-            val totalTime = System.currentTimeMillis() - startTime
-            Timber.i("复制完成: ${extractedCount.get()} 个文件, 耗时: ${totalTime}ms")
-
-            Result.success(extractedCount.get())
-        } catch (e: Exception) {
-            Timber.e(e, "复制失败")
-            Result.failure(e)
         }
-    }
 
-
-    private fun loadAssetManifest(): AssetManifest? {
-        return try {
-            context.assets.open(MANIFEST_FILE_NAME).use { input ->
-                val jsonText = input.bufferedReader().use { it.readText() }
-                json.decodeFromString<AssetManifest>(jsonText)
+        check(extractedCount == descriptor.fileCount) {
+            "归档文件数不匹配: $extractedCount/${descriptor.fileCount}"
+        }
+        check(extractedBytes == descriptor.uncompressedSize) {
+            "归档展开大小不匹配: $extractedBytes/${descriptor.uncompressedSize}"
+        }
+        val missingFile = extractedFiles.firstOrNull { relativePath ->
+            !File(destinationRoot, relativePath).isFile
+        }
+        check(missingFile == null) { "归档文件提取后缺失: $missingFile" }
+        if (descriptor.id == CORE_ARCHIVE_ID) {
+            val versionFile = File(destDir, "version.json")
+            check(versionFile.isFile && versionFile.sha256() == descriptor.versionSha256) {
+                "核心资源版本校验失败"
             }
-        } catch (e: Exception) {
-            Timber.e(e, "读取 Assets 清单失败")
-            null
         }
+        File(destDir, ".maa-archive-complete").writeText(descriptor.sha256)
+        onProgress(ExtractProgress(extractedCount, descriptor.fileCount, ""))
+        return extractedCount
     }
 
-    private suspend fun <T> retryWithBackoff(
-        maxRetries: Int = 3,
-        initialDelayMs: Long = 100,
-        block: suspend () -> T
-    ): T {
-        var lastException: Exception? = null
-        repeat(maxRetries) { attempt ->
+    private fun openTargetFile(targetFile: File, relativePath: String): FileOutputStream {
+        var lastError: FileNotFoundException? = null
+        repeat(FILE_OPEN_ATTEMPTS) { attempt ->
             try {
-                return block()
-            } catch (e: Exception) {
-                lastException = e
-                if (attempt < maxRetries - 1) {
-                    val delayMs = initialDelayMs * (1 shl attempt) // 100, 200, 400
-                    Timber.w("重试 ${attempt + 1}/$maxRetries，等待 ${delayMs}ms: ${e.message}")
-                    delay(delayMs)
+                val parent = requireNotNull(targetFile.parentFile)
+                if (!parent.isDirectory && !parent.mkdirs() && !parent.isDirectory) {
+                    throw FileNotFoundException("无法创建资源目录: ${parent.absolutePath}")
+                }
+                return FileOutputStream(targetFile)
+            } catch (error: FileNotFoundException) {
+                lastError = error
+                if (attempt < FILE_OPEN_ATTEMPTS - 1) {
+                    Thread.sleep(FILE_OPEN_RETRY_DELAY_MS * (attempt + 1))
                 }
             }
         }
-        throw lastException ?: IllegalStateException("Retry failed without exception")
+        throw ExtractFailedException(
+            relativePath,
+            FILE_OPEN_ATTEMPTS,
+            requireNotNull(lastError),
+        )
     }
 
-    private fun InputStream.copyToWithBuffer(out: OutputStream, buffer: ByteArray): Long {
-        var bytesCopied: Long = 0
-        var bytes = read(buffer)
-        while (bytes >= 0) {
-            out.write(buffer, 0, bytes)
-            bytesCopied += bytes
-            bytes = read(buffer)
+    private fun loadAssetManifest(): AssetManifest {
+        return context.assets.open(MANIFEST_FILE_NAME).use { input ->
+            json.decodeFromString(input.bufferedReader().readText())
         }
-        return bytesCopied
     }
+
+    private fun File.sha256(): String = inputStream().buffered().use(::sha256)
+
+    private fun sha256(input: InputStream): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+        return digest.digest().toHex()
+    }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 }

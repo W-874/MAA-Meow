@@ -9,8 +9,10 @@ import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AchievementReporter
 import com.aliothmoon.maameow.domain.service.AppAliveChecker
+import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.remote.AppAliveStatus
 import io.mockk.every
+import io.mockk.coEvery
 import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
@@ -37,6 +39,10 @@ class PrepareTaskStartUseCaseTest {
     )
 
     private fun useCase(aliveStatus: Int) = PrepareTaskStartUseCase(
+        resourceLoader = mockk<MaaResourceLoader> {
+            coEvery { ensureLoaded() } returns Result.success(Unit)
+            coEvery { ensureTaskMetadataReady() } returns Result.success(Unit)
+        },
         analyzeTaskChainUseCase = analyzeTaskChainUseCase,
         checkGameReadiness = CheckGameReadinessUseCase(
             appAliveChecker = FakeAppAliveChecker(aliveStatus),

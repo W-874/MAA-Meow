@@ -1,73 +1,143 @@
-// Asset Manifest Generation Plugin
-// Generates a JSON manifest of all files in the MaaResource directory
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.bundling.Zip
+import java.security.MessageDigest
 
 abstract class GenerateAssetManifestTask : DefaultTask() {
     @get:InputDirectory
-    @get:Optional
-    abstract val sourceDir: DirectoryProperty
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val resourceDirectory: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val versionFile: RegularFileProperty
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    abstract val archiveFiles: ConfigurableFileCollection
+
+    @get:Input
+    abstract val clientIds: ListProperty<String>
 
     @get:OutputFile
     abstract val manifestFile: RegularFileProperty
 
-    @get:Input
-    abstract val assetSourceDir: Property<String>
-
     @TaskAction
     fun generate() {
-        val source = sourceDir.orNull?.asFile
-        val manifest = manifestFile.get().asFile
-
-        manifest.parentFile?.mkdirs()
-
-        val files = if (source?.exists() == true) {
-            listFilesRecursively(source, "")
-                .map { "${assetSourceDir.get()}/$it" }
-                .sorted()
-        } else {
-            emptyList()
-        }
-
-        val jsonContent = """{"files":[${files.joinToString(",") { "\"$it\"" }}]}"""
-        manifest.writeText(jsonContent)
-        logger.lifecycle("Generated asset manifest: ${files.size} files")
-    }
-
-    private fun listFilesRecursively(dir: File, basePath: String): List<String> {
-        val result = mutableListOf<String>()
-        dir.listFiles()?.forEach { file ->
-            val relativePath = if (basePath.isEmpty()) file.name else "$basePath/${file.name}"
-            if (file.isDirectory) {
-                result.addAll(listFilesRecursively(file, relativePath))
-            } else {
-                result.add(relativePath)
+        val resourceDir = resourceDirectory.get().asFile
+        val archivesByName = archiveFiles.files.associateBy { it.nameWithoutExtension }
+        val versionSha = versionFile.get().asFile.sha256()
+        val descriptors = buildList {
+            val coreFiles = resourceDir.walkTopDown()
+                .filter { file ->
+                    file.isFile && !file.relativeTo(resourceDir).invariantSeparatorsPath.startsWith("global/")
+                }
+                .toList()
+            add(descriptor("core", "", requireNotNull(archivesByName["core"]), coreFiles, versionSha))
+            clientIds.get().forEach { client ->
+                val clientFiles = File(resourceDir, "global/$client")
+                    .walkTopDown()
+                    .filter(File::isFile)
+                    .toList()
+                add(
+                    descriptor(
+                        client,
+                        "global/$client",
+                        requireNotNull(archivesByName[client]),
+                        clientFiles,
+                        versionSha,
+                    )
+                )
             }
         }
-        return result
+        manifestFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText("""{"archives":[${descriptors.joinToString(",")}] }""".replace("] }", "]}"))
+        }
+    }
+
+    private fun descriptor(
+        id: String,
+        destination: String,
+        archive: File,
+        sourceFiles: List<File>,
+        versionSha: String,
+    ): String =
+        """{"id":"$id","assetPath":"MaaSync/archives/$id.zip","destination":"$destination","sha256":"${archive.sha256()}","fileCount":${sourceFiles.size},"uncompressedSize":${sourceFiles.sumOf { it.length() }},"versionSha256":"$versionSha"}"""
+
+    private fun File.sha256(): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        inputStream().buffered().use { input ->
+            val buffer = ByteArray(128 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+}
+
+val maaAssetsDir = layout.projectDirectory.dir("src/main/assets")
+val maaResourceDir = maaAssetsDir.dir("MaaSync/MaaResource")
+val generatedArchiveDir = layout.buildDirectory.dir("generated/assets/MaaSync/archives")
+val globalClients = listOf("YoStarEN", "YoStarJP", "YoStarKR", "txwy")
+
+val generateCoreAssetArchive by tasks.registering(Zip::class) {
+    from(maaResourceDir) {
+        exclude("global/**")
+    }
+    archiveFileName.set("core.zip")
+    destinationDirectory.set(generatedArchiveDir)
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}
+
+val globalArchiveTasks = globalClients.associateWith { client ->
+    tasks.register<Zip>("generate${client.replaceFirstChar(Char::uppercase)}AssetArchive") {
+        from(maaResourceDir.dir("global/$client"))
+        archiveFileName.set("$client.zip")
+        destinationDirectory.set(generatedArchiveDir)
+        isPreserveFileTimestamps = false
+        isReproducibleFileOrder = true
     }
 }
 
 val generateAssetManifest by tasks.registering(GenerateAssetManifestTask::class) {
-    description = "Generate assets file manifest"
-    group = "build"
-
-    val assetsDir = layout.projectDirectory.dir("src/main/assets")
-    val assetSourceDirName = "MaaSync/MaaResource"
-    //检查 MaaSync/MaaResource 目录
-    doFirst {
-        val targetDir = File(assetsDir.asFile, assetSourceDirName)
-        if (!targetDir.exists()) {
-            logger.lifecycle("Creating directory: ${targetDir.absolutePath}")
-            targetDir.mkdirs()
-        } else {
-            logger.lifecycle("Directory already exists: ${targetDir.absolutePath}")
-        }
+    resourceDirectory.set(maaResourceDir)
+    versionFile.set(maaResourceDir.file("version.json"))
+    archiveFiles.from(generateCoreAssetArchive.flatMap { it.archiveFile })
+    globalArchiveTasks.values.forEach { task ->
+        archiveFiles.from(task.flatMap { it.archiveFile })
     }
+    clientIds.set(globalClients)
+    manifestFile.set(layout.buildDirectory.file("generated/assets/MaaSync/asset_manifest.json"))
+    dependsOn(generateCoreAssetArchive)
+    dependsOn(globalArchiveTasks.values)
+}
 
-    assetSourceDir.set(assetSourceDirName)
-    sourceDir.set(assetsDir.dir(assetSourceDirName))
-    manifestFile.set(assetsDir.file("MaaSync/asset_manifest.json"))
+val prepareStaticAssets by tasks.registering(Copy::class) {
+    from(maaAssetsDir) {
+        exclude("MaaSync/MaaResource/**")
+        exclude("MaaSync/asset_manifest.json")
+    }
+    into(layout.buildDirectory.dir("generated/static-assets"))
 }
 
 tasks.matching { it.name.startsWith("preBuild") }.configureEach {
     dependsOn(generateAssetManifest)
+    dependsOn(prepareStaticAssets)
 }

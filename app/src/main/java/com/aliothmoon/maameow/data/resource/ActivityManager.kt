@@ -11,6 +11,7 @@ import com.aliothmoon.maameow.data.model.activity.StageActivityRoot
 import com.aliothmoon.maameow.data.preferences.TaskChainState
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import com.aliothmoon.maameow.utils.PerformanceTrace
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,6 +53,7 @@ class ActivityManager(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var periodicJob: Job? = null
+    private var refreshJob: Job? = null
 
     /** 活动关卡列表 */
     val activityStages: StateFlow<List<ActivityStage>> = _activityStages.asStateFlow()
@@ -86,7 +88,22 @@ class ActivityManager(
     }
 
     suspend fun load(clientType: String) {
-        doLoadActivityStages(clientType)
+        val type = if (clientType == "Bilibili") "Official" else clientType
+        val cached = maaApiService.getCachedStageActivity()
+        if (cached != null) {
+            applyStageActivity(cached, type)
+            buildMergedStagesMap()
+        }
+        if (refreshJob?.isActive != true) {
+            refreshJob = scope.launch {
+                val trace = PerformanceTrace.beginAsync("ActivityManager.backgroundRefresh")
+                try {
+                    doLoadActivityStages(type)
+                } finally {
+                    PerformanceTrace.endAsync("ActivityManager.backgroundRefresh", trace)
+                }
+            }
+        }
     }
 
 
@@ -123,6 +140,10 @@ class ActivityManager(
             Timber.w("无法获取活动关卡数据")
             return
         }
+        applyStageActivity(jsonVal, clientType)
+    }
+
+    private fun applyStageActivity(jsonVal: String, clientType: String) {
         val activity = StageActivityRoot.parse(jsonVal, clientType)
 
         if (activity == null) {

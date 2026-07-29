@@ -1,12 +1,14 @@
 package com.aliothmoon.maameow.domain.usecase
 
 import com.aliothmoon.maameow.data.model.TaskChainNode
+import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.utils.i18n.UiText
 
 /**
  * 主任务链的启动决策：链分析([AnalyzeTaskChainUseCase]) + 游戏就绪性闸门([CheckGameReadinessUseCase])。
  */
 class PrepareTaskStartUseCase(
+    private val resourceLoader: MaaResourceLoader,
     private val analyzeTaskChainUseCase: AnalyzeTaskChainUseCase,
     private val checkGameReadiness: CheckGameReadinessUseCase,
 ) {
@@ -14,6 +16,12 @@ class PrepareTaskStartUseCase(
         chain: List<TaskChainNode>,
         context: TaskStartContext,
     ): TaskStartDecision {
+        resourceLoader.ensureLoaded().exceptionOrNull()?.let {
+            return TaskStartDecision.Blocked(TaskStartDecisionReason.RESOURCES_NOT_READY)
+        }
+        resourceLoader.ensureTaskMetadataReady().exceptionOrNull()?.let {
+            return TaskStartDecision.Blocked(TaskStartDecisionReason.RESOURCES_NOT_READY)
+        }
         val plan = when (val analyzeResult = analyzeTaskChainUseCase(chain)) {
             is AnalyzeTaskChainResult.Ready -> analyzeResult.plan
             is AnalyzeTaskChainResult.Blocked -> {
@@ -58,6 +66,7 @@ enum class TaskStartAcknowledgement {
 }
 
 enum class TaskStartDecisionReason {
+    RESOURCES_NOT_READY,
     NO_TASK_SELECTED,
     CONFLICTING_CLIENT_TYPES,
     NO_EXECUTABLE_TASKS,

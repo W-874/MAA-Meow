@@ -189,6 +189,10 @@ class MaaApiService(
         return requestWithCache(MaaApi.STAGE_ACTIVITY_API)
     }
 
+    suspend fun getCachedStageActivity(): String? = withContext(Dispatchers.IO) {
+        internalCache.get(MaaApi.STAGE_ACTIVITY_API)
+    }
+
     /**
      * 获取任务配置数据
      */

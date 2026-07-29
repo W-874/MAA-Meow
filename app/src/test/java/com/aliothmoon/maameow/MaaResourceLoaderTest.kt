@@ -7,6 +7,9 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.ResourceDataManager
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.models.AppSettings
+import com.aliothmoon.maameow.domain.state.MaaResourceLoadStateStore
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -15,6 +18,7 @@ import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -48,6 +52,7 @@ class MaaResourceLoaderTest {
                 every { globalCacheResourceDir("YoStarEN") } returns File(rootDir, "cache/resource/global/YoStarEN/resource")
             }
             val appSettings = mockk<AppSettingsManager> {
+                coEvery { awaitLoaded() } returns AppSettings()
                 every { debugMode } returns MutableStateFlow(false)
                 every { language } returns MutableStateFlow(AppSettingsManager.AppLanguage.EN)
                 every { forceFullscreenOnVirtualDisplay } returns MutableStateFlow(false)
@@ -59,12 +64,14 @@ class MaaResourceLoaderTest {
             val itemHelper = mockk<ItemHelper>()
             val resourceDataManager = mockk<ResourceDataManager>()
             val activityManager = mockk<ActivityManager>()
+            val resourceInitService = mockk<ResourceInitService>()
             val service = mockk<RemoteService>()
             val maaCore = mockk<MaaCoreService>()
 
             coEvery { resourceDataManager.load(any(), any()) } returns Unit
             coEvery { itemHelper.load() } returns Unit
             coEvery { activityManager.load(any()) } returns Unit
+            coEvery { resourceInitService.ensureClientResources(any()) } returns Result.success(Unit)
             every { service.setup(any(), any()) } returns true
             justRun { service.setForceFullscreenOnVirtualDisplay(any()) }
             every { service.maaCoreService } returns maaCore
@@ -82,14 +89,23 @@ class MaaResourceLoaderTest {
                 itemHelper = itemHelper,
                 resourceDataManager = resourceDataManager,
                 activityManager = activityManager,
+                resourceInitService = resourceInitService,
+                stateStore = MaaResourceLoadStateStore(),
             )
 
             val result = loader.load("YoStarEN")
+            val selectedClientResult = loader.ensureLoaded()
+            val metadataResult = loader.ensureTaskMetadataReady("YoStarEN")
+            val selectedMetadataResult = loader.ensureTaskMetadataReady("Official")
 
             assertTrue(result.isSuccess)
+            assertTrue(selectedClientResult.isSuccess)
+            assertTrue(metadataResult.isSuccess)
+            assertTrue(selectedMetadataResult.isSuccess)
+            verify(exactly = 2) { service.setup(any(), any()) }
             coVerify(exactly = 1) { resourceDataManager.load("YoStarEN", "en-us") }
             coVerify(exactly = 1) { activityManager.load("YoStarEN") }
-            coVerify(exactly = 1) { itemHelper.load() }
+            coVerify(exactly = 2) { itemHelper.load() }
         } finally {
             rootDir.deleteRecursively()
         }
