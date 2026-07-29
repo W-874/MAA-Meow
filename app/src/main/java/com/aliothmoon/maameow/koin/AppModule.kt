@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.koin
 
 import com.aliothmoon.maameow.data.achievement.AchievementRepository
+import com.aliothmoon.maameow.AppInitializationCoordinator
 import com.aliothmoon.maameow.data.api.CopilotApiService
 import com.aliothmoon.maameow.data.api.ETagCacheManager
 import com.aliothmoon.maameow.data.api.HttpClientHelper
@@ -55,6 +56,9 @@ import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.service.ToolboxExportService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.service.update.UpdateService
+import com.aliothmoon.maameow.domain.state.MaaExecutionStateStore
+import com.aliothmoon.maameow.domain.state.MaaResourceLoadStateStore
+import com.aliothmoon.maameow.domain.state.OverlayStateStore
 import com.aliothmoon.maameow.domain.service.update.checker.AppVersionChecker
 import com.aliothmoon.maameow.domain.service.update.checker.ResourceVersionChecker
 import com.aliothmoon.maameow.maa.callback.ConnectionInfoHandler
@@ -74,10 +78,13 @@ import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.service.ForegroundScheduleStarter
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.schedule.service.ScheduleAlarmManager
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.utils.CrashHandler
 import com.aliothmoon.maameow.utils.log.LogTreeHolder
+import com.aliothmoon.maameow.presentation.state.BackgroundChromeState
 import okhttp3.OkHttpClient
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
@@ -88,6 +95,7 @@ val appModule = module {
 
 
     singleOf(::CrashHandler)
+    singleOf(::AppInitializationCoordinator)
     single {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -109,6 +117,9 @@ val appModule = module {
     singleOf(::ScheduleStrategyRepository)
     singleOf(::ScheduleTriggerLogger)
     singleOf(::ScheduleAlarmManager)
+    singleOf(::ScheduledLaunchInbox)
+    singleOf(::ScheduledLaunchUiState)
+    singleOf(::BackgroundChromeState)
     singleOf(::TaskChainState)
     singleOf(::ConfigBackupManager)
     singleOf(::MaaPathConfig)
@@ -127,6 +138,9 @@ val appModule = module {
     singleOf(::UpdateService)
 
     singleOf(::ResourceInitService)
+    singleOf(::MaaExecutionStateStore)
+    singleOf(::MaaResourceLoadStateStore)
+    singleOf(::OverlayStateStore)
     singleOf(::MaaResourceLoader)
     singleOf(::MaaSessionLogger)
 

@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.aliothmoon.maameow.AppInitializationCoordinator
 import com.aliothmoon.maameow.RemoteService
 import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
@@ -26,8 +27,10 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -35,6 +38,7 @@ import kotlin.coroutines.resume
 class PermissionManager(
     private val context: Context,
     private val appSettings: AppSettingsManager,
+    private val initializationCoordinator: AppInitializationCoordinator,
 ) : DefaultLifecycleObserver {
 
     private val _state = MutableStateFlow(PermissionState())
@@ -47,6 +51,7 @@ class PermissionManager(
     val isGranting: StateFlow<Boolean> = _isGranting.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var refreshJob: Job? = null
 
     init {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
@@ -64,11 +69,19 @@ class PermissionManager(
                 }
         }
 
-        refresh()
+        scheduleRefresh()
     }
 
     override fun onResume(owner: LifecycleOwner) {
-        refresh()
+        scheduleRefresh()
+    }
+
+    private fun scheduleRefresh() {
+        refreshJob?.cancel()
+        refreshJob = scope.launch {
+            initializationCoordinator.awaitFirstInteractive()
+            withContext(Dispatchers.Default) { refresh() }
+        }
     }
 
     fun refresh() {

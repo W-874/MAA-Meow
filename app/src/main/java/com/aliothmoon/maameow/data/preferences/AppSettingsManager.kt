@@ -21,13 +21,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import com.aliothmoon.maameow.utils.PerformanceTrace
 
 
 class AppSettingsManager(
@@ -51,17 +55,47 @@ class AppSettingsManager(
                 ?: FONT_SIZE_SCALE_DEFAULT
     }
 
-    val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
+    private val initialSettings: AppSettings = AppSettings()
 
-    // 阻塞读取 DataStore 首次值，确保后续 .value 不会是默认值
-    private val initialSettings: AppSettings = runBlocking { settings.first() }
+    val settings: Flow<AppSettings> = with(AppSettingsSchema) { context.dataStore.flow }
+    private val _loadedSettings = MutableStateFlow<AppSettings?>(null)
+    private val loadedSettings: StateFlow<AppSettings?> = _loadedSettings.asStateFlow()
+    val isLoaded: StateFlow<Boolean> = loadedSettings
+        .map { it != null }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+    private val settingsState: StateFlow<AppSettings> = loadedSettings
+        .map { it ?: initialSettings }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings)
+
+    init {
+        scope.launch {
+            val trace = PerformanceTrace.beginAsync("AppSettings.firstLoad")
+            var firstSnapshotPending = true
+            try {
+                settings.collect { snapshot ->
+                    _loadedSettings.value = snapshot
+                    if (firstSnapshotPending) {
+                        firstSnapshotPending = false
+                        PerformanceTrace.endAsync("AppSettings.firstLoad", trace)
+                    }
+                }
+            } finally {
+                if (firstSnapshotPending) {
+                    PerformanceTrace.endAsync("AppSettings.firstLoad", trace)
+                }
+            }
+        }
+    }
+
+    suspend fun awaitLoaded(): AppSettings = loadedSettings.filterNotNull().first()
 
     suspend fun setSettings(settings: AppSettings) {
         with(AppSettingsSchema) { context.dataStore.update(settings) }
     }
 
     // 悬浮窗模式
-    val overlayControlMode: StateFlow<OverlayControlMode> = settings
+    val overlayControlMode: StateFlow<OverlayControlMode> = settingsState
         .map {
             runCatching { OverlayControlMode.valueOf(it.overlayMode) }
                 .getOrDefault(OverlayControlMode.ACCESSIBILITY)
@@ -80,7 +114,7 @@ class AppSettingsManager(
     }
 
     // 运行模式
-    val runMode: StateFlow<RunMode> = settings
+    val runMode: StateFlow<RunMode> = settingsState
         .map {
             runCatching { RunMode.valueOf(it.runMode) }
                 .getOrDefault(RunMode.BACKGROUND)
@@ -99,7 +133,7 @@ class AppSettingsManager(
     }
 
     // 更新源
-    val updateSource: StateFlow<UpdateSource> = settings
+    val updateSource: StateFlow<UpdateSource> = settingsState
         .map { s ->
             runCatching {
                 UpdateSource.entries
@@ -126,7 +160,7 @@ class AppSettingsManager(
     }
 
     // Mirror酱 CDK
-    val mirrorChyanCdk: StateFlow<String> = settings
+    val mirrorChyanCdk: StateFlow<String> = settingsState
         .map { it.mirrorChyanCdk }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.mirrorChyanCdk)
@@ -138,7 +172,7 @@ class AppSettingsManager(
     }
 
     // 调试模式
-    val debugMode: StateFlow<Boolean> = settings
+    val debugMode: StateFlow<Boolean> = settingsState
         .map { it.debugMode.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -153,7 +187,7 @@ class AppSettingsManager(
     }
 
     // 启动时自动检查更新
-    val autoCheckUpdate: StateFlow<Boolean> = settings
+    val autoCheckUpdate: StateFlow<Boolean> = settingsState
         .map { it.autoCheckUpdate.toBooleanStrictOrNull() ?: true }
         .distinctUntilChanged()
         .stateIn(
@@ -168,7 +202,7 @@ class AppSettingsManager(
     }
 
     // 启动时自动下载更新
-    val autoDownloadUpdate: StateFlow<Boolean> = settings
+    val autoDownloadUpdate: StateFlow<Boolean> = settingsState
         .map { it.autoDownloadUpdate.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -183,7 +217,7 @@ class AppSettingsManager(
     }
 
     // IPC服务启动模式
-    val startupBackend: StateFlow<RemoteBackend> = settings
+    val startupBackend: StateFlow<RemoteBackend> = settingsState
         .map {
             runCatching { RemoteBackend.valueOf(it.startupBackend) }
                 .getOrDefault(RemoteBackend.SHIZUKU)
@@ -202,7 +236,7 @@ class AppSettingsManager(
     }
 
     // 跳过 Shizuku 检查
-    val skipShizukuCheck: StateFlow<Boolean> = settings
+    val skipShizukuCheck: StateFlow<Boolean> = settingsState
         .map { it.skipShizukuCheck.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -217,7 +251,7 @@ class AppSettingsManager(
     }
 
     // Shizuku 管理器快捷入口是否启用
-    val shizukuShortcutEnabled: StateFlow<Boolean> = settings
+    val shizukuShortcutEnabled: StateFlow<Boolean> = settingsState
         .map { it.shizukuShortcutEnabled.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -232,7 +266,7 @@ class AppSettingsManager(
     }
 
     // Shizuku 管理器入口包名，始终保持为非空包名。
-    val shizukuLaunchPackage: StateFlow<String> = settings
+    val shizukuLaunchPackage: StateFlow<String> = settingsState
         .map { it.shizukuLaunchPackage }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.shizukuLaunchPackage)
@@ -248,7 +282,7 @@ class AppSettingsManager(
     }
 
     // 游戏启动时静音
-    val muteOnGameLaunch: StateFlow<Boolean> = settings
+    val muteOnGameLaunch: StateFlow<Boolean> = settingsState
         .map { it.muteOnGameLaunch.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -262,7 +296,10 @@ class AppSettingsManager(
         }
     }
 
-    val initialMutedGamePackage: String get() = initialSettings.mutedGamePackage
+    internal val mutedGamePackage: StateFlow<String> = settingsState
+        .map { it.mutedGamePackage }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, initialSettings.mutedGamePackage)
 
     internal suspend fun setMutedGamePackage(packageName: String) {
         with(AppSettingsSchema) {
@@ -271,7 +308,7 @@ class AppSettingsManager(
     }
 
     // 任务结束时关闭应用
-    val closeAppOnTaskEnd: StateFlow<Boolean> = settings
+    val closeAppOnTaskEnd: StateFlow<Boolean> = settingsState
         .map { it.closeAppOnTaskEnd.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -286,7 +323,7 @@ class AppSettingsManager(
     }
 
     // 自动战斗干员部署「按住-暂停」(SWIPE_WITH_PAUSE)
-    val deploymentWithPause: StateFlow<Boolean> = settings
+    val deploymentWithPause: StateFlow<Boolean> = settingsState
         .map { it.deploymentWithPause.toBooleanStrictOrNull() ?: true }
         .distinctUntilChanged()
         .stateIn(
@@ -300,7 +337,7 @@ class AppSettingsManager(
         }
     }
 
-    val useHardwareScreenOff: StateFlow<Boolean> = settings
+    val useHardwareScreenOff: StateFlow<Boolean> = settingsState
         .map { it.useHardwareScreenOff.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -315,7 +352,7 @@ class AppSettingsManager(
     }
 
     // 触摸预览
-    val showTouchPreview: StateFlow<Boolean> = settings
+    val showTouchPreview: StateFlow<Boolean> = settingsState
         .map { it.showTouchPreview.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -330,7 +367,7 @@ class AppSettingsManager(
     }
 
     // 更新渠道
-    val updateChannel: StateFlow<UpdateChannel> = settings
+    val updateChannel: StateFlow<UpdateChannel> = settingsState
         .map {
             runCatching { UpdateChannel.valueOf(it.updateChannel) }
                 .getOrDefault(UpdateChannel.STABLE)
@@ -353,7 +390,7 @@ class AppSettingsManager(
         SYSTEM, WHITE, DARK, PURE_DARK
     }
 
-    val themeMode: StateFlow<ThemeMode> = settings
+    val themeMode: StateFlow<ThemeMode> = settingsState
         .map {
             runCatching { ThemeMode.valueOf(it.themeMode) }.getOrDefault(ThemeMode.SYSTEM)
         }
@@ -380,7 +417,7 @@ class AppSettingsManager(
         HIGH(R.string.notification_level_high),
     }
 
-    val eventNotificationLevel: StateFlow<EventNotificationLevel> = settings
+    val eventNotificationLevel: StateFlow<EventNotificationLevel> = settingsState
         .map {
             runCatching { EventNotificationLevel.valueOf(it.eventNotificationLevel) }
                 .getOrDefault(EventNotificationLevel.DEFAULT)
@@ -400,7 +437,7 @@ class AppSettingsManager(
 
     enum class TaskNotificationStyle { ANDROID, MI_ISLAND }
 
-    val taskNotificationStyle: StateFlow<TaskNotificationStyle> = settings
+    val taskNotificationStyle: StateFlow<TaskNotificationStyle> = settingsState
         .map { runCatching { TaskNotificationStyle.valueOf(it.taskNotificationStyle) }.getOrDefault(TaskNotificationStyle.ANDROID) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, runCatching { TaskNotificationStyle.valueOf(initialSettings.taskNotificationStyle) }.getOrDefault(TaskNotificationStyle.ANDROID))
@@ -409,7 +446,7 @@ class AppSettingsManager(
         with(AppSettingsSchema) { context.dataStore.edit { it[taskNotificationStyle] = style.name } }
     }
 
-    val miIslandBypassRestriction: StateFlow<Boolean> = settings
+    val miIslandBypassRestriction: StateFlow<Boolean> = settingsState
         .map { it.miIslandBypassRestriction.toBooleanStrictOrNull() ?: true }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.miIslandBypassRestriction.toBooleanStrictOrNull() ?: true)
@@ -419,7 +456,7 @@ class AppSettingsManager(
     }
 
     // 后台虚拟屏分辨率
-    val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = settings
+    val backgroundResolution: StateFlow<DefaultDisplayConfig.ResolutionPreference> = settingsState
         .map {
             runCatching { DefaultDisplayConfig.ResolutionPreference.valueOf(it.backgroundResolution) }
                 .getOrDefault(DefaultDisplayConfig.ResolutionPreference.P720)
@@ -445,7 +482,7 @@ class AppSettingsManager(
         EN("en"),
     }
 
-    val language: StateFlow<AppLanguage> = settings
+    val language: StateFlow<AppLanguage> = settingsState
         .map {
             runCatching { AppLanguage.valueOf(it.language) }
                 .getOrDefault(AppLanguage.SYSTEM)
@@ -467,12 +504,12 @@ class AppSettingsManager(
     }
 
     // 待展示的更新公告
-    val pendingChangelogVersion: StateFlow<String> = settings
+    val pendingChangelogVersion: StateFlow<String> = settingsState
         .map { it.pendingChangelogVersion }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.pendingChangelogVersion)
 
-    val pendingChangelogContent: StateFlow<String> = settings
+    val pendingChangelogContent: StateFlow<String> = settingsState
         .map { it.pendingChangelogContent }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.pendingChangelogContent)
@@ -496,7 +533,7 @@ class AppSettingsManager(
     }
 
     // 虚拟屏启动游戏时强制全屏模式
-    val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> = settings
+    val forceFullscreenOnVirtualDisplay: StateFlow<Boolean> = settingsState
         .map { it.forceFullscreenOnVirtualDisplay.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -511,7 +548,7 @@ class AppSettingsManager(
     }
 
     // Android 任务配置覆盖开关
-    val tasksOverrideEnabled: StateFlow<Boolean> = settings
+    val tasksOverrideEnabled: StateFlow<Boolean> = settingsState
         .map { it.tasksOverrideEnabled.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -526,7 +563,7 @@ class AppSettingsManager(
     }
 
     // 长期公告已读版本
-    val announcementReadVersion: StateFlow<String> = settings
+    val announcementReadVersion: StateFlow<String> = settingsState
         .map { it.announcementReadVersion }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, initialSettings.announcementReadVersion)
@@ -538,7 +575,7 @@ class AppSettingsManager(
     }
 
     // 允许在前台模式执行定时任务
-    val allowForegroundScheduledTask: StateFlow<Boolean> = settings
+    val allowForegroundScheduledTask: StateFlow<Boolean> = settingsState
         .map { it.allowForegroundScheduledTask.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -553,7 +590,7 @@ class AppSettingsManager(
     }
 
     // 定时任务触发时跳过锁屏检查
-    val runScheduleWhenLocked: StateFlow<Boolean> = settings
+    val runScheduleWhenLocked: StateFlow<Boolean> = settingsState
         .map { it.runScheduleWhenLocked.toBooleanStrictOrNull() ?: false }
         .distinctUntilChanged()
         .stateIn(
@@ -569,7 +606,7 @@ class AppSettingsManager(
 
 
     // 页面缩放比例（80~110，默认 100）
-    val fontSizeScale: StateFlow<Int> = settings
+    val fontSizeScale: StateFlow<Int> = settingsState
         .map { parseFontSizeScale(it.fontSizeScale) }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, parseFontSizeScale(initialSettings.fontSizeScale))
@@ -584,7 +621,7 @@ class AppSettingsManager(
     }
 
     // 是否显示成就解锁时的 Snackbar 提示
-    val showAchievementSnackbar: StateFlow<Boolean> = settings
+    val showAchievementSnackbar: StateFlow<Boolean> = settingsState
         .map { it.showAchievementSnackbar.toBooleanStrictOrNull() ?: true }
         .distinctUntilChanged()
         .stateIn(

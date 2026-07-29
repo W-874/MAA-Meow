@@ -12,15 +12,8 @@ import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 
@@ -31,20 +24,20 @@ class ScheduledLaunchCoordinator(
     private val appSettingsManager: AppSettingsManager,
     private val chainState: TaskChainState,
     private val triggerLogger: ScheduleTriggerLogger,
+    private val uiState: ScheduledLaunchUiState,
 ) {
-    private val _countdownState = MutableStateFlow<CountdownState>(CountdownState.Idle)
-    val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
-
-    private val _pendingExecution = MutableStateFlow<ScheduledExecutionRequest?>(null)
-    val pendingExecution: StateFlow<ScheduledExecutionRequest?> = _pendingExecution.asStateFlow()
-
-    private val _feedbackMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val feedbackMessages: SharedFlow<String> = _feedbackMessages.asSharedFlow()
+    val countdownState = uiState.countdown
+    val pendingExecution = uiState.pendingExecution
+    val feedbackMessages = uiState.feedbackMessages
 
     private var activeRequest: ScheduledExecutionRequest? = null
     private var startingRequestId: String? = null
     private var lastHandledRequestId: String? = null
     private var countdownJob: Job? = null
+
+    init {
+        uiState.attachActions(::onCancel, ::onStartNow)
+    }
 
     fun onLaunch(request: ScheduledExecutionRequest) {
         scope.launch { handleLaunch(request) }
@@ -52,7 +45,7 @@ class ScheduledLaunchCoordinator(
 
     fun onCancel() {
         val request = activeRequest ?: return
-        if (_countdownState.value !is CountdownState.Counting) return
+        if (countdownState.value !is CountdownState.Counting) return
         lastHandledRequestId = request.requestId
         triggerLogger.append("用户取消了定时任务执行")
         scope.launch {
@@ -62,7 +55,7 @@ class ScheduledLaunchCoordinator(
 
     fun onStartNow() {
         val request = activeRequest ?: return
-        if (_countdownState.value !is CountdownState.Counting) return
+        if (countdownState.value !is CountdownState.Counting) return
         triggerLogger.append("用户点击立即执行")
         promote(request)
     }
@@ -72,12 +65,12 @@ class ScheduledLaunchCoordinator(
      * [execute] 执行实际的任务启动，返回错误信息或 null 表示成功。
      */
     fun onPageReady(requestId: String, execute: suspend (ScheduledExecutionRequest) -> String?) {
-        val request = _pendingExecution.value ?: return
+        val request = pendingExecution.value ?: return
         if (request.requestId != requestId || startingRequestId == requestId) return
 
         scope.launch {
             startingRequestId = requestId
-            _pendingExecution.value = null
+            uiState.setPendingExecution(null)
             triggerLogger.append("页面就绪，开始执行任务")
             val message = execute(request)
             if (message == null) {
@@ -162,15 +155,15 @@ class ScheduledLaunchCoordinator(
     private fun isDuplicate(request: ScheduledExecutionRequest): Boolean {
         return request.requestId == lastHandledRequestId
                 || activeRequest?.requestId == request.requestId
-                || _pendingExecution.value?.requestId == request.requestId
+                || pendingExecution.value?.requestId == request.requestId
                 || startingRequestId == request.requestId
     }
 
     private fun hasPendingFlow(): Boolean {
         return activeRequest != null
-                || _pendingExecution.value != null
+                || pendingExecution.value != null
                 || startingRequestId != null
-                || _countdownState.value is CountdownState.Counting
+                || countdownState.value is CountdownState.Counting
     }
 
     private fun startCountdown(request: ScheduledExecutionRequest) {
@@ -179,12 +172,12 @@ class ScheduledLaunchCoordinator(
         countdownJob = scope.launch {
             for (remaining in ScheduledExecutionRequest.COUNTDOWN_SECONDS downTo 1) {
                 if (activeRequest?.requestId != request.requestId) return@launch
-                _countdownState.update {
+                uiState.setCountdown(
                     CountdownState.Counting(
                         strategyName = request.strategyName,
                         remainingSeconds = remaining,
                     )
-                }
+                )
                 delay(1000)
             }
             if (activeRequest?.requestId == request.requestId) {
@@ -197,8 +190,8 @@ class ScheduledLaunchCoordinator(
     private fun promote(request: ScheduledExecutionRequest) {
         cancelCountdown()
         activeRequest = request
-        _countdownState.value = CountdownState.Idle
-        _pendingExecution.value = request
+        uiState.setCountdown(CountdownState.Idle)
+        uiState.setPendingExecution(request)
     }
 
     private suspend fun reject(
@@ -214,7 +207,7 @@ class ScheduledLaunchCoordinator(
             result = result,
             message = message,
         )
-        _feedbackMessages.tryEmit("定时任务「${request.strategyName}」: $message")
+        uiState.emitFeedback("定时任务「${request.strategyName}」: $message")
     }
 
     private suspend fun finishFlow(
@@ -238,8 +231,8 @@ class ScheduledLaunchCoordinator(
         cancelCountdown()
         activeRequest = null
         startingRequestId = null
-        _countdownState.value = CountdownState.Idle
-        _pendingExecution.value = null
+        uiState.setCountdown(CountdownState.Idle)
+        uiState.setPendingExecution(null)
     }
 
     private fun cancelCountdown() {

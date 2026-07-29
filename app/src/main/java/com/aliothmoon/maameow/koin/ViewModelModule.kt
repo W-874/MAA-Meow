@@ -18,15 +18,36 @@ import com.aliothmoon.maameow.schedule.ui.ScheduleListViewModel
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 
 val viewModelModule = module {
-    viewModelOf(::HomeViewModel)
+    viewModel {
+        HomeViewModel(
+            application = get(),
+            appSettingsManager = get(),
+            overlayController = lazy { get() },
+            permissionManager = get(),
+            resourceLoadStateStore = get(),
+            executionStateStore = get(),
+            resourceInitService = get(),
+            overlayStateStore = get(),
+        )
+    }
     viewModelOf(::AchievementViewModel)
     viewModelOf(::AppEventsViewModel)
     viewModelOf(::SettingsViewModel)
-    viewModelOf(::UpdateViewModel)
+    viewModel {
+        UpdateViewModel(
+            appContext = get(),
+            updateServiceProvider = lazy { get() },
+            appSettingsManager = get(),
+            maaResourceLoader = lazy { get() },
+            pathConfig = get(),
+            initializationCoordinator = get(),
+        )
+    }
     viewModelOf(::LogHistoryViewModel)
     viewModelOf(::ErrorLogViewModel)
     viewModelOf(::BackgroundTaskViewModel)

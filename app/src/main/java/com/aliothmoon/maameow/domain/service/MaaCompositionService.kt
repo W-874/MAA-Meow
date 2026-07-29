@@ -15,6 +15,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.MaaExecutionStateStore
 import com.aliothmoon.maameow.maa.AsstMsg
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.ANDROID
 import com.aliothmoon.maameow.maa.MaaInstanceOptions.DEPLOYMENT_WITH_PAUSE
@@ -66,10 +67,9 @@ class MaaCompositionService(
     private val notificationCenter: MaaNotificationCenter,
     private val dropsRefresher: FightDropsRefresher,
     private val toolboxResultCollector: ToolboxResultCollector,
+    private val executionStateStore: MaaExecutionStateStore,
 ) : MaaExecutionStateHolder {
-
-    private val _state = MutableStateFlow(MaaExecutionState.IDLE)
-    val state: StateFlow<MaaExecutionState> = _state.asStateFlow()
+    val state: StateFlow<MaaExecutionState> = executionStateStore.state
 
     private val defaultResolution = DefaultDisplayConfig.Resolution(
         DefaultDisplayConfig.WIDTH, DefaultDisplayConfig.HEIGHT, DefaultDisplayConfig.DPI
@@ -80,14 +80,14 @@ class MaaCompositionService(
 
     override fun reportRunState(state: MaaExecutionState) {
         // STOPPING 期间，回调不主动设 IDLE — 由 finishStop() 统一处理
-        if (_state.value == MaaExecutionState.STOPPING && state == MaaExecutionState.IDLE) {
+        if (this.state.value == MaaExecutionState.STOPPING && state == MaaExecutionState.IDLE) {
             return
         }
         setRunState(state)
     }
 
     private fun setRunState(state: MaaExecutionState) {
-        _state.value = state
+        executionStateStore.set(state)
         when (state) {
             MaaExecutionState.STARTING ->
                 TaskExecutionService.start(context)
@@ -154,6 +154,8 @@ class MaaCompositionService(
 
 
     init {
+        unifiedStateDispatcher.start()
+        gameMuteCoordinator.startAutoRestore()
         scope.launch {
             unifiedStateDispatcher.serviceDiedEvent.collect {
                 appWatchdog.stopWatching()
@@ -249,6 +251,7 @@ class MaaCompositionService(
 
     private suspend fun checkPreconditions(
         mode: RunMode,
+        clientType: String,
         isScheduled: Boolean = false
     ): StartResult? {
         // 服务连接中时直接拒绝，避免与后台自动 load() 并发触发 LoadResource
@@ -271,8 +274,8 @@ class MaaCompositionService(
             )
         }
 
-        activityManager.runIfDirty { resourceLoader.load() }
-        val loaded = resourceLoader.ensureLoaded()
+        activityManager.runIfDirty { resourceLoader.load(clientType) }
+        val loaded = resourceLoader.ensureLoaded(clientType)
         if (loaded.isFailure) {
             return failStart(
                 context.getString(R.string.runlog_resource_load_failed), "RESOURCE_ERROR",
@@ -437,7 +440,7 @@ class MaaCompositionService(
 
         val mode = appSettings.runMode.value
         return withContext(Dispatchers.IO) {
-            checkPreconditions(mode, isScheduled)?.let { return@withContext it }
+            checkPreconditions(mode, clientType, isScheduled)?.let { return@withContext it }
 
             try {
                 useRemoteService { service ->

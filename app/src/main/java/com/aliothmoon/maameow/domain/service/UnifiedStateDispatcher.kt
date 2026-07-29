@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class UnifiedStateDispatcher(
     private val appSettingsManager: AppSettingsManager,
@@ -35,11 +36,13 @@ class UnifiedStateDispatcher(
 ) {
     private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val started = AtomicBoolean(false)
 
     private val _serviceDiedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val serviceDiedEvent: SharedFlow<Unit> = _serviceDiedEvent.asSharedFlow()
 
     fun start() {
+        if (!started.compareAndSet(false, true)) return
         scope.launch {
             RemoteServiceManager.state
                 .drop(1)

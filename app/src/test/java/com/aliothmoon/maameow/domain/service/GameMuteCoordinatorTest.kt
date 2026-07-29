@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.domain.service
 
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
+import com.aliothmoon.maameow.domain.models.AppSettings
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -119,7 +120,7 @@ class GameMuteCoordinatorTest {
     private fun fixture(initialMarker: String): Fixture {
         val persisted = MutableStateFlow(initialMarker)
         val manager = mockk<AppSettingsManager>()
-        every { manager.initialMutedGamePackage } returns initialMarker
+        coEvery { manager.awaitLoaded() } returns AppSettings(mutedGamePackage = initialMarker)
         coEvery { manager.setMutedGamePackage(any()) } coAnswers { persisted.value = firstArg() }
         val audio = FakeGameAudioAdapter()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)

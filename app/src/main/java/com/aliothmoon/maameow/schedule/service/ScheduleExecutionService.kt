@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.aliothmoon.maameow.MainActivity
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.AppInitializationCoordinator
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -45,6 +46,7 @@ class ScheduleExecutionService : Service() {
     private val alarmManager: ScheduleAlarmManager by inject()
     private val triggerLogger: ScheduleTriggerLogger by inject()
     private val appSettingsManager: AppSettingsManager by inject()
+    private val initializationCoordinator: AppInitializationCoordinator by inject()
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val silentStarter: ForegroundScheduleStarter by inject()
 
@@ -82,6 +84,7 @@ class ScheduleExecutionService : Service() {
     private suspend fun handleTrigger(strategyId: String, scheduledTimeMs: Long) {
         ensureNotificationChannel()
         startAsForeground(buildPreparingNotification())
+        initializationCoordinator.ensureReady()
 
         triggerLogger.append("调度触发，等待策略数据加载...")
         val strategy = awaitStrategy(strategyId)

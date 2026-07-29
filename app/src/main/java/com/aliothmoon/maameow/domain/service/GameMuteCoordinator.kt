@@ -3,6 +3,7 @@ package com.aliothmoon.maameow.domain.service
 import com.aliothmoon.maameow.constant.Packages
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 全部逻辑围绕一个标记展开：markedPackage 非空，表示该游戏包可能被 MaaMeow 静音过、
@@ -39,14 +41,25 @@ class GameMuteCoordinator internal constructor(
 ) {
     private val mutex = Mutex()
 
-    private val markedPackage = MutableStateFlow(appSettingsManager.initialMutedGamePackage)
+    private val markedPackage = MutableStateFlow("")
+    private val settingsReady = CompletableDeferred<Unit>()
+    private val autoRestoreStarted = AtomicBoolean(false)
+
+    init {
+        scope.launch {
+            markedPackage.value = appSettingsManager.awaitLoaded().mutedGamePackage
+            settingsReady.complete(Unit)
+        }
+    }
 
     val isMuted: StateFlow<Boolean> = markedPackage
         .map { it.isNotEmpty() }
         .stateIn(scope, SharingStarted.Eagerly, markedPackage.value.isNotEmpty())
 
     fun startAutoRestore() {
+        if (!autoRestoreStarted.compareAndSet(false, true)) return
         scope.launch {
+            settingsReady.await()
             gameAudioAdapter.connected.filter { it }.collect {
                 mutex.withLock {
                     if (markedPackage.value.isEmpty()) return@withLock
@@ -60,14 +73,23 @@ class GameMuteCoordinator internal constructor(
         }
     }
 
-    suspend fun mute(clientType: String?): Boolean = mutex.withLock { muteLocked(clientType) }
+    suspend fun mute(clientType: String?): Boolean {
+        settingsReady.await()
+        return mutex.withLock { muteLocked(clientType) }
+    }
 
-    suspend fun unmute(): Boolean = mutex.withLock { unmuteLocked() }
+    suspend fun unmute(): Boolean {
+        settingsReady.await()
+        return mutex.withLock { unmuteLocked() }
+    }
 
-    suspend fun toggle(clientType: String?): Boolean = mutex.withLock {
-        val marked = markedPackage.value
-        Timber.i("Toggle game mute, direction=%s", if (marked.isNotEmpty()) "unmute" else "mute")
-        if (marked.isNotEmpty()) unmuteLocked() else muteLocked(clientType)
+    suspend fun toggle(clientType: String?): Boolean {
+        settingsReady.await()
+        return mutex.withLock {
+            val marked = markedPackage.value
+            Timber.i("Toggle game mute, direction=%s", if (marked.isNotEmpty()) "unmute" else "mute")
+            if (marked.isNotEmpty()) unmuteLocked() else muteLocked(clientType)
+        }
     }
 
     private suspend fun muteLocked(clientType: String?): Boolean {

@@ -2,6 +2,7 @@ package com.aliothmoon.maameow
 
 import android.app.NotificationManager
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -26,46 +27,58 @@ import com.aliothmoon.maameow.domain.service.TaskExecutionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.overlay.screensaver.ScreenSaverOverlayManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
-import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
 import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.utils.PerformanceTrace
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
-import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : AppCompatActivity() {
 
     @Volatile
     private var isUiReady: Boolean = false
+    @Volatile
+    private var isContentInstalled: Boolean = false
 
     private val appSettingsManager: AppSettingsManager by inject()
     private val achievementRepository: AchievementRepository by inject()
     private val compositionService: MaaCompositionService by inject()
     private val screenSaverManager: ScreenSaverOverlayManager by inject()
-    private val backgroundTaskViewModel: BackgroundTaskViewModel by viewModel()
+    private val scheduledLaunchInbox: ScheduledLaunchInbox by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        delegate.localNightMode = appSettingsManager.themeMode.value.toAppCompatNightMode()
+        val firstFrameTrace = PerformanceTrace.beginAsync("MaaMeow.firstFrame")
         val splash = installSplashScreen()
-        splash.setKeepOnScreenCondition { !isUiReady }
+        splash.setKeepOnScreenCondition { !isContentInstalled || !isUiReady }
         super.onCreate(savedInstanceState)
         dismissTaskNotificationIfRequested(intent)
         dispatchScheduledLaunchIntent(intent)
         enableEdgeToEdge()
         lifecycleScope.launch {
-            achievementRepository.report {
-                event = AchievementEvents.APP_LAUNCH
-            }
+            (application as MaaApplication).ensureUiBootstrapReady()
+            delegate.localNightMode = appSettingsManager.themeMode.value.toAppCompatNightMode()
+            installContent(firstFrameTrace)
+            doObserveThemeMode()
         }
-        doObserveKeepScreenOn()
-        doObserveThemeMode()
+    }
+
+    private fun installContent(firstFrameTrace: Int) {
         window.decorView.viewTreeObserver.addOnPreDrawListener(object :
             ViewTreeObserver.OnPreDrawListener {
             override fun onPreDraw(): Boolean {
                 isUiReady = true
-                window.decorView.viewTreeObserver.removeOnPreDrawListener(this)
+                val viewTreeObserver = window.decorView.viewTreeObserver
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    viewTreeObserver.registerFrameCommitCallback {
+                        onFirstFrameCommitted(firstFrameTrace)
+                    }
+                } else {
+                    window.decorView.post { onFirstFrameCommitted(firstFrameTrace) }
+                }
+                viewTreeObserver.removeOnPreDrawListener(this)
                 return true
             }
         })
@@ -81,8 +94,22 @@ class MainActivity : AppCompatActivity() {
                         fontScale = baseDensity.fontScale
                     )
                 ) {
-                    AppNavigation(backgroundTaskViewModel = backgroundTaskViewModel)
+                    AppNavigation()
                 }
+            }
+        }
+        isContentInstalled = true
+    }
+
+    private fun onFirstFrameCommitted(firstFrameTrace: Int) {
+        PerformanceTrace.endAsync("MaaMeow.firstFrame", firstFrameTrace)
+        PerformanceTrace.section("MaaMeow.firstInteractive") {
+            (application as MaaApplication).startDeferredServices()
+        }
+        doObserveKeepScreenOn()
+        lifecycleScope.launch {
+            achievementRepository.report {
+                event = AchievementEvents.APP_LAUNCH
             }
         }
     }
@@ -104,7 +131,7 @@ class MainActivity : AppCompatActivity() {
     private fun dispatchScheduledLaunchIntent(intent: Intent?) {
         val request = ScheduledExecutionRequest.fromIntent(intent)
             ?: ScheduledExecutionRequest.fromExternalIntent(intent)
-        request?.let { backgroundTaskViewModel.onScheduledLaunch(it) }
+        request?.let(scheduledLaunchInbox::submit)
     }
 
     private fun doObserveKeepScreenOn() {

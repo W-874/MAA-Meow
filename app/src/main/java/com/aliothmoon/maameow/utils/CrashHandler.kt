@@ -26,8 +26,9 @@ class CrashHandler(private val pathConfig: MaaPathConfig) : Thread.UncaughtExcep
         Timber.i("CrashHandler init")
         this.context = context.applicationContext
         Thread.setDefaultUncaughtExceptionHandler(this)
-        cleanOldCrashLogs()
     }
+
+    fun cleanupOldCrashLogs() = cleanOldCrashLogs()
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         try {

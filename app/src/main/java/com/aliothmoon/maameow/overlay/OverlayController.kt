@@ -20,10 +20,12 @@ import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.OverlayStateStore
 import com.aliothmoon.maameow.overlay.border.BorderOverlayManager
 import com.aliothmoon.maameow.presentation.LocalFloatingWindowContext
 import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import com.aliothmoon.maameow.utils.Misc
@@ -45,13 +47,16 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
 
 class OverlayController(
     private val context: Application,
     val borderOverlayManager: BorderOverlayManager,
     private val fwViewModelOwner: OverlayViewModelOwner,
     private val compositionService: MaaCompositionService,
-    private val appSettings: AppSettingsManager
+    private val appSettings: AppSettingsManager,
+    private val overlayStateStore: OverlayStateStore,
+    private val scheduledLaunchUiState: ScheduledLaunchUiState,
 ) {
 
     companion object {
@@ -61,8 +66,7 @@ class OverlayController(
     }
 
     private val _isLocked = MutableStateFlow(true)
-    private val _isActive = MutableStateFlow(false)
-    val isActive: StateFlow<Boolean> = _isActive.asStateFlow()
+    val isActive: StateFlow<Boolean> = overlayStateStore.active
     private var calculatedPanelLayout: Pair<Int, Int>? = null
     private var orientation = context.resources.configuration.orientation
 
@@ -73,14 +77,15 @@ class OverlayController(
     private var currentMode: OverlayControlMode = OverlayControlMode.ACCESSIBILITY
     private var maaStateJob: Job? = null
 
-    private val _countdownState = MutableStateFlow<CountdownState>(CountdownState.Idle)
-    val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
-
-    var onCountdownClick: (() -> Unit)? = null
+    val countdownState: StateFlow<CountdownState> = scheduledLaunchUiState.countdown
     private var tempCountdownListener: (() -> Unit)? = null
 
     fun setTemporaryCountdownListener(listener: (() -> Unit)?) {
         this.tempCountdownListener = listener
+    }
+
+    fun updateCountdownState(state: CountdownState) {
+        scheduledLaunchUiState.setCountdown(state)
     }
 
     fun handleCountdownClick() {
@@ -88,15 +93,12 @@ class OverlayController(
         if (temp != null) {
             temp.invoke()
         } else {
-            onCountdownClick?.invoke()
+            scheduledLaunchUiState.startNow()
         }
     }
 
-    fun updateCountdownState(state: CountdownState) {
-        _countdownState.value = state
-    }
-
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val setupComplete = AtomicBoolean(false)
 
     private val callback = object : ComponentCallbacks {
         override fun onConfigurationChanged(newConfig: Configuration) {
@@ -115,6 +117,7 @@ class OverlayController(
     }
 
     fun setup() {
+        if (!setupComplete.compareAndSet(false, true)) return
         context.registerComponentCallbacks(callback)
         scope.launch {
             appSettings.runMode.collect { mode ->
@@ -154,7 +157,7 @@ class OverlayController(
     }
 
     private suspend fun onMaaStateChanged(previous: MaaExecutionState, current: MaaExecutionState) {
-        if (!_isActive.value) return
+        if (!isActive.value) return
 
         val wasActive =
             previous == MaaExecutionState.RUNNING || previous == MaaExecutionState.STARTING || previous == MaaExecutionState.STOPPING
@@ -359,7 +362,7 @@ class OverlayController(
     }
 
     fun onFloatBallClick() {
-        if (_countdownState.value is CountdownState.Counting) {
+        if (countdownState.value is CountdownState.Counting) {
             handleCountdownClick()
             return
         }
@@ -436,7 +439,7 @@ class OverlayController(
                 Timber.d("OverlayController: 悬浮球模式已启动")
             }
         }
-        _isActive.value = true
+        overlayStateStore.setActive(true)
     }
 
     suspend fun applyMode(mode: OverlayControlMode) {
@@ -479,7 +482,7 @@ class OverlayController(
         hideFloatBall()
         borderOverlayManager.hide()
         unregisterVolumeKeyListener()
-        _isActive.value = false
+        overlayStateStore.setActive(false)
     }
 
     fun toggleMainPanel() {

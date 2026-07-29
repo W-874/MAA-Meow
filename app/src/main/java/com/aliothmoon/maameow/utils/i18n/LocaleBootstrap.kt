@@ -3,25 +3,15 @@ package com.aliothmoon.maameow.utils.i18n
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 object LocaleBootstrap {
 
-    fun applyPersisted(manager: AppSettingsManager) {
-        val persisted = manager.language.value
-        val resolved = when {
-            !AppCompatDelegate.getApplicationLocales().isEmpty -> currentRuntimeLanguage()
-            persisted != AppSettingsManager.AppLanguage.SYSTEM -> persisted
-            else -> systemSnapshotLanguage()
-        }
-
-        AppCompatDelegate.setApplicationLocales(resolved.toLocaleList())
-        if (persisted != resolved) {
-            persistResolvedLanguage(manager, resolved)
-        }
+    suspend fun applyPersisted(manager: AppSettingsManager) {
+        val persisted = runCatching {
+            AppSettingsManager.AppLanguage.valueOf(manager.awaitLoaded().language)
+        }.getOrDefault(AppSettingsManager.AppLanguage.SYSTEM)
+        AppCompatDelegate.setApplicationLocales(persisted.toLocaleList())
     }
 
     fun resolveSelectedLanguage(current: AppSettingsManager.AppLanguage): AppSettingsManager.AppLanguage {
@@ -43,15 +33,6 @@ object LocaleBootstrap {
     private fun systemSnapshotLanguage(): AppSettingsManager.AppLanguage {
         val current = LocaleListCompat.forLanguageTags(Locale.getDefault().toLanguageTag())
         return current.toAppLanguage()
-    }
-
-    private fun persistResolvedLanguage(
-        manager: AppSettingsManager,
-        resolved: AppSettingsManager.AppLanguage,
-    ) {
-        CoroutineScope(Dispatchers.IO).launch {
-            manager.setLanguage(resolved)
-        }
     }
 
     fun AppSettingsManager.AppLanguage.toLocaleList(): LocaleListCompat =

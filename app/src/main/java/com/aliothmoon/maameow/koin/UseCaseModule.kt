@@ -41,6 +41,7 @@ val useCaseModule = module {
     }
     factory {
         PrepareTaskStartUseCase(
+            resourceLoader = get(),
             analyzeTaskChainUseCase = get(),
             checkGameReadiness = get(),
         )

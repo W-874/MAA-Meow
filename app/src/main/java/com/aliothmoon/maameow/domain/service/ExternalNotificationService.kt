@@ -33,6 +33,7 @@ class ExternalNotificationService(
 
     fun sendWithLogs(title: String, content: String) {
         scope.launch {
+            settingsManager.awaitLoaded()
             val body = if (settingsManager.includeLogDetails.value) {
                 val logs = sessionLogger.logs.value
                     .joinToString("\n") { "[${it.formattedTime}] ${it.content}" }
@@ -51,6 +52,7 @@ class ExternalNotificationService(
     }
 
     private suspend fun dispatchToProviders(title: String, content: String, isTest: Boolean) {
+        settingsManager.awaitLoaded()
         val enabledIds = settingsManager.enabledProviderIds.value
 
         if (enabledIds.isEmpty()) {

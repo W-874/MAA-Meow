@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -129,13 +128,23 @@ class TaskExecutionService : Service() {
         super.onCreate()
         notificationSessionActive = true
         ensureNotificationChannel()
-        val initial = TaskNotificationSnapshot(
-            state = compositionService.state.value,
-            statusText = sessionLogger.logs.value.lastOrNull()?.content,
-            tasks = taskChainStatusTracker.tasks.value,
-        )
-        startAsForeground(buildNotification(initial))
-        observeProgress()
+        postForegroundNotification(buildPreparingNotification())
+        serviceScope.launch {
+            try {
+                appSettingsManager.awaitLoaded()
+                val initial = TaskNotificationSnapshot(
+                    state = compositionService.state.value,
+                    statusText = sessionLogger.logs.value.lastOrNull()?.content,
+                    tasks = taskChainStatusTracker.tasks.value,
+                )
+                postConfiguredForegroundNotification(buildNotification(initial))
+                observeProgress()
+            } catch (error: Exception) {
+                Timber.e(error, "TaskExecutionService initialization failed")
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -299,19 +308,33 @@ class TaskExecutionService : Service() {
         manager.createNotificationChannel(taskChannel)
     }
 
-    private fun startAsForeground(notification: Notification) {
+    private fun buildPreparingNotification(): Notification =
+        NotificationCompat.Builder(this, TASK_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_maa_logo)
+            .setContentTitle(getString(R.string.notification_task_running_title))
+            .setContentText(getString(R.string.notification_task_starting))
+            .setContentIntent(buildContentIntent())
+            .setOngoing(true)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .build()
+
+    private suspend fun postConfiguredForegroundNotification(notification: Notification) {
         val shouldBypass = appSettingsManager.taskNotificationStyle.value == AppSettingsManager.TaskNotificationStyle.MI_ISLAND &&
             appSettingsManager.miIslandBypassRestriction.value
         if (!shouldBypass) {
             postForegroundNotification(notification)
             return
         }
-        runBlocking(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             miIslandNetworkMutex.withLock {
                 val remote = (RemoteServiceManager.state.value as? RemoteServiceManager.ServiceState.Connected)?.service
                 val blocked = remote?.setPackageNetworkingEnabled("com.xiaomi.xmsf", false) == true
                 try {
-                    postForegroundNotification(notification)
+                    withContext(Dispatchers.Main.immediate) {
+                        postForegroundNotification(notification)
+                    }
                     if (blocked) delay(100L)
                 } finally {
                     if (blocked) {
