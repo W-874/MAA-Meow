@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -394,7 +395,8 @@ fun SettingsView(
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .benchmarkTestTag("settings_list"),
             contentPadding = PaddingValues(
                 start = MaaDesignTokens.Spacing.listHorizontal,
                 end = MaaDesignTokens.Spacing.listHorizontal,
@@ -509,107 +511,7 @@ fun SettingsView(
 
             // 权限管理
             item {
-                SectionHeader(stringResource(R.string.home_permission_section))
-                SegmentedSettingsGroup {
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        val isGrantingPermission by permissionManager.isGranting.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
-                            granted = permissionState.remoteAccessGranted,
-                            isLoading = isGrantingPermission,
-                            icon = Icons.Rounded.Security,
-                            onClick = {
-                                coroutineScope.launch {
-                                    val backend = permissionState.startupBackend
-                                    if (!permissionState.isStartupBackendAvailable(backend)) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.home_toast_backend_unavailable, backend.display),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                        return@launch
-                                    }
-                                    if (!permissionManager.requestRemoteAccess()) {
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(R.string.home_toast_backend_auth_failed, backend.display),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                    }
-                                }
-                            },
-                        )
-                    }
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = stringResource(R.string.home_permission_overlay),
-                            granted = permissionState.overlay,
-                            icon = Icons.Rounded.TouchApp,
-                            onClick = {
-                                coroutineScope.launch { permissionManager.requestOverlay(context) }
-                            },
-                        )
-                    }
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = stringResource(R.string.home_permission_storage),
-                            granted = permissionState.storage,
-                            icon = Icons.Rounded.Folder,
-                            onClick = {
-                                coroutineScope.launch { permissionManager.requestStorage(context) }
-                            },
-                        )
-                    }
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = stringResource(R.string.home_permission_battery),
-                            granted = permissionState.batteryWhitelist,
-                            grantedText = stringResource(R.string.home_permission_battery_added),
-                            icon = Icons.Rounded.BatteryChargingFull,
-                            onClick = {
-                                coroutineScope.launch { permissionManager.requestBatteryWhitelist(context) }
-                            },
-                        )
-                    }
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = stringResource(R.string.home_permission_accessibility),
-                            granted = permissionState.accessibility,
-                            icon = Icons.Rounded.AccessibilityNew,
-                            ungrantedText = if (permissionState.remoteAccessGranted) {
-                                stringResource(R.string.home_permission_quick_grant)
-                            } else {
-                                stringResource(R.string.home_permission_request)
-                            },
-                            onClick = {
-                                coroutineScope.launch {
-                                    if (permissionState.remoteAccessGranted &&
-                                        permissionManager.quickGrantAccessibility()
-                                    ) {
-                                        return@launch
-                                    }
-                                    permissionManager.requestAccessibility(context)
-                                }
-                            },
-                        )
-                    }
-                    item {
-                        val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-                        PermissionStatusRow(
-                            title = stringResource(R.string.home_permission_notification),
-                            granted = permissionState.notification,
-                            icon = Icons.Rounded.Notifications,
-                            onClick = {
-                                coroutineScope.launch { permissionManager.requestNotification(context) }
-                            },
-                        )
-                    }
-                }
+                SettingsPermissionSection(permissionManager)
             }
 
             // 其他设置
@@ -1058,6 +960,99 @@ private fun SettingInfoRow(
         },
         onClick = onClick,
     )
+}
+
+@Composable
+private fun SettingsPermissionSection(permissionManager: PermissionManager) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val permissionState by permissionManager.state.collectAsStateWithLifecycle()
+    val isGrantingPermission by permissionManager.isGranting.collectAsStateWithLifecycle()
+
+    SectionHeader(stringResource(R.string.home_permission_section))
+    SegmentedSettingsGroup {
+        item {
+            PermissionStatusRow(
+                title = context.remoteBackendPermissionLabel(permissionState.startupBackend),
+                granted = permissionState.remoteAccessGranted,
+                isLoading = isGrantingPermission,
+                icon = Icons.Rounded.Security,
+                onClick = {
+                    coroutineScope.launch {
+                        val backend = permissionState.startupBackend
+                        if (!permissionState.isStartupBackendAvailable(backend)) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.home_toast_backend_unavailable, backend.display),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                            return@launch
+                        }
+                        if (!permissionManager.requestRemoteAccess()) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.home_toast_backend_auth_failed, backend.display),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+            )
+        }
+        item {
+            PermissionStatusRow(
+                title = stringResource(R.string.home_permission_overlay),
+                granted = permissionState.overlay,
+                icon = Icons.Rounded.TouchApp,
+                onClick = { coroutineScope.launch { permissionManager.requestOverlay(context) } },
+            )
+        }
+        item {
+            PermissionStatusRow(
+                title = stringResource(R.string.home_permission_storage),
+                granted = permissionState.storage,
+                icon = Icons.Rounded.Folder,
+                onClick = { coroutineScope.launch { permissionManager.requestStorage(context) } },
+            )
+        }
+        item {
+            PermissionStatusRow(
+                title = stringResource(R.string.home_permission_battery),
+                granted = permissionState.batteryWhitelist,
+                grantedText = stringResource(R.string.home_permission_battery_added),
+                icon = Icons.Rounded.BatteryChargingFull,
+                onClick = { coroutineScope.launch { permissionManager.requestBatteryWhitelist(context) } },
+            )
+        }
+        item {
+            PermissionStatusRow(
+                title = stringResource(R.string.home_permission_accessibility),
+                granted = permissionState.accessibility,
+                icon = Icons.Rounded.AccessibilityNew,
+                ungrantedText = if (permissionState.remoteAccessGranted) {
+                    stringResource(R.string.home_permission_quick_grant)
+                } else {
+                    stringResource(R.string.home_permission_request)
+                },
+                onClick = {
+                    coroutineScope.launch {
+                        if (permissionState.remoteAccessGranted && permissionManager.quickGrantAccessibility()) {
+                            return@launch
+                        }
+                        permissionManager.requestAccessibility(context)
+                    }
+                },
+            )
+        }
+        item {
+            PermissionStatusRow(
+                title = stringResource(R.string.home_permission_notification),
+                granted = permissionState.notification,
+                icon = Icons.Rounded.Notifications,
+                onClick = { coroutineScope.launch { permissionManager.requestNotification(context) } },
+            )
+        }
+    }
 }
 
 @Composable

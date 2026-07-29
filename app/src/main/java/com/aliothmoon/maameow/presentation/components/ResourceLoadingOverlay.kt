@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.domain.service.MaaResourceLoader
+import com.aliothmoon.maameow.domain.state.MaaResourceLoadStateStore
 import com.aliothmoon.maameow.utils.i18n.resourceLoaderMessage
 import org.koin.compose.koinInject
 
@@ -36,10 +37,9 @@ import org.koin.compose.koinInject
 @Composable
 fun ResourceLoadingOverlay(
     modifier: Modifier = Modifier,
-    loader: MaaResourceLoader = koinInject(),
+    stateStore: MaaResourceLoadStateStore = koinInject(),
 ) {
-
-    val state by loader.state.collectAsStateWithLifecycle()
+    val state by stateStore.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val isVisible = state is MaaResourceLoader.State.Loading
             || state is MaaResourceLoader.State.Reloading

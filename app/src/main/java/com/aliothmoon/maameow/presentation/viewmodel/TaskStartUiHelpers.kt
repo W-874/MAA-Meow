@@ -31,6 +31,9 @@ internal fun Context.resolveTaskStartBlockedMessage(
     reason: TaskStartDecisionReason,
     clientTypes: List<String> = emptyList(),
 ): UiText = when (reason) {
+    TaskStartDecisionReason.RESOURCES_NOT_READY ->
+        uiTextOf(R.string.task_start_error_resource_load_failed)
+
     TaskStartDecisionReason.NO_TASK_SELECTED ->
         uiTextOf(R.string.task_start_error_no_task_selected)
 

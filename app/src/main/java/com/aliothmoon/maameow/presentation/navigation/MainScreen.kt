@@ -25,13 +25,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.constant.Routes
+import com.aliothmoon.maameow.presentation.enableBenchmarkTestTags
 import com.aliothmoon.maameow.presentation.view.background.BackgroundTaskView
 import com.aliothmoon.maameow.presentation.view.home.HomeView
 import com.aliothmoon.maameow.presentation.view.settings.SettingsView
-import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.MaaAnimations
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import kotlin.math.abs
 
 internal val LocalMainBottomBarPadding = compositionLocalOf<Dp> { 0.dp }
@@ -40,11 +42,11 @@ internal val LocalMainBottomBarPadding = compositionLocalOf<Dp> { 0.dp }
 fun MainScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
-    backgroundTaskViewModel: BackgroundTaskViewModel,
     onViewAnnouncement: () -> Unit = {},
     visible: Boolean = true,
     fullscreen: Boolean = false,
 ) {
+    val scheduledLaunchInbox: ScheduledLaunchInbox = koinInject()
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val tabStateHolder = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
@@ -78,7 +80,7 @@ fun MainScreen(
 
     // 定时任务触发时：若正处于子页面，先弹回主 Tab 浮出主界面，再滑到后台任务页
     // （恢复旧导航 navigate(BACKGROUND){popUpTo(HOME)} 的“自动浮出后台页”语义）。
-    val pendingScheduledExecution by backgroundTaskViewModel.coordinator.pendingExecution.collectAsStateWithLifecycle()
+    val pendingScheduledExecution by scheduledLaunchInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingScheduledExecution?.requestId) {
         if (pendingScheduledExecution != null) {
             navController.popBackStack(Routes.HOME, false)
@@ -89,12 +91,14 @@ fun MainScreen(
     if (!visible) return
 
     Scaffold(
-        modifier = modifier.graphicsLayer {
-            translationX = size.width * predictiveBackProgress * 0.12f
-            val predictiveScale = 1f - predictiveBackProgress * 0.015f
-            scaleX = predictiveScale
-            scaleY = predictiveScale
-        },
+        modifier = modifier
+            .enableBenchmarkTestTags()
+            .graphicsLayer {
+                translationX = size.width * predictiveBackProgress * 0.12f
+                val predictiveScale = 1f - predictiveBackProgress * 0.015f
+                scaleX = predictiveScale
+                scaleY = predictiveScale
+            },
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         bottomBar = {
             if (!fullscreen) {
@@ -122,10 +126,11 @@ fun MainScreen(
                             navController = navController,
                             onViewAnnouncement = onViewAnnouncement,
                         )
-                        BottomNavTab.BACKGROUND -> BackgroundTaskView(
-                            navController = navController,
-                            viewModel = backgroundTaskViewModel,
-                        )
+                        BottomNavTab.BACKGROUND -> {
+                            if (page == pagerState.currentPage || page == pagerState.targetPage) {
+                                BackgroundTaskView(navController = navController)
+                            }
+                        }
 
                         BottomNavTab.SCHEDULE -> ScheduleListView(navController = navController)
                         BottomNavTab.SETTINGS -> SettingsView(navController = navController)

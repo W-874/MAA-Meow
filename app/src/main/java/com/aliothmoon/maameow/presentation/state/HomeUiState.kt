@@ -21,3 +21,25 @@ data class HomeUiState(
     val showRunModeUnsupportedDialog: Boolean = false,
     val runModeUnsupportedMessage: UiText = UiText.Empty
 )
+
+data class HomeServiceUiState(
+    val serviceStatusText: UiText = UiText.Empty,
+    val serviceStatusColor: StatusColorType = StatusColorType.NEUTRAL,
+    val serviceStatusLoading: Boolean = false,
+    val remoteServiceActive: Boolean = false,
+    val isLoading: Boolean = false,
+)
+
+data class HomeResourceUiState(
+    val resourceUpdateState: UpdateProcessState = UpdateProcessState.Idle,
+    val resourceInitState: ResourceInitState = ResourceInitState.NotChecked,
+)
+
+data class HomeInteractionUiState(
+    val isShowControlOverlay: Boolean = false,
+    val runMode: RunMode = RunMode.BACKGROUND,
+    val overlayControlMode: OverlayControlMode = OverlayControlMode.FLOAT_BALL,
+    val isGranting: Boolean = false,
+    val showRunModeUnsupportedDialog: Boolean = false,
+    val runModeUnsupportedMessage: UiText = UiText.Empty,
+)

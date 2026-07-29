@@ -26,15 +26,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.constant.Routes
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.service.ExternalNotificationService
-import com.aliothmoon.maameow.overlay.OverlayController
+import com.aliothmoon.maameow.domain.service.ResourceInitService
+import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.presentation.LocalToaster
+import com.aliothmoon.maameow.presentation.enableBenchmarkTestTags
 import com.aliothmoon.maameow.presentation.components.AnnouncementDialog
 import com.aliothmoon.maameow.presentation.components.ResourceLoadingOverlay
 import com.aliothmoon.maameow.presentation.state.UiEffect
+import com.aliothmoon.maameow.presentation.state.BackgroundChromeState
 import com.aliothmoon.maameow.presentation.view.notification.NotificationSettingsView
 import com.aliothmoon.maameow.presentation.view.background.TaskProfileEditorView
 import com.aliothmoon.maameow.presentation.view.settings.AchievementDebugView
@@ -44,8 +47,8 @@ import com.aliothmoon.maameow.presentation.view.settings.ErrorLogView
 import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
-import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
 import com.aliothmoon.maameow.schedule.ui.ScheduleTriggerLogView
@@ -54,9 +57,9 @@ import com.aliothmoon.maameow.utils.i18n.resolve
 import com.dokar.sonner.ToastType
 import com.dokar.sonner.Toaster
 import com.dokar.sonner.rememberToasterState
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -65,22 +68,18 @@ private val MAIN_TAB_ROUTES: Set<String> = BottomNavTab.all.mapTo(HashSet()) { i
 
 @Composable
 fun AppNavigation(
-    backgroundTaskViewModel: BackgroundTaskViewModel,
     appSettings: AppSettingsManager = koinInject(),
-    notificationService: ExternalNotificationService = koinInject(),
-    overlayController: OverlayController = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
+    backgroundChromeState: BackgroundChromeState = koinInject(),
+    scheduledLaunchUiState: ScheduledLaunchUiState = koinInject(),
+    resourceInitService: ResourceInitService = koinInject(),
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentNavRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
     val toaster = rememberToasterState()
-    val isFullscreen by remember(backgroundTaskViewModel) {
-        backgroundTaskViewModel.state
-            .map { it.isFullscreenMonitor }
-            .distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = false)
+    val isFullscreen by backgroundChromeState.fullscreen.collectAsStateWithLifecycle()
     var forceShowAnnouncement by remember { mutableStateOf(false) }
     var announcementDismissedOnce by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -88,39 +87,19 @@ fun AppNavigation(
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
     val announcementReadVersion by appSettings.announcementReadVersion.collectAsStateWithLifecycle()
     val language by appSettings.language.collectAsStateWithLifecycle()
-    val scheduledCountdownState by backgroundTaskViewModel.coordinator.countdownState.collectAsStateWithLifecycle()
+    val scheduledCountdownState by scheduledLaunchUiState.countdown.collectAsStateWithLifecycle()
+    val resourcesReady by remember(resourceInitService) {
+        resourceInitService.state
+            .map { it is ResourceInitState.Ready }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
 
     // 判断是否处于主 Tab 页面
     val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
 
-    LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.coordinator.feedbackMessages.collect { message ->
+    LaunchedEffect(scheduledLaunchUiState) {
+        scheduledLaunchUiState.feedbackMessages.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-    LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.coordinator.countdownState.collect { state ->
-            overlayController.updateCountdownState(state)
-        }
-    }
-    LaunchedEffect(backgroundTaskViewModel) {
-        overlayController.onCountdownClick = {
-            backgroundTaskViewModel.onScheduledStartNow()
-        }
-    }
-    LaunchedEffect(notificationService) {
-        notificationService.feedbackMessages.collect { message ->
-            Toast.makeText(context, message.resolve(context), Toast.LENGTH_SHORT).show()
-        }
-    }
-    LaunchedEffect(backgroundTaskViewModel) {
-        backgroundTaskViewModel.effects.collect { effect ->
-            when (effect) {
-                is UiEffect.Toast -> toaster.show(
-                    message = effect.message.resolve(context),
-                    type = ToastType.Info,
-                )
-            }
         }
     }
     LaunchedEffect(appEventsViewModel) {
@@ -137,12 +116,12 @@ fun AppNavigation(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .enableBenchmarkTestTags()
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         // MainScreen with HorizontalPager for smooth tab switching
         MainScreen(
             navController = navController,
-            backgroundTaskViewModel = backgroundTaskViewModel,
             onViewAnnouncement = { forceShowAnnouncement = true },
             visible = isOnMainTab,
             fullscreen = isFullscreen,
@@ -180,7 +159,7 @@ fun AppNavigation(
                 composable(Routes.TASK_PROFILE_EDITOR) {
                     TaskProfileEditorView(
                         navController = navController,
-                        viewModel = backgroundTaskViewModel,
+                        viewModel = koinViewModel(),
                     )
                 }
                 composable(Routes.SCHEDULE_EDIT) { backStackEntry ->
@@ -216,12 +195,16 @@ fun AppNavigation(
         if (countdown is CountdownState.Counting && !hideCountdownDialog) {
             CountdownDialog(
                 state = countdown,
-                onCancel = { backgroundTaskViewModel.onScheduledCountdownCancel() },
-                onStartNow = { backgroundTaskViewModel.onScheduledStartNow() },
+                onCancel = scheduledLaunchUiState::cancel,
+                onStartNow = scheduledLaunchUiState::startNow,
             )
         }
         // 长期公告弹窗：每次公告版本变更后首次启动自动弹出，或从设置中手动打开
-        val needsToShow = announcementReadVersion != AnnouncementConfig.CURRENT_VERSION
+        val needsToShow = !BuildConfig.BENCHMARK_BUILD &&
+            !BuildConfig.BUILD_TYPE.contains("benchmark", ignoreCase = true) &&
+            !BuildConfig.BUILD_TYPE.contains("nonMinified", ignoreCase = true) &&
+            resourcesReady &&
+            announcementReadVersion != AnnouncementConfig.CURRENT_VERSION
         val showAnnouncement = forceShowAnnouncement || (needsToShow && !announcementDismissedOnce)
         val announcementMarkdown = remember(showAnnouncement, language) {
             if (showAnnouncement) {

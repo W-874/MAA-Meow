@@ -42,6 +42,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +65,8 @@ import com.aliothmoon.maameow.theme.MaaDesignTokens
 import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** 勾选"不再显示"前需停留的秒数 */
 private const val STAY_SECONDS_REQUIRED = 5
@@ -112,11 +115,17 @@ fun AnnouncementDialog(
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val context = LocalContext.current
 
-    val imageBitmap = remember(imageAssetPath) {
-        if (imageAssetPath == null) return@remember null
-        runCatching {
-            context.assets.open(imageAssetPath).use { BitmapFactory.decodeStream(it) }
-        }.getOrNull()?.asImageBitmap()
+    val imageBitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+        initialValue = null,
+        key1 = imageAssetPath,
+    ) {
+        value = withContext(Dispatchers.IO) {
+            imageAssetPath?.let { path ->
+                runCatching {
+                    context.assets.open(path).use { BitmapFactory.decodeStream(it) }
+                }.getOrNull()?.asImageBitmap()
+            }
+        }
     }
 
     Dialog(
@@ -271,9 +280,9 @@ fun AnnouncementDialog(
                         .weight(1f, fill = false)
                         .verticalScroll(scrollState),
                 ) {
-                    if (imageBitmap != null) {
+                    imageBitmap?.let { bitmap ->
                         Image(
-                            bitmap = imageBitmap,
+                            bitmap = bitmap,
                             contentDescription = null,
                             contentScale = ContentScale.Fit,
                             modifier = Modifier

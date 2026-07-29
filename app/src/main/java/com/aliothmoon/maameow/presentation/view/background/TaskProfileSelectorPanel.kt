@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -176,7 +177,10 @@ fun TaskProfileSelectorPanel(
                                     )
                                 }
                             }
-                            IconButton(onClick = { onEditProfile(profile.id) }) {
+                            IconButton(
+                                onClick = { onEditProfile(profile.id) },
+                                modifier = Modifier.benchmarkTestTag("edit_task_profile"),
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = stringResource(

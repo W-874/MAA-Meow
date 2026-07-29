@@ -21,9 +21,9 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -178,35 +178,6 @@ fun UpdateCard(
 
     // ==================== 弹窗 ====================
 
-    // 资源更新确认弹窗
-    (resourceCheckResult as? UpdateCheckResult.Available)?.info?.let { updateInfo ->
-        UpdateConfirmDialog(
-            updateInfo = updateInfo,
-            onConfirm = {
-                viewModel.dismissResourceCheckResult()
-                viewModel.confirmResourceDownload()
-            },
-            onDismiss = {
-                viewModel.dismissResourceCheckResult()
-            }
-        )
-    }
-
-    // 应用更新确认弹窗
-    (appCheckResult as? UpdateCheckResult.Available)?.info?.let { updateInfo ->
-        AppUpdateConfirmDialog(
-            updateInfo = updateInfo,
-            currentVersion = viewModel.currentAppVersion,
-            onConfirm = {
-                viewModel.dismissAppCheckResult()
-                viewModel.confirmAppDownload(updateInfo.version)
-            },
-            onDismiss = {
-                viewModel.dismissAppCheckResult()
-            }
-        )
-    }
-
     // 资源更新错误弹窗
     resourceErrorMessage?.let { message ->
         ErrorDialog(
@@ -265,12 +236,6 @@ fun UpdateCard(
                 onClick = viewModel::checkResourceUpdate,
             )
         }
-        AnimatedVisibility(visible = appIsUpdating) {
-            AppUpdateProgress(appUpdateState)
-        }
-        AnimatedVisibility(visible = resIsUpdating) {
-            ResourceUpdateProgress(resourceUpdateState)
-        }
     }
 }
 
@@ -284,11 +249,11 @@ private fun VersionStatCard(
     isError: Boolean = false,
     onClick: () -> Unit,
 ) {
-    ElevatedCard(
+    Card(
         onClick = onClick,
         enabled = !checking && !updating,
         modifier = modifier.height(88.dp),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceBright,
         ),
     ) {

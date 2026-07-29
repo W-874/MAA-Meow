@@ -1,6 +1,14 @@
 package com.aliothmoon.maameow.presentation.view.home
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,34 +31,40 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.datasource.ResourceDownloader
+import com.aliothmoon.maameow.data.model.update.UpdateCheckResult
+import com.aliothmoon.maameow.data.model.update.UpdateInfo
+import com.aliothmoon.maameow.data.model.update.UpdateProcessState
 import com.aliothmoon.maameow.data.permission.PermissionState
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
@@ -61,12 +75,12 @@ import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ShizukuReadinessGate
 import com.aliothmoon.maameow.presentation.components.ChangelogDialog
 import com.aliothmoon.maameow.presentation.components.ResourceInitDialog
-import com.aliothmoon.maameow.presentation.components.SectionHeader
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingActionButton
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateCard
+import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
@@ -78,7 +92,6 @@ import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.overlayControlModeDisplayName
 import com.aliothmoon.maameow.utils.i18n.resolve
 import com.aliothmoon.maameow.utils.i18n.runModeDisplayName
-import dev.jeziellago.compose.markdowntext.MarkdownText
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import timber.log.Timber
@@ -96,13 +109,8 @@ fun HomeView(
 ) {
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val (width, height) = Misc.getScreenSize(context)
-
-    val startupDialog by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
+    val (width, height) = remember(context) { Misc.getScreenSize(context) }
 
     // 启动时检查资源初始化
     LaunchedEffect(Unit) {
@@ -129,19 +137,17 @@ fun HomeView(
     }
 
     // 资源初始化完成后刷新版本号
-    LaunchedEffect(uiState.resourceInitState) {
-        if (uiState.resourceInitState is ResourceInitState.Ready) {
-            updateViewModel.refreshResourceVersion()
-            updateViewModel.checkPendingChangelog()
-            updateViewModel.checkUpdatesOnStartup()
+    LaunchedEffect(viewModel) {
+        viewModel.resourceInitState.collect { state ->
+            if (state is ResourceInitState.Ready) {
+                updateViewModel.refreshResourceVersion()
+                updateViewModel.checkPendingChangelog()
+                updateViewModel.checkUpdatesOnStartup()
+            }
         }
     }
 
-    // 资源初始化弹窗
-    ResourceInitDialog(
-        state = uiState.resourceInitState,
-        onRetry = { viewModel.onTryResourceInit() }
-    )
+    ResourceInitDialogHost(viewModel)
 
     // 更新公告弹窗
     val changelogDialog by updateViewModel.changelogDialog.collectAsStateWithLifecycle()
@@ -152,64 +158,7 @@ fun HomeView(
         )
     }
 
-    // 发现更新弹窗
-    startupDialog?.let { result ->
-        val appVersionLine = result.appUpdate?.let {
-            stringResource(R.string.dialog_update_app_version_line, it.version)
-        }.orEmpty()
-        val resourceMessage = result.resourceUpdate?.let {
-            val display = ResourceDownloader.formatVersionForDisplay(it.version)
-            stringResource(R.string.update_confirm_message_resource, display)
-        }.orEmpty()
-        val releaseNote = result.appUpdate?.releaseNote
-        AdaptiveTaskPromptDialog(
-            visible = true,
-            title = stringResource(R.string.dialog_update_found_title),
-            icon = Icons.Rounded.Info,
-            confirmText = stringResource(R.string.dialog_update_confirm),
-            confirmColor = Color(0xFF4CAF50),
-            dismissText = stringResource(R.string.dialog_update_dismiss),
-            landscapeAdaptive = true,
-            onConfirm = {
-                if (result.appUpdate != null) {
-                    updateViewModel.confirmAppDownload(result.appUpdate.version)
-                } else {
-                    updateViewModel.confirmResourceDownload()
-                }
-                updateViewModel.dismissStartupDialog()
-            },
-            onDismissRequest = { updateViewModel.dismissStartupDialog() },
-            content = {
-                Column {
-                    Text(
-                        text = appVersionLine + resourceMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!releaseNote.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MarkdownText(
-                            markdown = releaseNote,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-        )
-    }
-
-    if (uiState.showRunModeUnsupportedDialog) {
-        AdaptiveTaskPromptDialog(
-            visible = true,
-            title = stringResource(R.string.dialog_run_mode_unsupported_title),
-            message = uiState.runModeUnsupportedMessage.asString(),
-            confirmText = stringResource(R.string.common_i_got_it),
-            dismissText = null,
-            onConfirm = { viewModel.onDismissRunModeUnsupportedDialog() },
-            onDismissRequest = { viewModel.onDismissRunModeUnsupportedDialog() }
-        )
-    }
+    RunModeUnsupportedDialogHost(viewModel)
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -239,7 +188,8 @@ fun HomeView(
         ) { paddingValues ->
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .benchmarkTestTag("home_list"),
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
@@ -249,72 +199,57 @@ fun HomeView(
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item {
+                item(key = "screen_info", contentType = "home_screen_info") {
+                    val serviceUiState by viewModel.serviceUiState.collectAsStateWithLifecycle()
                     ScreenInfoCard(
                         screenWidth = width,
                         screenHeight = height,
-                        serviceStatusColor = uiState.serviceStatusColor,
-                        serviceStatusText = uiState.serviceStatusText,
-                        serviceStatusLoading = uiState.serviceStatusLoading
+                        serviceStatusColor = serviceUiState.serviceStatusColor,
+                        serviceStatusText = serviceUiState.serviceStatusText,
+                        serviceStatusLoading = serviceUiState.serviceStatusLoading
                     )
                 }
 
-                item {
-                    UpdateCard(viewModel = updateViewModel)
+                item(key = "home_updates", contentType = "home_updates") {
+                    HomeOperationStatusCardHost(viewModel, updateViewModel)
                 }
 
-                item {
-                    RuntimeInfoSection(
-                        runMode = uiState.runMode,
-                        onRunModeSelected = {
-                            viewModel.onRunModeChange(it == RunMode.BACKGROUND)
-                        },
-                        changeEnabled = viewModel.checkRunModeChangeEnabled(),
-                        permissionState = permissionState,
-                        isGranting = uiState.isGranting,
-                        onRequestShizukuAccess = { viewModel.onRequestShizukuAccess() },
-                        remoteServiceActive = uiState.remoteServiceActive,
-                        isLoading = uiState.isLoading,
-                        shizukuShortcutEnabled = shizukuShortcutEnabled,
-                        onOpenShizuku = { viewModel.onOpenShizuku() },
-                        onCloseRemoteService = { viewModel.onToggleRemoteService() },
-                    )
-                }
-
-                if (uiState.runMode == RunMode.FOREGROUND) {
-                    item {
-                        ForegroundModeSection(
-                            overlayControlMode = uiState.overlayControlMode,
-                            isShowControlOverlay = uiState.isShowControlOverlay,
-                            isLoading = uiState.isLoading,
-                            onChangeTo16x9Resolution = { viewModel.onChangeTo16x9Resolution(context) },
-                            onResetResolution = { viewModel.onResetResolution() },
-                            onControlOverlayModeChanged = { viewModel.onControlOverlayModeChanged(it) },
-                            onToggleOverlay = {
-                                if (uiState.isShowControlOverlay) {
-                                    Timber.d("关闭悬浮窗")
-                                    viewModel.onStopControlOverlay()
-                                } else {
-                                    Timber.d("开启悬浮窗模式")
-                                    viewModel.onStartControlOverlay()
-                                }
-                            }
+                item(key = "runtime_info", contentType = "home_runtime_info") {
+                    val serviceUiState by viewModel.serviceUiState.collectAsStateWithLifecycle()
+                    val interactionUiState by viewModel.interactionUiState.collectAsStateWithLifecycle()
+                    val permissionState by permissionManager.state.collectAsStateWithLifecycle()
+                    val shizukuShortcutEnabled by appSettingsManager.shizukuShortcutEnabled.collectAsStateWithLifecycle()
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        RuntimeInfoSection(
+                            runMode = interactionUiState.runMode,
+                            onRunModeSelected = {
+                                viewModel.onRunModeChange(it == RunMode.BACKGROUND)
+                            },
+                            changeEnabled = viewModel.checkRunModeChangeEnabled(),
+                            permissionState = permissionState,
+                            isGranting = interactionUiState.isGranting,
+                            onRequestShizukuAccess = { viewModel.onRequestShizukuAccess() },
+                            remoteServiceActive = serviceUiState.remoteServiceActive,
+                            isLoading = serviceUiState.isLoading,
+                            shizukuShortcutEnabled = shizukuShortcutEnabled,
+                            onOpenShizuku = { viewModel.onOpenShizuku() },
+                            onCloseRemoteService = { viewModel.onToggleRemoteService() },
                         )
+                        if (interactionUiState.runMode == RunMode.FOREGROUND) {
+                            ForegroundModeSectionHost(viewModel)
+                        }
                     }
                 }
 
-                item {
-                    Column {
-                        SectionHeader(stringResource(R.string.home_learn_more_title))
-                        SegmentedSettingsGroup {
-                            item {
-                                SettingRow(
-                                    title = stringResource(R.string.home_announcement_title),
-                                    description = stringResource(R.string.home_announcement_desc),
-                                    icon = null,
-                                    onClick = onViewAnnouncement,
-                                )
-                            }
+                item(key = "learn_more", contentType = "home_learn_more") {
+                    SegmentedSettingsGroup {
+                        item {
+                            SettingRow(
+                                title = stringResource(R.string.home_announcement_title),
+                                description = stringResource(R.string.home_announcement_desc),
+                                icon = null,
+                                onClick = onViewAnnouncement,
+                            )
                         }
                     }
                 }
@@ -323,6 +258,355 @@ fun HomeView(
         }
 
         ShizukuReadinessGate()
+    }
+}
+
+@Composable
+private fun RunModeUnsupportedDialogHost(viewModel: HomeViewModel) {
+    val state by viewModel.interactionUiState.collectAsStateWithLifecycle()
+    if (!state.showRunModeUnsupportedDialog) return
+    AdaptiveTaskPromptDialog(
+        visible = true,
+        title = stringResource(R.string.dialog_run_mode_unsupported_title),
+        message = state.runModeUnsupportedMessage.asString(),
+        confirmText = stringResource(R.string.common_i_got_it),
+        dismissText = null,
+        onConfirm = viewModel::onDismissRunModeUnsupportedDialog,
+        onDismissRequest = viewModel::onDismissRunModeUnsupportedDialog,
+    )
+}
+
+@Composable
+private fun ForegroundModeSectionHost(viewModel: HomeViewModel) {
+    val context = LocalContext.current
+    val serviceState by viewModel.serviceUiState.collectAsStateWithLifecycle()
+    val interactionState by viewModel.interactionUiState.collectAsStateWithLifecycle()
+    if (interactionState.runMode != RunMode.FOREGROUND) return
+    ForegroundModeSection(
+        overlayControlMode = interactionState.overlayControlMode,
+        isShowControlOverlay = interactionState.isShowControlOverlay,
+        isLoading = serviceState.isLoading,
+        onChangeTo16x9Resolution = { viewModel.onChangeTo16x9Resolution(context) },
+        onResetResolution = viewModel::onResetResolution,
+        onControlOverlayModeChanged = viewModel::onControlOverlayModeChanged,
+        onToggleOverlay = {
+            if (interactionState.isShowControlOverlay) {
+                Timber.d("关闭悬浮窗")
+                viewModel.onStopControlOverlay()
+            } else {
+                Timber.d("开启悬浮窗模式")
+                viewModel.onStartControlOverlay()
+            }
+        },
+    )
+}
+
+@Composable
+private fun ResourceInitDialogHost(viewModel: HomeViewModel) {
+    val state by viewModel.resourceInitState.collectAsStateWithLifecycle()
+    ResourceInitDialog(
+        state = state,
+        onRetry = viewModel::onTryResourceInit,
+    )
+}
+
+@Composable
+private fun HomeOperationStatusCardHost(
+    viewModel: HomeViewModel,
+    updateViewModel: UpdateViewModel,
+) {
+    val resourceInitState by viewModel.resourceInitState.collectAsStateWithLifecycle()
+    val startupUpdate by updateViewModel.startupUpdateDialog.collectAsStateWithLifecycle()
+    val appCheckResult by updateViewModel.appCheckResult.collectAsStateWithLifecycle()
+    val resourceCheckResult by updateViewModel.resourceCheckResult.collectAsStateWithLifecycle()
+    val appUpdateState by updateViewModel.appUpdateState.collectAsStateWithLifecycle()
+    val resourceUpdateState by updateViewModel.resourceUpdateState.collectAsStateWithLifecycle()
+
+    val extracting = resourceInitState as? ResourceInitState.Extracting
+    val checkedAppUpdate = (appCheckResult as? UpdateCheckResult.Available)?.info
+    val checkedResourceUpdate = (resourceCheckResult as? UpdateCheckResult.Available)?.info
+    val appUpdate = startupUpdate?.appUpdate ?: checkedAppUpdate
+    val resourceUpdate = startupUpdate?.resourceUpdate ?: checkedResourceUpdate
+
+    val statusKind = when {
+        extracting != null -> HomeOperationStatusKind.RESOURCE_INITIALIZATION
+        appUpdateState.isActiveUpdate() -> HomeOperationStatusKind.APP_UPDATE_PROGRESS
+        resourceUpdateState.isActiveUpdate() -> HomeOperationStatusKind.RESOURCE_UPDATE_PROGRESS
+        appUpdate != null || resourceUpdate != null -> HomeOperationStatusKind.UPDATE_AVAILABLE
+        else -> null
+    }
+    val confirmUpdate = {
+        if (appUpdate != null) {
+            updateViewModel.confirmAppDownload(appUpdate.version)
+        } else {
+            updateViewModel.confirmResourceDownload()
+        }
+        updateViewModel.dismissStartupDialog()
+        updateViewModel.dismissAppCheckResult()
+        updateViewModel.dismissResourceCheckResult()
+    }
+    val dismissUpdate = {
+        updateViewModel.dismissStartupDialog()
+        updateViewModel.dismissAppCheckResult()
+        updateViewModel.dismissResourceCheckResult()
+    }
+
+    Column(
+        modifier = if (resourceInitState is ResourceInitState.Ready) {
+            Modifier.benchmarkTestTag("resource_init_ready")
+        } else {
+            Modifier
+        },
+    ) {
+        AnimatedContent(
+            targetState = statusKind,
+            transitionSpec = {
+                (fadeIn(tween(220)) + expandVertically(expandFrom = Alignment.Top))
+                    .togetherWith(
+                        fadeOut(tween(160)) + shrinkVertically(shrinkTowards = Alignment.Top),
+                    )
+                    .using(SizeTransform(clip = false))
+            },
+            contentKey = { it },
+            label = "homeOperationStatus",
+        ) { kind ->
+            if (kind != null) {
+                Column {
+                    HomeOperationStatusContent(
+                        kind = kind,
+                        extracting = extracting,
+                        appUpdateState = appUpdateState,
+                        resourceUpdateState = resourceUpdateState,
+                        appUpdate = appUpdate,
+                        resourceUpdate = resourceUpdate,
+                        onConfirmUpdate = confirmUpdate,
+                        onDismissUpdate = dismissUpdate,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+        }
+        UpdateCard(viewModel = updateViewModel)
+    }
+}
+
+private enum class HomeOperationStatusKind {
+    RESOURCE_INITIALIZATION,
+    APP_UPDATE_PROGRESS,
+    RESOURCE_UPDATE_PROGRESS,
+    UPDATE_AVAILABLE,
+}
+
+@Composable
+private fun HomeOperationStatusContent(
+    kind: HomeOperationStatusKind,
+    extracting: ResourceInitState.Extracting?,
+    appUpdateState: UpdateProcessState,
+    resourceUpdateState: UpdateProcessState,
+    appUpdate: UpdateInfo?,
+    resourceUpdate: UpdateInfo?,
+    onConfirmUpdate: () -> Unit,
+    onDismissUpdate: () -> Unit,
+) {
+    when (kind) {
+        HomeOperationStatusKind.RESOURCE_INITIALIZATION -> {
+            if (extracting != null) {
+                ResourceInitializationStatusCard(extracting)
+            }
+        }
+        HomeOperationStatusKind.APP_UPDATE_PROGRESS -> {
+            UpdateProgressStatusCard(state = appUpdateState, isAppUpdate = true)
+        }
+        HomeOperationStatusKind.RESOURCE_UPDATE_PROGRESS -> {
+            UpdateProgressStatusCard(state = resourceUpdateState, isAppUpdate = false)
+        }
+        HomeOperationStatusKind.UPDATE_AVAILABLE -> {
+            UpdateAvailableStatusCard(
+                appUpdate = appUpdate,
+                resourceUpdate = resourceUpdate,
+                onConfirm = onConfirmUpdate,
+                onDismiss = onDismissUpdate,
+            )
+        }
+    }
+}
+
+private fun UpdateProcessState.isActiveUpdate(): Boolean =
+    this is UpdateProcessState.Downloading ||
+        this is UpdateProcessState.Extracting ||
+        this is UpdateProcessState.Installing
+
+@Composable
+private fun ResourceInitializationStatusCard(extracting: ResourceInitState.Extracting) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .benchmarkTestTag("resource_init_card"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.resource_init_in_progress_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            LinearProgressIndicator(
+                progress = { extracting.progress / 100f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "${extracting.extractedCount} / ${extracting.totalCount} (${extracting.progress}%)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdateAvailableStatusCard(
+    appUpdate: UpdateInfo?,
+    resourceUpdate: UpdateInfo?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .benchmarkTestTag("home_update_status_card"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+                Text(
+                    text = stringResource(R.string.dialog_update_found_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+            appUpdate?.let {
+                Text(
+                    text = stringResource(R.string.dialog_update_app_version_line, it.version),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                it.releaseNote?.takeIf(String::isNotBlank)?.let { releaseNote ->
+                    Text(
+                        text = releaseNote,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            resourceUpdate?.let {
+                Text(
+                    text = stringResource(
+                        R.string.dialog_update_resource_version_line,
+                        ResourceDownloader.formatVersionForDisplay(it.version),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.dialog_update_dismiss))
+                }
+                Button(onClick = onConfirm) {
+                    Text(stringResource(R.string.dialog_update_confirm))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateProgressStatusCard(
+    state: UpdateProcessState,
+    isAppUpdate: Boolean,
+) {
+    val progress = when (state) {
+        is UpdateProcessState.Downloading -> state.progress
+        is UpdateProcessState.Extracting -> state.progress
+        else -> null
+    }
+    val title = when (state) {
+        is UpdateProcessState.Downloading -> stringResource(
+            if (isAppUpdate) R.string.update_progress_app_downloading
+            else R.string.update_progress_resource_downloading,
+            state.progress.toString(),
+        )
+        is UpdateProcessState.Extracting -> stringResource(
+            R.string.update_progress_resource_extracting,
+            state.progress.toString(),
+        )
+        is UpdateProcessState.Installing -> stringResource(R.string.update_progress_app_installing)
+        else -> return
+    }
+    val detail = when (state) {
+        is UpdateProcessState.Downloading -> state.speed
+        is UpdateProcessState.Extracting -> "${state.current}/${state.total}"
+        else -> null
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .benchmarkTestTag("home_update_status_card"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = title, style = MaterialTheme.typography.titleSmall)
+                detail?.let {
+                    Text(text = it, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            if (progress != null) {
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
     }
 }
 
@@ -347,9 +631,9 @@ private fun ScreenInfoCard(
         StatusColorType.ERROR -> MaterialTheme.colorScheme.onErrorContainer
         StatusColorType.NEUTRAL -> MaterialTheme.colorScheme.onSurface
     }
-    ElevatedCard(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor,
         ),
@@ -357,7 +641,7 @@ private fun ScreenInfoCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 26.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (serviceStatusLoading) {
@@ -416,9 +700,7 @@ private fun RuntimeInfoSection(
     onCloseRemoteService: () -> Unit,
 ) {
     val context = LocalContext.current
-    Column {
-        SectionHeader(stringResource(R.string.home_runtime_info_section))
-        SegmentedSettingsGroup {
+    SegmentedSettingsGroup {
             item {
                 SettingDropdown(
                     title = stringResource(R.string.home_run_mode_title),
@@ -493,7 +775,6 @@ private fun RuntimeInfoSection(
                     contentColor = MaterialTheme.colorScheme.onError,
                 )
             }
-        }
     }
 }
 
@@ -511,9 +792,9 @@ private fun ForegroundModeSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ElevatedCard(
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
+            colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceBright
             ),
         ) {
@@ -569,9 +850,9 @@ private fun ForegroundModeSection(
                 }
             }
         }
-        ElevatedCard(
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
+            colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceBright
             ),
         ) {

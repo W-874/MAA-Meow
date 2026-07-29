@@ -77,6 +77,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +95,7 @@ import com.aliothmoon.maameow.constant.DefaultDisplayConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.AppWatchdog
+import com.aliothmoon.maameow.domain.service.ExternalNotificationService
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
 import com.aliothmoon.maameow.domain.service.UnifiedStateDispatcher
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
@@ -115,17 +117,20 @@ import com.aliothmoon.maameow.presentation.view.panel.rememberSafToolboxFileExpo
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
 import com.aliothmoon.maameow.theme.MaaAnimations
 import com.aliothmoon.maameow.utils.i18n.asString
+import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import timber.log.Timber
 
 @Composable
 fun BackgroundTaskView(
     navController: NavController,
-    viewModel: BackgroundTaskViewModel,
+    viewModel: BackgroundTaskViewModel = koinViewModel(),
     copilotViewModel: CopilotViewModel = koinInject(),
     toolboxViewModel: ToolboxViewModel = koinInject(),
     compositionService: MaaCompositionService = koinInject(),
@@ -134,6 +139,8 @@ fun BackgroundTaskView(
     appWatchdog: AppWatchdog = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
     permissionManager: PermissionManager = koinInject(),
+    scheduledLaunchInbox: ScheduledLaunchInbox = koinInject(),
+    externalNotificationService: ExternalNotificationService = koinInject(),
 ) {
 
     val coroutineScope = rememberCoroutineScope()
@@ -141,7 +148,6 @@ fun BackgroundTaskView(
     val maaState by compositionService.state.collectAsStateWithLifecycle()
     val runMode by appSettingsManager.runMode.collectAsStateWithLifecycle()
     val permissionState by permissionManager.state.collectAsStateWithLifecycle()
-    val markers by viewModel.markers.collectAsStateWithLifecycle()
     val displayResolution by compositionService.displayResolution.collectAsStateWithLifecycle()
     val displayAspectRatio = if (displayResolution.width > 0 && displayResolution.height > 0) {
         displayResolution.width.toFloat() / displayResolution.height.toFloat()
@@ -206,10 +212,31 @@ fun BackgroundTaskView(
 
 
     val pendingExecution by viewModel.coordinator.pendingExecution.collectAsStateWithLifecycle()
+    val incomingScheduledExecution by scheduledLaunchInbox.pending.collectAsStateWithLifecycle()
+
+    LaunchedEffect(incomingScheduledExecution?.requestId) {
+        incomingScheduledExecution?.let { request ->
+            scheduledLaunchInbox.consume(request.requestId)?.let(viewModel::onScheduledLaunch)
+        }
+    }
 
     LaunchedEffect(pendingExecution?.requestId) {
         pendingExecution?.let { request ->
             viewModel.onScheduledExecutionPageReady(request.requestId)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        externalNotificationService.feedbackMessages.collect { message ->
+            Toast.makeText(context, message.resolve(context), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            if (effect is com.aliothmoon.maameow.presentation.state.UiEffect.Toast) {
+                Toast.makeText(context, effect.message.resolve(context), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -295,18 +322,14 @@ fun BackgroundTaskView(
                             }
                         }, modifier = Modifier.fillMaxSize()
                     )
-                    if (markers.isNotEmpty()) TouchPreviewOverlay(
-                        markers = markers,
-                        displayResolution = displayResolution,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    TouchPreviewLayer(viewModel, displayResolution)
                 }
             }
         }
     }
 
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().benchmarkTestTag("background_page")) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -705,6 +728,21 @@ fun BackgroundTaskView(
             )
         }
 
+    }
+}
+
+@Composable
+private fun TouchPreviewLayer(
+    viewModel: BackgroundTaskViewModel,
+    displayResolution: DefaultDisplayConfig.Resolution,
+) {
+    val markers by viewModel.markers.collectAsStateWithLifecycle()
+    if (markers.isNotEmpty()) {
+        TouchPreviewOverlay(
+            markers = markers,
+            displayResolution = displayResolution,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 

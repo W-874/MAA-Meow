@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.alibaba.fastjson2.JSON
 import com.aliothmoon.maameow.BuildConfig
+import com.aliothmoon.maameow.AppInitializationCoordinator
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.MaaFiles.VERSION_FILE
 import com.aliothmoon.maameow.data.config.MaaPathConfig
@@ -38,19 +39,28 @@ import okio.buffer
 import okio.source
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(FlowPreview::class)
 class UpdateViewModel(
     private val appContext: Context,
-    private val updateService: UpdateService,
+    private val updateServiceProvider: Lazy<UpdateService>,
     private val appSettingsManager: AppSettingsManager,
-    private val maaResourceLoader: MaaResourceLoader,
+    private val maaResourceLoader: Lazy<MaaResourceLoader>,
     private val pathConfig: MaaPathConfig,
+    private val initializationCoordinator: AppInitializationCoordinator,
 ) : ViewModel() {
+    private val isPerformanceBuild = BuildConfig.BENCHMARK_BUILD ||
+        BuildConfig.BUILD_TYPE.contains("benchmark", ignoreCase = true) ||
+        BuildConfig.BUILD_TYPE.contains("nonMinified", ignoreCase = true)
 
     // ==================== 资源更新 ====================
 
-    val resourceUpdateState = updateService.resourceProcessState
+    private val _resourceUpdateState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
+    val resourceUpdateState: StateFlow<UpdateProcessState> = _resourceUpdateState.asStateFlow()
+    private val _appUpdateState = MutableStateFlow<UpdateProcessState>(UpdateProcessState.Idle)
+    val appUpdateState: StateFlow<UpdateProcessState> = _appUpdateState.asStateFlow()
+    private val updateStateObservationStarted = AtomicBoolean(false)
 
     private val _currentResourceVersion = MutableStateFlow("")
     val currentResourceVersion: StateFlow<String> = _currentResourceVersion.asStateFlow()
@@ -87,7 +97,7 @@ class UpdateViewModel(
             .filter { it.isNotBlank() }
             .debounce(1000L)
             .onEach {
-                updateService.checkAppUpdate(channel = updateChannel.value)
+                getUpdateService().checkAppUpdate(channel = updateChannel.value)
             }
             .launchIn(viewModelScope)
     }
@@ -133,7 +143,7 @@ class UpdateViewModel(
             _resourceChecking.value = true
             val currentVersion = loadResourceVersion()
             Timber.d("当前资源版本: $currentVersion, 下载源: ${updateSource.value}")
-            _resourceCheckResult.value = updateService.checkResourceUpdate(currentVersion)
+            _resourceCheckResult.value = getUpdateService().checkResourceUpdate(currentVersion)
             _resourceChecking.value = false
         }
     }
@@ -147,14 +157,14 @@ class UpdateViewModel(
             val file = File(pathConfig.resourceDir)
 
             val currentVersion = loadResourceVersion()
-            val result = updateService.downloadResource(
+            val result = getUpdateService().downloadResource(
                 source = updateSource.value,
                 currentVersion = currentVersion,
                 target = file
             )
             if (result.isSuccess) {
                 refreshResourceVersion()
-                maaResourceLoader.load()
+                maaResourceLoader.value.load()
             }
         }
     }
@@ -170,18 +180,20 @@ class UpdateViewModel(
     fun checkUpdatesOnStartup() {
         if (hasCheckedOnStartup) return
         hasCheckedOnStartup = true
+        if (isPerformanceBuild) return
 
         viewModelScope.launch {
+            initializationCoordinator.awaitUpdateWindow()
             if (!appSettingsManager.autoCheckUpdate.value) return@launch
 
             val currentVersion = loadResourceVersion()
 
             // 并行检查
             val appDeferred = async {
-                updateService.checkAppUpdate(channel = updateChannel.value)
+                getUpdateService().checkAppUpdate(channel = updateChannel.value)
             }
             val resDeferred = async {
-                updateService.checkResourceUpdate(currentVersion)
+                getUpdateService().checkResourceUpdate(currentVersion)
             }
 
             val appResult = appDeferred.await()
@@ -213,7 +225,7 @@ class UpdateViewModel(
             when {
                 // 两者同时存在 → 仅下载 App,资源等下次启动
                 appAvailable != null -> {
-                    val result = updateService.downloadApp(
+                    val result = getUpdateService().downloadApp(
                         source = updateSource.value,
                         version = appAvailable.version,
                         channel = updateChannel.value
@@ -226,14 +238,14 @@ class UpdateViewModel(
                 resAvailable != null -> {
                     val file = File(pathConfig.resourceDir)
                     val currentVersion = loadResourceVersion()
-                    val result = updateService.downloadResource(
+                    val result = getUpdateService().downloadResource(
                         source = updateSource.value,
                         currentVersion = currentVersion,
                         target = file
                     )
                     if (result.isSuccess) {
                         refreshResourceVersion()
-                        maaResourceLoader.load()
+                        maaResourceLoader.value.load()
                     } else {
                         _toastMessage.tryEmit(appContext.getString(R.string.update_toast_auto_download_resource_failed))
                     }
@@ -247,12 +259,10 @@ class UpdateViewModel(
     }
 
     fun reset() {
-        updateService.resetResourceProcess()
+        getUpdateService().resetResourceProcess()
     }
 
     // ==================== App 更新 ====================
-
-    val appUpdateState = updateService.appProcessState
 
     val currentAppVersion: String = BuildConfig.VERSION_NAME
 
@@ -264,7 +274,7 @@ class UpdateViewModel(
         viewModelScope.launch {
             _appChecking.value = true
             Timber.i("检查 App 更新 (MirrorChyan)")
-            val result = updateService.checkAppUpdate(channel = updateChannel.value)
+            val result = getUpdateService().checkAppUpdate(channel = updateChannel.value)
             saveAppChangelog((result as? UpdateCheckResult.Available)?.info)
             _appCheckResult.value = result
             _appChecking.value = false
@@ -278,7 +288,7 @@ class UpdateViewModel(
     fun confirmAppDownload(version: String) {
         Timber.i("确认下载 App 更新: version=$version")
         viewModelScope.launch {
-            updateService.downloadApp(
+            getUpdateService().downloadApp(
                 source = updateSource.value,
                 version = version,
                 channel = updateChannel.value
@@ -287,7 +297,22 @@ class UpdateViewModel(
     }
 
     fun resetAppUpdate() {
-        updateService.resetAppProcess()
+        getUpdateService().resetAppProcess()
+    }
+
+    private fun getUpdateService(): UpdateService {
+        val service = updateServiceProvider.value
+        if (updateStateObservationStarted.compareAndSet(false, true)) {
+            _resourceUpdateState.value = service.resourceProcessState.value
+            _appUpdateState.value = service.appProcessState.value
+            service.resourceProcessState
+                .onEach { _resourceUpdateState.value = it }
+                .launchIn(viewModelScope)
+            service.appProcessState
+                .onEach { _appUpdateState.value = it }
+                .launchIn(viewModelScope)
+        }
+        return service
     }
 
     // ==================== 更新公告 ====================
@@ -296,6 +321,7 @@ class UpdateViewModel(
     val changelogDialog: StateFlow<String?> = _changelogDialog.asStateFlow()
 
     fun checkPendingChangelog() {
+        if (isPerformanceBuild) return
         val version = appSettingsManager.pendingChangelogVersion.value
         val content = appSettingsManager.pendingChangelogContent.value
         val isNewVersion = version == BuildConfig.VERSION_NAME

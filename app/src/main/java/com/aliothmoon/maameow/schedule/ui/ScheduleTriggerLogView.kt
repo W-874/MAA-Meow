@@ -139,7 +139,7 @@ fun ScheduleTriggerLogView(
                     contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
                     verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
                 ) {
-                    items(summaries, key = { it.fileName }) { summary ->
+                    items(summaries, key = { it.fileName }, contentType = { "summary" }) { summary ->
                         SummaryCard(
                             summary = summary,
                             onClick = { viewModel.loadDetail(summary.fileName) },
@@ -300,7 +300,7 @@ private fun DetailView(
             contentPadding = PaddingValues(horizontal = MaaDesignTokens.Spacing.listHorizontal, vertical = MaaDesignTokens.Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
         ) {
-            itemsIndexed(entries, key = { index, _ -> index }) { _, entry ->
+            itemsIndexed(entries, key = { index, _ -> index }, contentType = { _, entry -> entry::class }) { _, entry ->
                 when (entry) {
                     is TriggerLogEntry.Header -> {
                         Text(

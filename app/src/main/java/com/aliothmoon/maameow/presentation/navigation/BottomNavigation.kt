@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.constant.Routes
 
@@ -64,6 +65,7 @@ fun AppBottomNavigation(
             val label = stringResource(tab.labelRes)
             val selected = currentRoute == tab.route
             NavigationBarItem(
+                modifier = Modifier.benchmarkTestTag("nav_${tab.route}"),
                 selected = selected,
                 onClick = { onTabSelected(tab) },
                 icon = {

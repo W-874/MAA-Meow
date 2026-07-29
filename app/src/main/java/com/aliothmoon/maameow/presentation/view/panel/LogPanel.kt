@@ -139,7 +139,8 @@ fun LogPanel(
             ) {
                 items(
                     items = logs,
-                    key = { it.id }
+                    key = { it.id },
+                    contentType = { "log" },
                 ) { logItem ->
                     LogLine(
                         logItem = logItem,

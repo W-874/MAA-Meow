@@ -24,6 +24,7 @@ import com.aliothmoon.maameow.domain.usecase.TaskStartMode
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.maa.task.visibleTaskCount
 import com.aliothmoon.maameow.presentation.state.BackgroundTaskState
+import com.aliothmoon.maameow.presentation.state.BackgroundChromeState
 import com.aliothmoon.maameow.presentation.state.PreviewTouchMarker
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
@@ -33,6 +34,7 @@ import com.aliothmoon.maameow.schedule.data.ScheduleStrategyRepository
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.schedule.service.ScheduleTriggerLogger
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchCoordinator
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.resolve
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,8 @@ class BackgroundTaskViewModel(
     private val gameMuteCoordinator: GameMuteCoordinator,
     scheduleRepository: ScheduleStrategyRepository,
     triggerLogger: ScheduleTriggerLogger,
+    scheduledLaunchUiState: ScheduledLaunchUiState,
+    private val backgroundChromeState: BackgroundChromeState,
     private val application: Context,
 ) : ViewModel() {
 
@@ -73,6 +77,7 @@ class BackgroundTaskViewModel(
         appSettingsManager = appSettingsManager,
         chainState = chainState,
         triggerLogger = triggerLogger,
+        uiState = scheduledLaunchUiState,
     )
 
     private val _state = MutableStateFlow(BackgroundTaskState())
@@ -426,7 +431,11 @@ class BackgroundTaskViewModel(
     // ==================== UI State ====================
 
     fun onToggleFullscreenMonitor() {
-        _state.update { it.copy(isFullscreenMonitor = !it.isFullscreenMonitor) }
+        _state.update {
+            it.copy(isFullscreenMonitor = !it.isFullscreenMonitor).also { updated ->
+                backgroundChromeState.setFullscreen(updated.isFullscreenMonitor)
+            }
+        }
     }
 
     fun onTabChange(tab: PanelTab) {
@@ -633,6 +642,7 @@ class BackgroundTaskViewModel(
     override fun onCleared() {
         coordinator.cancel()
         touchPreviewController.onClear()
+        backgroundChromeState.setFullscreen(false)
         super.onCleared()
     }
 }

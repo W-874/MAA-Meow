@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +59,7 @@ import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import org.koin.compose.koinInject
 
 @Composable
@@ -263,8 +265,9 @@ private fun HintRow(text: String) {
 
 @Composable
 private fun rememberItemIcon(itemId: String, loader: ItemIconLoader): State<ImageBitmap?> {
+    val targetSizePx = with(LocalDensity.current) { 44.dp.toPx().roundToInt() }
     return produceState(initialValue = null, itemId) {
-        value = loader.load(itemId)
+        value = loader.load(itemId, targetSizePx)
     }
 }
 

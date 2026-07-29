@@ -174,7 +174,8 @@ private fun LogFileListView(
                 ) {
                     items(
                         items = logFiles,
-                        key = { it.fileName }
+                        key = { it.fileName },
+                        contentType = { "log_file" },
                     ) { logFile ->
                         LogFileItem(
                             logFile = logFile,
@@ -269,7 +270,8 @@ private fun LogDetailView(
                         is LogEntry.Log -> "log_${index}"
                         is LogEntry.Footer -> "footer_${index}_${entry.endTime}"
                     }
-                }
+                },
+                contentType = { _, entry -> entry::class }
             ) { _, entry ->
                 when (entry) {
                     is LogEntry.Header -> {

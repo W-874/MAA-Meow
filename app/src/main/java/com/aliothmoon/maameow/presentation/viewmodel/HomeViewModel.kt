@@ -10,17 +10,20 @@ import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.domain.models.OverlayControlMode
 import com.aliothmoon.maameow.domain.models.RemoteBackend
 import com.aliothmoon.maameow.domain.models.RunMode
-import com.aliothmoon.maameow.domain.service.MaaCompositionService
-import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.service.ResourceInitService
-import com.aliothmoon.maameow.domain.service.update.UpdateService
+import com.aliothmoon.maameow.domain.service.MaaResourceLoader
 import com.aliothmoon.maameow.domain.state.MaaExecutionState
+import com.aliothmoon.maameow.domain.state.MaaExecutionStateStore
+import com.aliothmoon.maameow.domain.state.MaaResourceLoadStateStore
+import com.aliothmoon.maameow.domain.state.OverlayStateStore
+import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager
 import com.aliothmoon.maameow.manager.RemoteServiceManager.useRemoteService
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.overlay.OverlayController
-import com.aliothmoon.maameow.presentation.state.HomeUiState
+import com.aliothmoon.maameow.presentation.state.HomeInteractionUiState
+import com.aliothmoon.maameow.presentation.state.HomeServiceUiState
 import com.aliothmoon.maameow.presentation.state.StatusColorType
 import com.aliothmoon.maameow.presentation.state.UiEffect
 import com.aliothmoon.maameow.utils.Misc
@@ -30,8 +33,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,47 +45,42 @@ import kotlin.math.abs
 class HomeViewModel(
     private val application: Context,
     private val appSettingsManager: AppSettingsManager,
-    private val overlayController: OverlayController,
-    private val updateService: UpdateService,
+    private val overlayController: Lazy<OverlayController>,
     private val permissionManager: PermissionManager,
-    private val resourceLoader: MaaResourceLoader,
-    private val compositionService: MaaCompositionService,
+    private val resourceLoadStateStore: MaaResourceLoadStateStore,
+    private val executionStateStore: MaaExecutionStateStore,
     private val resourceInitService: ResourceInitService,
+    private val overlayStateStore: OverlayStateStore,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        HomeUiState(serviceStatusText = uiTextOf(R.string.home_status_disconnected))
+    private val _serviceUiState = MutableStateFlow(
+        HomeServiceUiState(serviceStatusText = uiTextOf(R.string.home_status_disconnected))
     )
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    val serviceUiState: StateFlow<HomeServiceUiState> = _serviceUiState
+
+    val resourceInitState: StateFlow<ResourceInitState> = resourceInitService.state
+
+    private val _interactionUiState = MutableStateFlow(HomeInteractionUiState())
+    val interactionUiState: StateFlow<HomeInteractionUiState> = _interactionUiState
 
     private val _effects = Channel<UiEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
     init {
-        observeResourceUpdateState()
         observeServiceStatus()
-        observeResourceInitState()
         observeRunMode()
         observeFloatWindowMode()
         observeIsGranting()
         observeOverlayActive()
     }
 
-    private fun observeResourceUpdateState() {
-        viewModelScope.launch {
-            updateService.resourceProcessState.collect { state ->
-                Timber.i("ResourceUpdateState collect $state")
-                _uiState.update { it.copy(resourceUpdateState = state) }
-            }
-        }
-    }
-
     private fun observeServiceStatus() {
         viewModelScope.launch {
             combine(
-                RemoteServiceManager.state, resourceLoader.state, compositionService.state
+                RemoteServiceManager.state,
+                resourceLoadStateStore.state,
+                executionStateStore.state,
             ) { serviceState, resourceState, executionState ->
-                Timber.i("ServiceState collect $serviceState $resourceState $executionState")
                 val remoteServiceActive =
                     serviceState is RemoteServiceManager.ServiceState.Connected || serviceState is RemoteServiceManager.ServiceState.Connecting
                 val status = when {
@@ -135,9 +133,11 @@ class HomeViewModel(
                     )
                 }
                 Pair(status, remoteServiceActive)
-            }.collect { (status, remoteServiceActive) ->
+            }
+                .distinctUntilChanged()
+                .collect { (status, remoteServiceActive) ->
                 val (text, color, loading) = status
-                _uiState.update {
+                _serviceUiState.update {
                     it.copy(
                         serviceStatusText = text,
                         serviceStatusColor = color,
@@ -152,7 +152,7 @@ class HomeViewModel(
     private fun observeFloatWindowMode() {
         viewModelScope.launch {
             appSettingsManager.overlayControlMode.collect { mode ->
-                _uiState.update { it.copy(overlayControlMode = mode) }
+                _interactionUiState.update { it.copy(overlayControlMode = mode) }
             }
         }
     }
@@ -160,23 +160,15 @@ class HomeViewModel(
     private fun observeIsGranting() {
         viewModelScope.launch {
             permissionManager.isGranting.collect { granting ->
-                _uiState.update { it.copy(isGranting = granting) }
+                _interactionUiState.update { it.copy(isGranting = granting) }
             }
         }
     }
 
     private fun observeOverlayActive() {
         viewModelScope.launch {
-            overlayController.isActive.collect { active ->
-                _uiState.update { it.copy(isShowControlOverlay = active) }
-            }
-        }
-    }
-
-    private fun observeResourceInitState() {
-        viewModelScope.launch {
-            resourceInitService.state.collect { state ->
-                _uiState.update { it.copy(resourceInitState = state) }
+            overlayStateStore.active.collect { active ->
+                _interactionUiState.update { it.copy(isShowControlOverlay = active) }
             }
         }
     }
@@ -184,7 +176,7 @@ class HomeViewModel(
     private fun observeRunMode() {
         viewModelScope.launch {
             appSettingsManager.runMode.collect { mode ->
-                _uiState.update { it.copy(runMode = mode) }
+                _interactionUiState.update { it.copy(runMode = mode) }
             }
         }
     }
@@ -282,8 +274,8 @@ class HomeViewModel(
     fun onControlOverlayModeChanged(mode: OverlayControlMode) {
         viewModelScope.launch {
             appSettingsManager.setFloatWindowMode(mode)
-            if (_uiState.value.isShowControlOverlay) {
-                overlayController.applyMode(mode)
+            if (_interactionUiState.value.isShowControlOverlay) {
+                overlayController.value.applyMode(mode)
             }
         }
     }
@@ -291,7 +283,7 @@ class HomeViewModel(
     fun onStartControlOverlay() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
+                _serviceUiState.update { it.copy(isLoading = true) }
 
                 // 刷新权限状态
                 permissionManager.refresh()
@@ -300,7 +292,7 @@ class HomeViewModel(
                 // 检查必要权限
                 val currentMode = appSettingsManager.overlayControlMode.value
                 if (!state.remoteAccessGranted) {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _serviceUiState.update { it.copy(isLoading = false) }
                     _effects.send(
                         UiEffect.toast(
                             R.string.home_toast_grant_permission,
@@ -319,7 +311,7 @@ class HomeViewModel(
                 }
 
                 if (missingPermissions.isNotEmpty()) {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _serviceUiState.update { it.copy(isLoading = false) }
                     val separator =
                         application.getString(R.string.home_toast_missing_permissions_separator)
                     _effects.send(
@@ -333,15 +325,15 @@ class HomeViewModel(
 
                 // 检查分辨率是否为 16:9
                 if (!checkResolution()) {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _serviceUiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
 
-                overlayController.show(currentMode)
-                _uiState.update { it.copy(isLoading = false) }
+                overlayController.value.show(currentMode)
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "Error starting floating window")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_start_overlay_failed, e.message.orEmpty()
@@ -354,13 +346,13 @@ class HomeViewModel(
     fun onStopControlOverlay() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
-                overlayController.hideAll()
+                _serviceUiState.update { it.copy(isLoading = true) }
+                overlayController.value.hideAll()
                 Timber.i("onStopFloatingWindow: Floating window hidden")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "Error stopping floating window")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_stop_overlay_failed, e.message.orEmpty()
@@ -384,7 +376,7 @@ class HomeViewModel(
     }
 
     fun onToggleRemoteService() {
-        if (_uiState.value.remoteServiceActive) {
+        if (_serviceUiState.value.remoteServiceActive) {
             onCloseRemoteService()
         } else {
             onOpenRemoteService()
@@ -394,13 +386,13 @@ class HomeViewModel(
     private fun onOpenRemoteService() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
+                _serviceUiState.update { it.copy(isLoading = true) }
 
                 permissionManager.refresh()
                 val state = permissionManager.permissions
                 val backend = state.startupBackend
                 if (!state.isStartupBackendAvailable(backend)) {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _serviceUiState.update { it.copy(isLoading = false) }
                     _effects.send(
                         UiEffect.toast(
                             R.string.home_toast_backend_unavailable, backend.display
@@ -412,7 +404,7 @@ class HomeViewModel(
                 if (!state.remoteAccessGranted) {
                     val granted = permissionManager.requestRemoteAccess()
                     if (!granted) {
-                        _uiState.update { it.copy(isLoading = false) }
+                        _serviceUiState.update { it.copy(isLoading = false) }
                         _effects.send(
                             UiEffect.toast(
                                 R.string.home_toast_backend_auth_failed, backend.display
@@ -425,10 +417,10 @@ class HomeViewModel(
                 RemoteServiceManager.bind()
 
                 Timber.i("onOpenRemoteService: Service binding started")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "Error opening remote service")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_open_service_failed, e.message.orEmpty()
@@ -441,17 +433,17 @@ class HomeViewModel(
     private fun onCloseRemoteService() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true) }
+                _serviceUiState.update { it.copy(isLoading = true) }
 
                 // 先关闭依赖远程服务的入口，避免继续操作已断开的 Binder。
-                overlayController.hideAll()
+                overlayController.value.hideAll()
                 RemoteServiceManager.unbind()
 
                 Timber.i("onCloseRemoteService: Service unbound")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "Error closing remote service")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_close_service_failed, e.message.orEmpty()
@@ -477,7 +469,7 @@ class HomeViewModel(
                         return@launch
                     }
                 }
-                _uiState.update { it.copy(isLoading = true) }
+                _serviceUiState.update { it.copy(isLoading = true) }
                 val (width, height) = Misc.getPhysicalSize(ctx)
 
                 val (targetWidth, targetHeight) = Misc.calculate16x9Resolution(
@@ -490,10 +482,10 @@ class HomeViewModel(
                 }
                 Timber.i("onChangeTo16x9Resolution: setForcedDisplaySize result: %s", ret)
 
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "onChangeTo16x9Resolution: Error changing resolution")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_change_resolution_failed, e.message.orEmpty()
@@ -520,15 +512,15 @@ class HomeViewModel(
                         return@launch
                     }
                 }
-                _uiState.update { it.copy(isLoading = true) }
+                _serviceUiState.update { it.copy(isLoading = true) }
                 val ret = withContext(Dispatchers.IO) {
                     useRemoteService { it.clearForcedDisplaySize() }
                 }
                 Timber.i("onResetResolution: %s", ret)
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 Timber.e(e, "Error resetting resolution")
-                _uiState.update { it.copy(isLoading = false) }
+                _serviceUiState.update { it.copy(isLoading = false) }
                 _effects.send(
                     UiEffect.toast(
                         R.string.home_toast_reset_resolution_failed, e.message.orEmpty()
@@ -564,7 +556,7 @@ class HomeViewModel(
     fun onRunModeChange(isBackground: Boolean) {
         viewModelScope.launch {
             if (isBackground && Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                _uiState.update {
+                _interactionUiState.update {
                     it.copy(
                         showRunModeUnsupportedDialog = true,
                         runModeUnsupportedMessage = uiTextOf(R.string.dialog_run_mode_unsupported_message_pre_q)
@@ -577,6 +569,9 @@ class HomeViewModel(
                 if (isBackground) RunMode.BACKGROUND
                 else RunMode.FOREGROUND
             )
+            if (!isBackground) {
+                overlayController.value.setup()
+            }
             val mode = if (isBackground) {
                 DisplayMode.BACKGROUND
             } else {
@@ -591,11 +586,11 @@ class HomeViewModel(
     }
 
     fun onDismissRunModeUnsupportedDialog() {
-        _uiState.update { it.copy(showRunModeUnsupportedDialog = false) }
+        _interactionUiState.update { it.copy(showRunModeUnsupportedDialog = false) }
     }
 
     fun checkRunModeChangeEnabled(): Boolean {
-        val value = compositionService.state.value
+        val value = executionStateStore.state.value
         return !(value == MaaExecutionState.RUNNING || value == MaaExecutionState.STARTING || value == MaaExecutionState.STOPPING)
     }
 

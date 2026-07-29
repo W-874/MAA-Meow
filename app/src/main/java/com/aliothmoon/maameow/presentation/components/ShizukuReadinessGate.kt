@@ -8,6 +8,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aliothmoon.maameow.BuildConfig
 import com.aliothmoon.maameow.data.preferences.AppSettingsManager
 import com.aliothmoon.maameow.manager.PermissionManager
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
@@ -22,6 +23,11 @@ fun ShizukuReadinessGate(
     appSettingsManager: AppSettingsManager = koinInject(),
     readinessProvider: ShizukuReadinessProvider = koinInject(),
 ) {
+    if (BuildConfig.BENCHMARK_BUILD ||
+        BuildConfig.BUILD_TYPE.contains("benchmark", ignoreCase = true) ||
+        BuildConfig.BUILD_TYPE.contains("nonMinified", ignoreCase = true)
+    ) return
+
     val readiness by readinessProvider.state.collectAsStateWithLifecycle()
     val launchPackage by appSettingsManager.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val context = LocalContext.current

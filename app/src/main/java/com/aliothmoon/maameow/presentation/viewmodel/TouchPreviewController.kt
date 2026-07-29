@@ -1,6 +1,9 @@
 package com.aliothmoon.maameow.presentation.viewmodel
 
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.view.Choreographer
 import android.view.MotionEvent
 import com.aliothmoon.maameow.ITouchEventCallback
 import com.aliothmoon.maameow.manager.RemoteServiceManager
@@ -14,48 +17,74 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
+
+fun interface TouchFrameScheduler {
+    fun schedule(callback: () -> Unit)
+}
+
+private object ChoreographerTouchFrameScheduler : TouchFrameScheduler {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    override fun schedule(callback: () -> Unit) {
+        val post = {
+            Choreographer.getInstance().postFrameCallback { callback() }
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) post() else mainHandler.post(post)
+    }
+}
 
 class TouchPreviewController(
     private val scope: CoroutineScope,
+    private val frameScheduler: TouchFrameScheduler = ChoreographerTouchFrameScheduler,
+    private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
 ) {
     private val _markers = MutableStateFlow<List<PreviewTouchMarker>>(emptyList())
     val markers: StateFlow<List<PreviewTouchMarker>> = _markers.asStateFlow()
 
-    private var markerId = AtomicLong(0L)
-    private var job: Job? = null
+    private val markerId = AtomicLong(0L)
+    private var cleanupJob: Job? = null
+    private val pendingMove = AtomicReference<PreviewTouchMarker?>()
+    private val frameScheduled = AtomicBoolean(false)
+    private val eventLock = Any()
 
     val callback = lazy {
         object : ITouchEventCallback.Stub() {
             override fun onCallback(x: Int, y: Int, type: Int) {
-                if (type != MotionEvent.ACTION_DOWN
-                    && type != MotionEvent.ACTION_MOVE
-                    && type != MotionEvent.ACTION_UP
-                ) {
-                    return
-                }
-                val newMarker = PreviewTouchMarker(
-                    id = markerId.incrementAndGet(),
-                    x = x,
-                    y = y,
-                    action = type,
-                    createdAtMs = SystemClock.elapsedRealtime()
-                )
-                _markers.update { current ->
-                    val max = PreviewTouchMarker.MAX_ACTIVE_MARKERS
-                    buildList(max) {
-                        val start = if (current.size >= max) current.size - max + 1 else 0
-                        for (i in start until current.size) add(current[i])
-                        add(newMarker)
-                    }
-                }
-                ensureCleanupJob()
+                acceptTouchEvent(x, y, type)
             }
         }
     }
 
+    internal fun acceptTouchEvent(x: Int, y: Int, type: Int) {
+        if (type != MotionEvent.ACTION_DOWN &&
+            type != MotionEvent.ACTION_MOVE &&
+            type != MotionEvent.ACTION_UP
+        ) return
+
+        val marker = PreviewTouchMarker(
+            id = markerId.incrementAndGet(),
+            x = x,
+            y = y,
+            action = type,
+            createdAtMs = elapsedRealtime(),
+        )
+        synchronized(eventLock) {
+            if (type == MotionEvent.ACTION_MOVE) {
+                pendingMove.set(marker)
+                scheduleMoveFlush()
+            } else {
+                flushPendingMoveLocked()
+                appendMarker(marker)
+            }
+        }
+        ensureCleanupJob()
+    }
+
     fun onTouchCallbackChange(enabled: Boolean) {
-        val service = RemoteServiceManager.getInstanceOrNull()?: return
+        val service = RemoteServiceManager.getInstanceOrNull() ?: return
         if (enabled) {
             scope.launch(Dispatchers.IO) {
                 runCatching { service.setTouchCallback(callback.value) }
@@ -69,25 +98,53 @@ class TouchPreviewController(
     }
 
     fun onClear() {
-        job?.cancel()
-        job = null
-        _markers.value = emptyList()
+        cleanupJob?.cancel()
+        cleanupJob = null
+        synchronized(eventLock) {
+            pendingMove.set(null)
+            frameScheduled.set(false)
+            _markers.value = emptyList()
+        }
+    }
+
+    private fun scheduleMoveFlush() {
+        if (!frameScheduled.compareAndSet(false, true)) return
+        frameScheduler.schedule {
+            synchronized(eventLock) {
+                flushPendingMoveLocked()
+                frameScheduled.set(false)
+                if (pendingMove.get() != null) scheduleMoveFlush()
+            }
+        }
+    }
+
+    private fun flushPendingMoveLocked() {
+        pendingMove.getAndSet(null)?.let(::appendMarker)
+    }
+
+    private fun appendMarker(marker: PreviewTouchMarker) {
+        _markers.update { current ->
+            val max = PreviewTouchMarker.MAX_ACTIVE_MARKERS
+            buildList(max) {
+                val start = if (current.size >= max) current.size - max + 1 else 0
+                for (index in start until current.size) add(current[index])
+                add(marker)
+            }
+        }
     }
 
     private fun ensureCleanupJob() {
-        if (job?.isActive == true) return
-        job = scope.launch {
+        if (cleanupJob?.isActive == true) return
+        cleanupJob = scope.launch {
             while (true) {
                 delay(PreviewTouchMarker.CLEANUP_INTERVAL_MS)
-                val cutoff = SystemClock.elapsedRealtime() - PreviewTouchMarker.TTL_MS
-                _markers.update { markers ->
-                    markers.filter { it.createdAtMs > cutoff }
-                }
+                val cutoff = elapsedRealtime() - PreviewTouchMarker.TTL_MS
+                _markers.update { markers -> markers.filter { it.createdAtMs > cutoff } }
                 if (_markers.value.isEmpty()) break
             }
-        }.also { job ->
-            job.invokeOnCompletion {
-                if (this@TouchPreviewController.job === job) this@TouchPreviewController.job = null
+        }.also { activeJob ->
+            activeJob.invokeOnCompletion {
+                if (cleanupJob === activeJob) cleanupJob = null
             }
         }
     }

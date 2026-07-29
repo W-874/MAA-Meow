@@ -39,72 +39,7 @@ fun ResourceInitDialog(
 ) {
 
     when (state) {
-        is ResourceInitState.Extracting -> {
-            // 解压进度弹窗（不可关闭）——恢复不透明配色，避免透出主界面自定义背景图
-            OpaqueTheme {
-                Dialog(
-                    onDismissRequest = {},
-                    properties = DialogProperties(
-                        dismissOnBackPress = false,
-                        dismissOnClickOutside = false
-                    )
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.dialog),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        tonalElevation = 6.dp
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = stringResource(R.string.resource_init_in_progress_title),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // 进度条
-                            LinearProgressIndicator(
-                                progress = { state.progress / 100f },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // 进度文本
-                            Text(
-                                text = "${state.extractedCount} / ${state.totalCount} (${state.progress}%)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            if (state.currentFile.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = state.currentFile,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    maxLines = 1
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = stringResource(R.string.resource_init_in_progress_message),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        is ResourceInitState.Extracting -> Unit
 
         is ResourceInitState.Failed -> {
             // 失败弹窗
