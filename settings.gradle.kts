@@ -27,6 +27,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "MaaMeow"
 include(":app")
+include(":benchmark")
 include(":hidden-api")
 include(":annotation-api")
 include(":ksp-processor")

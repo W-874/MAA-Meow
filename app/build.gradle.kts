@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 val localProperties = Properties().apply {
@@ -69,6 +70,7 @@ android {
         applicationId = "com.walker874.maameow"
         minSdk = 28
         targetSdk = 36
+        buildConfigField("boolean", "BENCHMARK_BUILD", "false")
         versionCode = gitVersionCode
         versionName = gitVersionName
         println("Build version: versionCode=$versionCode, versionName=$versionName")
@@ -129,8 +131,18 @@ android {
                 println("[Signing] No release keystore configured, release build will not be signed")
             }
         }
+        create("benchmark") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+            buildConfigField("boolean", "BENCHMARK_BUILD", "true")
+            signingConfig = if (releaseKeystorePath.isNotEmpty()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
     }
-
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -164,7 +176,15 @@ android {
 
     androidResources {
         localeFilters += listOf("zh", "en")
+        noCompress += "zip"
     }
+
+    sourceSets.getByName("main").assets.setSrcDirs(
+        listOf(
+            layout.buildDirectory.dir("generated/assets").get().asFile,
+            layout.buildDirectory.dir("generated/static-assets").get().asFile,
+        )
+    )
 
     lint {
         // AGP 9 强制使用 K2 UAST，其在分析 .gradle.kts 构建脚本时会崩溃
@@ -182,6 +202,7 @@ kotlin {
 }
 
 dependencies {
+    baselineProfile(project(":benchmark"))
     compileOnly(project(":hidden-api"))
     implementation(project(":annotation-api"))
     ksp(project(":ksp-processor"))
@@ -204,6 +225,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.window)
+    implementation(libs.androidx.profileinstaller)
 
     // Koin
     implementation(libs.koin.android)
