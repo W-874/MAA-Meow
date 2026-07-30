@@ -223,7 +223,7 @@ private fun AboutGroup(
     content: com.aliothmoon.maameow.presentation.components.SegmentedSettingsScope.() -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        SectionHeader(title)
+        SectionHeader(title, modifier = Modifier.padding(horizontal = 16.dp))
         SegmentedSettingsGroup(
             modifier = Modifier.padding(horizontal = 16.dp),
             content = content,
