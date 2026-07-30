@@ -22,6 +22,17 @@
 
 > 无需 Root 权限，明日方舟可后台！正在开发中，功能不稳定，欢迎尝鲜体验～
 
+## Fork 改动
+
+本 fork 基于上游 [Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow)，原作者为 Aliothmoon。
+
+相较上游，当前 fork 主要聚焦于：
+
+- Material 3 Expressive UI 与后台任务工作区优化
+- 性能与启动流程改进，以及资源延迟加载优化
+- 构建、性能分析与测试流程改进
+- 工具箱与档案数据可靠性改进
+
 <p align="center">
   <img src="docs/zh-cn/manual/screenshots/home.png" width="200" />
   <img src="docs/zh-cn/manual/screenshots/background_task.png" width="200" />

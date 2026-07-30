@@ -22,6 +22,17 @@ One-click automation for all daily tasks, powered by image recognition
 
 > No root required. Run Arknights in the background! Still in development — expect instability. Feedback is welcome!
 
+## Fork Changes
+
+This fork is based on the upstream [Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow), created by Aliothmoon.
+
+Compared with upstream, this fork currently focuses on:
+
+- Material 3 Expressive UI and background task workspace improvements
+- Performance and startup-flow improvements, plus deferred resource loading
+- Build, performance profiling, and testing improvements
+- Toolbox and profile data reliability improvements
+
 <p align="center">
   <img src="docs/zh-cn/manual/screenshots/home.png" width="200" />
   <img src="docs/zh-cn/manual/screenshots/background_task.png" width="200" />
