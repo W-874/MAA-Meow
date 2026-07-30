@@ -31,6 +31,7 @@ class ProfileShardStore<T : Any>(
     private val keyPrefix: String,
     private val serializer: KSerializer<T>,
     private val empty: () -> T,
+    private val normalize: (T) -> T = { it },
 ) {
     private val json = JsonUtils.common
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -64,10 +65,9 @@ class ProfileShardStore<T : Any>(
     }
 
     /** 同步改内存并排队落盘。 */
-    fun mutate(transform: (T) -> T) {
-        val profileId = taskChainState.profileId.value
+    fun mutate(profileId: String, transform: (T) -> T) {
         if (profileId.isEmpty()) {
-            Timber.w("活跃配置档为空，跳过写入: %s", keyPrefix)
+            Timber.w("配置档为空，跳过写入: %s", keyPrefix)
             return
         }
         if (!_isLoaded.value) {
@@ -80,6 +80,9 @@ class ProfileShardStore<T : Any>(
         }
         ops.trySend(PersistOp.Write(profileId))
     }
+
+    /** 以调用时的活跃配置档写入；优先使用带 [profileId] 的重载。 */
+    fun mutate(transform: (T) -> T) = mutate(taskChainState.profileId.value, transform)
 
     suspend fun remove(profileId: String) {
         if (profileId.isEmpty()) return
@@ -106,7 +109,7 @@ class ProfileShardStore<T : Any>(
             prefs?.asMap()?.forEach { (key, value) ->
                 if (!key.name.startsWith(keyPrefix)) return@forEach
                 val profileId = key.name.removePrefix(keyPrefix)
-                put(profileId, decode(value as? String))
+                put(profileId, normalize(decode(value as? String)))
             }
         }
         _shards.update { current -> fromDisk + current }

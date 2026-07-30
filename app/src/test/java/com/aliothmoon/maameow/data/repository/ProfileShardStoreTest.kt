@@ -175,6 +175,19 @@ class ProfileShardStoreTest {
         assertEquals(TestShard(), shards.snapshot.value)
     }
 
+    @Test
+    fun explicitProfileId_mutatesCapturedShardInsteadOfActiveProfile() = runBlocking {
+        val store = FakePreferencesDataStore()
+        val shards = storeOf(store)
+        shards.awaitLoaded()
+
+        shards.mutate(PROFILE_B) { it.copy(value = 9) }
+        shards.awaitPersist()
+
+        assertEquals(9, storedValueOf(store, PROFILE_B))
+        assertEquals(TestShard(), shards.snapshot.value)
+    }
+
     // ---------------------------------------------------------------- 写回队列
 
     @Test
