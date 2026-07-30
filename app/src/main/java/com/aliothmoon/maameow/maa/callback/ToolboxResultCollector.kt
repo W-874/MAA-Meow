@@ -27,8 +27,13 @@ class ToolboxResultCollector(
 ) {
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val achievement = DoubleSyncAchievement()
+    @Volatile
+    private var sessionProfileId = ""
 
-    fun onSessionStart() = achievement.clear()
+    fun onSessionStart(profileId: String) {
+        sessionProfileId = profileId
+        achievement.clear()
+    }
 
     private val _recruitTags = MutableStateFlow<List<String>>(emptyList())
     val recruitTags: StateFlow<List<String>> = _recruitTags.asStateFlow()
@@ -77,7 +82,7 @@ class ToolboxResultCollector(
             val count = (value as? Number)?.toInt() ?: return@mapNotNull null
             if (count > 0) DepotItem(id, count) else null
         }
-        depotRepository.set(items)
+        depotRepository.replaceRecognition(sessionProfileId, items)
         achievement.onDepotSuccess()
         ioScope.launch {
             achievementRepository.report {
@@ -91,6 +96,7 @@ class ToolboxResultCollector(
     fun onOperBoxResult(details: JSONObject?) {
         details ?: return
         if (!details.getBooleanValue("done")) return
+        val profileId = sessionProfileId
 
         val ownOpers = details.getJSONArray("own_opers")?.mapNotNull { entry ->
             val obj = entry as? JSONObject ?: return@mapNotNull null
@@ -129,7 +135,7 @@ class ToolboxResultCollector(
         )
         val notOwnedSorted = notOwned.sortedByDescending { it.rarity }
 
-        operBoxRepository.set(ownedSorted, notOwnedSorted)
+        operBoxRepository.set(profileId, ownedSorted, notOwnedSorted)
         achievement.onOperSuccess()
         ioScope.launch {
             achievementRepository.report {

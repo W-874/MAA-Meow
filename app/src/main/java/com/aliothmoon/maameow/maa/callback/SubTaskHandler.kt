@@ -70,8 +70,12 @@ class SubTaskHandler(
     var lastSanitySnapshot: SanitySnapshot? = null
         private set
 
-    /** 每次新 session 开始时调用，重置跨任务状态 */
-    fun resetSessionState() {
+    @Volatile
+    private var sessionProfileId = ""
+
+    /** 每次新 session 开始时调用，重置跨任务状态并固定本次回调的配置档。 */
+    fun resetSessionState(profileId: String) {
+        sessionProfileId = profileId
         pendingFight = PendingFightState()
         medicineUsedTotal = 0
         expiringMedicineUsedTotal = 0
@@ -710,7 +714,7 @@ class SubTaskHandler(
 
         if (drops.isNotEmpty()) {
             // 同步写穿内存，下一关 TaskChainStart 立刻能 countOf 到本场掉落
-            depotRepository.merge(drops)
+            depotRepository.recordFightDrops(sessionProfileId, drops)
         }
     }
 

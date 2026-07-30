@@ -424,9 +424,10 @@ class MaaCompositionService(
         onSessionStarted: (suspend () -> Unit)? = null,
     ): StartResult {
         setRunState(MaaExecutionState.STARTING)
+        val sessionProfileId = taskChainState.profileId.value
         sessionLogger.startSession(tasks.map { it.type.value })
-        subTaskHandler.resetSessionState()
-        toolboxResultCollector.onSessionStart()
+        subTaskHandler.resetSessionState(sessionProfileId)
+        toolboxResultCollector.onSessionStart(sessionProfileId)
         onSessionStarted?.invoke()
         sessionLogger.appendAndWait(startMessage, LogLevel.INFO)
         preflightLogs.forEach { (text, level) ->

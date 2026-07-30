@@ -23,7 +23,7 @@ data class OperBoxSnapshot(
 /** 干员箱分片：内存权威，set 同步写内存并排队落盘。 */
 class OperBoxRepository(
     store: DataStore<Preferences>,
-    taskChainState: TaskChainState,
+    private val taskChainState: TaskChainState,
 ) {
     private val shards = ProfileShardStore(
         store = store,
@@ -39,8 +39,12 @@ class OperBoxRepository(
 
     fun start() = shards.start()
 
-    fun set(owned: List<OperBoxOperator>, notOwned: List<OperBoxOperator>) {
-        shards.mutate {
+    fun set(
+        profileId: String,
+        owned: List<OperBoxOperator>,
+        notOwned: List<OperBoxOperator>,
+    ) {
+        shards.mutate(profileId) {
             OperBoxSnapshot(
                 owned = owned,
                 notOwned = notOwned,
@@ -48,6 +52,10 @@ class OperBoxRepository(
             )
         }
     }
+
+    /** 以调用时的活跃配置档写入；会话回调应优先使用带 [profileId] 的重载。 */
+    fun set(owned: List<OperBoxOperator>, notOwned: List<OperBoxOperator>) =
+        set(taskChainState.profileId.value, owned, notOwned)
 
     companion object {
         private const val KEY_PREFIX = "operbox_"
