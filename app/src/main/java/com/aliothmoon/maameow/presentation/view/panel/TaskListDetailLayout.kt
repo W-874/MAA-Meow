@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -77,6 +76,7 @@ fun TaskListDetailLayout(
                 isEditMode = isEditMode,
                 isAddingTask = isAddingTask,
                 isProfileMode = isProfileMode,
+                useIntrinsicWidth = false,
                 onNodeEnabledChange = onNodeEnabledChange,
                 onNodeSelected = onNodeSelected,
                 onNodeMove = onNodeMove,
@@ -85,7 +85,7 @@ fun TaskListDetailLayout(
                 onToggleProfileMode = onToggleProfileMode,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(IntrinsicSize.Max),
+                    .then(if (this@BoxWithConstraints.constraints.hasBoundedWidth) Modifier.weight(0.4f) else Modifier),
             )
             Spacer(modifier = Modifier.width(8.dp))
             DetailHost(

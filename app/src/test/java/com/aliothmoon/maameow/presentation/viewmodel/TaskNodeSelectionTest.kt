@@ -58,8 +58,8 @@ class TaskNodeSelectionTest {
     }
 
     @Test
-    fun `adding or profile mode keeps null`() {
-        val nodes = listOf(node("a"))
+    fun `adding or profile mode preserves selection`() {
+        val nodes = listOf(node("a"), node("b"))
         assertNull(
             resolveTaskPanelSelectedNodeId(
                 nodes = nodes,
@@ -72,6 +72,24 @@ class TaskNodeSelectionTest {
             resolveTaskPanelSelectedNodeId(
                 nodes = nodes,
                 selectedNodeId = null,
+                isAddingTask = false,
+                isProfileMode = true,
+            ),
+        )
+        assertEquals(
+            "b",
+            resolveTaskPanelSelectedNodeId(
+                nodes = nodes,
+                selectedNodeId = "b",
+                isAddingTask = true,
+                isProfileMode = false,
+            ),
+        )
+        assertEquals(
+            "b",
+            resolveTaskPanelSelectedNodeId(
+                nodes = nodes,
+                selectedNodeId = "b",
                 isAddingTask = false,
                 isProfileMode = true,
             ),

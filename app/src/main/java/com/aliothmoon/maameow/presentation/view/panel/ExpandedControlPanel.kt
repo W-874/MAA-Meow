@@ -45,6 +45,8 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.ERROR
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogType.SUCCESS
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.ExpandedControlPanelViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.ToolboxAction
+import com.aliothmoon.maameow.presentation.viewmodel.ToolboxTab
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
 import com.aliothmoon.maameow.utils.i18n.asString
 import com.aliothmoon.maameow.utils.i18n.resolve
@@ -67,6 +69,7 @@ fun ExpandedControlPanel(
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val maaState by service.state.collectAsStateWithLifecycle()
     val runMode by appSettings.runMode.collectAsStateWithLifecycle()
+    val toolboxUiState by toolboxViewModel.uiState.collectAsStateWithLifecycle()
 
     val nodes by viewModel.chainState.chain.collectAsStateWithLifecycle()
     val profiles by viewModel.chainState.profiles.collectAsStateWithLifecycle()
@@ -208,6 +211,15 @@ fun ExpandedControlPanel(
                 }
 
                 if (uiState.currentTab == PanelTab.TASKS || uiState.currentTab == PanelTab.AUTO_BATTLE || uiState.currentTab == PanelTab.TOOLS) {
+                    val isToolboxPage = uiState.currentTab == PanelTab.TOOLS
+                    val toolboxShowsStop = toolboxUiState.canStop ||
+                        maaState == MaaExecutionState.STOPPING
+                    val toolboxIsTransitioning = toolboxUiState.isStarting ||
+                        maaState == MaaExecutionState.STOPPING
+                    val hideToolboxStartForGachaDisclaimer = isToolboxPage &&
+                        !toolboxShowsStop &&
+                        toolboxUiState.currentTab == ToolboxTab.GACHA &&
+                        !toolboxUiState.gachaDisclaimerAccepted
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 6.dp),
                         thickness = 1.dp,
@@ -219,11 +231,30 @@ fun ExpandedControlPanel(
                             inputFocusManager.clear()
                             when (uiState.currentTab) {
                                 PanelTab.AUTO_BATTLE -> copilotViewModel.onStart()
-                                PanelTab.TOOLS -> toolboxViewModel.onStart()
+                                PanelTab.TOOLS -> toolboxViewModel.onAction(
+                                    if (toolboxShowsStop) ToolboxAction.Stop else ToolboxAction.Start
+                                )
                                 else -> viewModel.onStartTasks()
                             }
                         },
-                        isStarting = maaState == MaaExecutionState.STARTING
+                        isStarting = if (isToolboxPage) {
+                            toolboxIsTransitioning
+                        } else {
+                            maaState == MaaExecutionState.STARTING
+                        },
+                        isStopping = isToolboxPage && toolboxShowsStop,
+                        actionEnabled = if (isToolboxPage) {
+                            if (toolboxShowsStop) {
+                                toolboxUiState.canStop && maaState != MaaExecutionState.STOPPING
+                            } else {
+                                toolboxUiState.canStart && !toolboxIsTransitioning
+                            }
+                        } else {
+                            maaState != MaaExecutionState.STARTING &&
+                                maaState != MaaExecutionState.RUNNING &&
+                                maaState != MaaExecutionState.STOPPING
+                        },
+                        showAction = !hideToolboxStartForGachaDisclaimer,
                     )
                 }
             }
@@ -233,7 +264,17 @@ fun ExpandedControlPanel(
             ResourceLoadingOverlay()
         }
 
-        val dialog = uiState.dialog
+        val dialog = uiState.dialog ?: toolboxUiState.dialog
+        val onDialogDismiss = if (uiState.dialog != null) {
+            viewModel::onDialogDismiss
+        } else {
+            toolboxViewModel::onDialogDismiss
+        }
+        val onDialogConfirm = if (uiState.dialog != null) {
+            viewModel::onDialogConfirm
+        } else {
+            toolboxViewModel::onDialogConfirm
+        }
         val dialogTitle = dialog?.title.asString()
         val dialogMessage = dialog?.message.asString()
         val dialogConfirmText = dialog?.confirmText.asString()
@@ -245,7 +286,7 @@ fun ExpandedControlPanel(
         }
         AdaptiveTaskPromptDialog(
             visible = dialog != null,
-            onDismissRequest = viewModel::onDialogDismiss,
+            onDismissRequest = onDialogDismiss,
             title = dialogTitle,
             message = AnnotatedString(dialogMessage),
             icon = when (dialog?.type) {
@@ -258,7 +299,7 @@ fun ExpandedControlPanel(
                 ?: stringResource(R.string.common_confirm),
             dismissText = dialogDismissText.takeIf { it.isNotBlank() }
                 ?: stringResource(R.string.common_close),
-            onConfirm = viewModel::onDialogConfirm,
+            onConfirm = onDialogConfirm,
         )
     }
 }

@@ -30,7 +30,10 @@ import com.aliothmoon.maameow.theme.MaaThemeAlphas
 fun BottomButtons(
     onClose: () -> Unit,
     onStart: () -> Unit,
-    isStarting: Boolean = false
+    isStarting: Boolean = false,
+    isStopping: Boolean = false,
+    actionEnabled: Boolean = !isStarting,
+    showAction: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -50,6 +53,8 @@ fun BottomButtons(
             Text(stringResource(R.string.panel_bottom_hide))
         }
 
+        if (!showAction) return@Row
+
         Spacer(modifier = Modifier.width(16.dp))
 
         Button(
@@ -57,7 +62,7 @@ fun BottomButtons(
             modifier = Modifier.weight(1f).height(36.dp),
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            enabled = !isStarting,
+            enabled = actionEnabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = MaaThemeAlphas.DISABLED)
@@ -74,10 +79,18 @@ fun BottomButtons(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.panel_bottom_starting))
+                    Text(
+                        stringResource(
+                            if (isStopping) R.string.task_btn_stop else R.string.panel_bottom_starting
+                        )
+                    )
                 }
             } else {
-                Text(stringResource(R.string.panel_bottom_start))
+                Text(
+                    stringResource(
+                        if (isStopping) R.string.task_btn_stop else R.string.panel_bottom_start
+                    )
+                )
             }
         }
     }
