@@ -1,191 +1,93 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
+import com.aliothmoon.maameow.presentation.components.InfoCard
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MiniGamePanel(
     modifier: Modifier = Modifier,
-    delegate: MiniGameDelegate
+    delegate: MiniGameDelegate,
 ) {
     val state by delegate.state.collectAsStateWithLifecycle()
     val miniGames by delegate.miniGames.collectAsStateWithLifecycle()
-
     val currentGame = delegate.findGame(state.selectedTaskName)
     val tip = currentGame?.tip.asString().ifBlank { MiniGameTextRegistry.EMPTY_TIP.asString() }
     val isUnsupported = currentGame?.isUnsupported == true
     val currentGameDisplay = currentGame?.display.asString()
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
-    val tabTitleTextStyle = MaterialTheme.typography.bodySmall.copy(
-        lineHeight = 16.sp
-    )
-
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal),
         contentPadding = PaddingValues(
-            top = 2.dp,
-            bottom = mainBottomBarPadding + 4.dp,
+            top = MaaDesignTokens.Spacing.xs,
+            bottom = mainBottomBarPadding + MaaDesignTokens.Spacing.xs,
         ),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
         item {
             Text(
                 text = stringResource(R.string.panel_mini_game_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
-        // 任务选择 - 卡片网格
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = stringResource(R.string.panel_mini_game_name),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                miniGames.chunked(3).forEach { rowGames ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        rowGames.forEach { game ->
-                            val selected = state.selectedTaskName == game.value
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (game.isUnsupported) {
-                                    MaterialTheme.colorScheme.errorContainer
-                                } else if (selected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                },
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (game.isUnsupported && selected) {
-                                        MaterialTheme.colorScheme.error
-                                    } else if (selected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.outlineVariant
-                                    }
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 36.dp)
-                                    .clickable { delegate.onTaskSelected(game.value) }
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = game.display.asString(),
-                                        style = tabTitleTextStyle,
-                                        color = if (game.isUnsupported) {
-                                            MaterialTheme.colorScheme.onErrorContainer
-                                        } else if (selected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            }
+            SegmentedSettingsGroup {
+                miniGames.forEach { game ->
+                    val selected = state.selectedTaskName == game.value
+                    item {
+                        val containerColor = when {
+                            game.isUnsupported -> MaterialTheme.colorScheme.errorContainer
+                            selected -> MaterialTheme.colorScheme.primaryContainer
+                            else -> MaterialTheme.colorScheme.surfaceBright
                         }
-                        repeat(3 - rowGames.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                        val contentColor = when {
+                            game.isUnsupported -> MaterialTheme.colorScheme.onErrorContainer
+                            selected -> MaterialTheme.colorScheme.onPrimaryContainer
+                            else -> MaterialTheme.colorScheme.onSurface
                         }
-                    }
-                }
-            }
-        }
-
-        // Tip 提示
-        if (tip.isNotBlank()) {
-            item {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isUnsupported) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    border = if (isUnsupported) {
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                    } else {
-                        null
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        if (currentGameDisplay.isNotBlank()) {
-                            Text(
-                                text = currentGameDisplay,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isUnsupported) {
-                                    MaterialTheme.colorScheme.onErrorContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
-                        Text(
-                            text = tip,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isUnsupported) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                        SettingRow(
+                            title = game.display.asString(),
+                            titleColor = contentColor,
+                            containerColor = containerColor,
+                            icon = null,
+                            onClick = { delegate.onTaskSelected(game.value) },
+                            trailing = {
+                                RadioButton(
+                                    selected = selected,
+                                    onClick = { delegate.onTaskSelected(game.value) },
+                                )
                             },
                         )
                     }
@@ -193,98 +95,77 @@ fun MiniGamePanel(
             }
         }
 
-        // 隐秘战线配置
+        if (tip.isNotBlank()) {
+            item {
+                InfoCard(
+                    title = currentGameDisplay.orEmpty(),
+                    containerColor = if (isUnsupported) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    },
+                    contentColor = if (isUnsupported) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                ) {
+                    Text(
+                        text = tip,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isUnsupported) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+        }
+
         if (delegate.isSecretFront(state.selectedTaskName)) {
             item {
-                HorizontalDivider()
-            }
-
-            // 结局选择
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = stringResource(R.string.panel_mini_game_ending),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                InfoCard(title = stringResource(R.string.panel_mini_game_ending)) {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
                     ) {
                         MiniGameDelegate.ENDINGS.forEach { ending ->
                             FilterChip(
                                 selected = state.selectedEnding == ending,
                                 onClick = { delegate.onEndingSelected(ending) },
-                                label = {
-                                    Text(
-                                        text = ending,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                },
+                                label = { Text(ending) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 ),
-                                shape = RoundedCornerShape(8.dp),
                             )
                         }
                     }
                 }
             }
 
-            // 事件选择 - 卡片网格
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = stringResource(R.string.panel_mini_game_preferred_events),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                InfoCard(title = stringResource(R.string.panel_mini_game_preferred_events)) {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                        horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
                     ) {
                         MiniGameDelegate.EVENTS.forEach { (value, display) ->
                             val selected = state.selectedEvent == value
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                },
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (selected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.outlineVariant
-                                    }
+                            FilterChip(
+                                selected = selected,
+                                onClick = { delegate.onEventSelected(value) },
+                                label = { Text(display.asString()) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 ),
-                                modifier = Modifier
-                                    .clickable { delegate.onEventSelected(value) }
-                            ) {
-                                Text(
-                                    text = display.asString(),
-                                    style = tabTitleTextStyle,
-                                    color = if (selected) {
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                )
-                            }
+                            )
                         }
                     }
                 }
             }
         }
-
     }
 }

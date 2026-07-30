@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.model.toolbox.RecruitCalcResult
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
+import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.INumericField
 import com.aliothmoon.maameow.presentation.components.LocalSettingItemShape
 import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
@@ -61,6 +62,7 @@ import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
 
@@ -78,12 +80,14 @@ fun RecruitCalcPanel(
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = MaaDesignTokens.Spacing.listHorizontal),
         contentPadding = PaddingValues(
-            top = 2.dp,
-            bottom = mainBottomBarPadding + 4.dp,
+            top = MaaDesignTokens.Spacing.xs,
+            bottom = mainBottomBarPadding + MaaDesignTokens.Spacing.xs,
         ),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -141,20 +145,14 @@ fun RecruitCalcPanel(
         // 检测到的标签
         if (tags.isNotEmpty()) {
             item {
-                Spacer(Modifier.height(4.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = stringResource(R.string.panel_recruit_calc_detected_tags),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                InfoCard(title = stringResource(R.string.panel_recruit_calc_detected_tags)) {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
                     ) {
                         tags.forEach { tag ->
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = MaterialTheme.shapes.small,
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                             ) {
                                 Text(
@@ -170,17 +168,6 @@ fun RecruitCalcPanel(
             }
         }
 
-        // 分隔线（有标签或有结果时显示）
-        if (tags.isNotEmpty() || results.isNotEmpty()) {
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
-        }
-
         // 计算结果
         if (results.isNotEmpty()) {
             val sorted = results.sortedByDescending { it.level }
@@ -192,17 +179,17 @@ fun RecruitCalcPanel(
         // 空提示
         if (tags.isEmpty() && results.isEmpty()) {
             item {
-                Text(
-                    text = resolvedStatusMessage.ifBlank {
-                        stringResource(R.string.panel_recruit_calc_empty_hint)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                )
+                InfoCard {
+                    Text(
+                        text = resolvedStatusMessage.ifBlank {
+                            stringResource(R.string.panel_recruit_calc_empty_hint)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
@@ -288,66 +275,62 @@ private fun RecruitCalcSwitchSetting(
 @Composable
 private fun RecruitResultItem(result: RecruitCalcResult) {
     val levelColor = when {
-        result.level >= 6 -> Color(0xFFFF6B35)
-        result.level >= 5 -> Color(0xFFFFD700)
-        result.level >= 4 -> Color(0xFF9C7CFF)
+        result.level >= 6 -> MaterialTheme.colorScheme.error
+        result.level >= 5 -> MaterialTheme.colorScheme.tertiary
+        result.level >= 4 -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val bgColor = when {
-        result.level >= 6 -> Color(0xFFFF6B35).copy(alpha = 0.08f)
-        result.level >= 5 -> Color(0xFFFFD700).copy(alpha = 0.08f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val containerColor = when {
+        result.level >= 6 -> MaterialTheme.colorScheme.errorContainer
+        result.level >= 5 -> MaterialTheme.colorScheme.tertiaryContainer
+        result.level >= 4 -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
 
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = bgColor,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
-    ) {
+    InfoCard(containerColor = containerColor) {
         Row(
-            modifier = Modifier.padding(8.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            // 左侧星级徽标
             Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = levelColor.copy(alpha = 0.15f),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
             ) {
                 Text(
                     text = "${result.level}★",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = levelColor,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(
+                        horizontal = MaaDesignTokens.Spacing.sm,
+                        vertical = MaaDesignTokens.Spacing.xs,
+                    ),
                 )
             }
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(MaaDesignTokens.Spacing.sm))
 
-            // 右侧内容
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // 标签组合
+            Column(verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs)) {
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
                 ) {
                     result.tags.forEach { tag ->
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
                         ) {
                             Text(
                                 text = tag,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(
+                                    horizontal = MaaDesignTokens.Spacing.sm,
+                                    vertical = MaaDesignTokens.Spacing.xs,
+                                ),
                             )
                         }
                     }
                 }
-                // 干员列表
                 if (result.operators.isNotEmpty()) {
                     Text(
                         text = result.operators.joinToString("  ") { it.name },
