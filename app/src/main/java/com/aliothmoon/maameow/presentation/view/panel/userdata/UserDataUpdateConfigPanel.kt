@@ -2,23 +2,16 @@ package com.aliothmoon.maameow.presentation.view.panel.userdata
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -30,7 +23,10 @@ import com.aliothmoon.maameow.data.repository.DepotRepository
 import com.aliothmoon.maameow.data.repository.OperBoxRepository
 import com.aliothmoon.maameow.domain.models.UserDataUpdateTriggerInterval
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
-import com.aliothmoon.maameow.presentation.components.SelectableChipGroup
+import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
+import com.aliothmoon.maameow.presentation.components.SettingDropdown
+import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipContent
+import com.aliothmoon.maameow.presentation.components.tip.ExpandableTipIcon
 import com.aliothmoon.maameow.utils.i18n.formatToolboxSyncTime
 import org.koin.compose.koinInject
 
@@ -79,28 +75,34 @@ fun UserDataUpdateConfigPanel(
             ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CheckBoxWithLabel(
-            checked = config.updateOperBox,
-            onCheckedChange = { onConfigChange(config.copy(updateOperBox = it)) },
-            label = stringResource(R.string.panel_userdata_update_oper_box),
-            subtitle = operSyncText,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        SegmentedSettingsGroup {
+            item {
+                CheckBoxWithLabel(
+                    checked = config.updateOperBox,
+                    onCheckedChange = { onConfigChange(config.copy(updateOperBox = it)) },
+                    label = stringResource(R.string.panel_userdata_update_oper_box),
+                    subtitle = operSyncText,
+                )
+            }
+            item {
+                CheckBoxWithLabel(
+                    checked = config.updateDepot,
+                    onCheckedChange = { onConfigChange(config.copy(updateDepot = it)) },
+                    label = stringResource(R.string.panel_userdata_update_depot),
+                    subtitle = depotSyncText,
+                )
+            }
+        }
 
-        CheckBoxWithLabel(
-            checked = config.updateDepot,
-            onCheckedChange = { onConfigChange(config.copy(updateDepot = it)) },
-            label = stringResource(R.string.panel_userdata_update_depot),
-            subtitle = depotSyncText,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        SelectableChipGroup(
-            label = stringResource(R.string.panel_userdata_trigger_interval),
-            selectedValue = config.triggerInterval,
-            options = intervalOptions,
+        SettingDropdown(
+            title = stringResource(R.string.panel_userdata_trigger_interval),
+            selected = config.triggerInterval,
+            options = intervalOptions.map { it.first },
+            optionLabel = { interval ->
+                intervalOptions.first { it.first == interval }.second
+            },
             onSelected = { onConfigChange(config.copy(triggerInterval = it)) },
-            modifier = Modifier.fillMaxWidth(),
+            icon = null,
         )
 
         ProfileBoundTip(
@@ -115,23 +117,17 @@ private fun ProfileBoundTip(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Icon(
-            imageVector = Icons.Default.Info,
-            contentDescription = null,
-            modifier = Modifier
-                .size(18.dp)
-                .padding(top = 2.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        ExpandableTipIcon(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ExpandableTipContent(
+            visible = expanded,
+            tipText = text,
+            modifier = Modifier.padding(top = 8.dp),
         )
     }
 }
