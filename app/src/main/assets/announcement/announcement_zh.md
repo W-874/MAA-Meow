@@ -8,9 +8,9 @@
 
 ## 安全下载提示
 
-请优先通过以下 **官方渠道** 获取 MaaMeow：
+请优先通过以下 **官方渠道** 获取 MaaNyan：
 
-- **GitHub Release**：[github.com/Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow/releases)
+- **GitHub Release**：[github.com/W-874/MAA-Meow](https://github.com/W-874/MAA-Meow/releases)
 - **QQ 官方群**：群内公告/文件（可通过「设置 → 关于 → 问题反馈 QQ 群」加群）
 - **Mirror 酱**：官方支持的镜像加速渠道
 

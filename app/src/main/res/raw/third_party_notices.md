@@ -1,15 +1,15 @@
-# 第三方代码声明
+# MaaNyan 第三方代码声明
 
-MaaNyan 基于上游 [Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow)，原作者为 Aliothmoon。
+MaaNyan 基于 [Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow)，原作者为 Aliothmoon。
 
 以下项目随 MaaNyan 分发或由 MaaNyan 使用，均按各自原始许可证执行：
 
 | 项目 | 许可证 | 用途 |
 | --- | --- | --- |
-| [MaaCore / MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | AGPL-3.0 | 任务执行核心；原生库和资源由设置流程获取，并通过 JNA 运行时加载。 |
-| [scrcpy](https://github.com/Genymobile/scrcpy) | Apache License 2.0 | 适配后的 Android 系统服务、虚拟显示和输入反射封装（位于 `app/src/main/java/com/aliothmoon/maameow/third/`）。 |
-| [Shizuku](https://github.com/RikkaApps/Shizuku) | Apache License 2.0 | 特权用户服务 API 和 Provider。 |
-| [JNA](https://github.com/java-native-access/jna) | Apache License 2.0 | Java/Kotlin 与 MaaCore 原生接口桥接。 |
+| [MaaCore / MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | AGPL-3.0 | 提供任务执行核心；原生库和资源由设置流程获取，并通过 JNA 在运行时加载。 |
+| [scrcpy](https://github.com/Genymobile/scrcpy) | Apache License 2.0 | 提供适配后的 Android 系统服务、虚拟显示和输入反射封装。 |
+| [Shizuku](https://github.com/RikkaApps/Shizuku) | Apache License 2.0 | 提供特权用户服务 API 和 Provider。 |
+| [JNA](https://github.com/java-native-access/jna) | Apache License 2.0 | 连接 Java/Kotlin 与 MaaCore 原生接口。 |
 | [AndroidX / Jetpack Compose](https://developer.android.com/jetpack) | Apache License 2.0 | Android 兼容性、生命周期、导航、UI 和 Material 组件。 |
 | [Kotlin](https://github.com/JetBrains/kotlin) | Apache License 2.0 | 应用语言及 Kotlin 运行时库。 |
 | [Koin](https://github.com/InsertKoinIO/koin) | Apache License 2.0 | Android 与 Compose 依赖注入。 |

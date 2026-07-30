@@ -1,6 +1,6 @@
 # Pull Request Guidelines
 
-This document describes the basic expectations for pull requests to MAA Meow. It helps contributors and maintainers understand the change scope, verification results, and merge risks more quickly.
+This document describes the basic expectations for pull requests to MaaNyan. It helps contributors and maintainers understand the change scope, verification results, and merge risks more quickly.
 
 ## Basic Principles
 

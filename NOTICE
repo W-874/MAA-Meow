@@ -1,0 +1,58 @@
+MaaNyan — Third-Party Notices
+
+MaaNyan is based on Aliothmoon/MAA-Meow, created by Aliothmoon:
+https://github.com/Aliothmoon/MAA-Meow
+
+The following open-source projects are distributed with or used by MaaNyan.
+Each project remains under its original license; no additional copyright
+claims are made here.
+
+* MaaCore (MaaAssistantArknights) — AGPL-3.0.
+  The MaaCore native library and resource bundle are obtained by the project
+  setup flow and loaded at runtime through JNA.
+  https://github.com/MaaAssistantArknights/MaaAssistantArknights
+* scrcpy (Genymobile) — Apache License 2.0.
+  Adapted Android system-service and display/input wrappers are included in
+  app/src/main/java/com/aliothmoon/maameow/third/.
+  https://github.com/Genymobile/scrcpy
+* Shizuku (RikkaApps) — Apache License 2.0.
+  Provides the privileged user-service API and provider used to run tasks.
+  https://github.com/RikkaApps/Shizuku
+* JNA — Apache License 2.0.
+  Provides the Java Native Access bridge used to call MaaCore.
+  https://github.com/java-native-access/jna
+* AndroidX and Jetpack Compose — Apache License 2.0.
+  Provide Android compatibility, lifecycle, navigation, UI, and Material
+  components.
+  https://developer.android.com/jetpack
+* Kotlin — Apache License 2.0.
+  Provides the application language and Kotlin runtime libraries.
+  https://github.com/JetBrains/kotlin
+* Koin — Apache License 2.0.
+  Provides dependency injection for Android and Compose.
+  https://github.com/InsertKoinIO/koin
+* OkHttp — Apache License 2.0.
+  Provides HTTP client functionality for network downloads and requests.
+  https://github.com/square/okhttp
+* Timber — Apache License 2.0.
+  Provides structured Android logging.
+  https://github.com/JakeWharton/timber
+* fastjson2, Focus API, DeviceCompat, XXPermissions, FloatingX, Sonner,
+  Eclipse Angus Mail/Activation, Jakarta Activation API, Compose Markdown,
+  Reorderable, Sora Editor and kotlinx.serialization-json.
+  These direct runtime libraries are identified in gradle/libs.versions.toml;
+  their respective source repositories, license texts and notices control.
+  https://github.com/alibaba/fastjson2
+  https://github.com/getActivity/DeviceCompat
+  https://github.com/getActivity/XXPermissions
+  https://github.com/petterp/floatingx
+  https://github.com/dokar3/sonner
+  https://eclipse-ee4j.github.io/angus-mail/
+  https://github.com/Jeziellago/compose-markdown
+  https://github.com/Calvin-LL/Reorderable
+  https://github.com/Rosemoe/sora-editor
+  https://github.com/Kotlin/kotlinx.serialization
+
+This notice is a summary and is not a replacement for the original license
+texts. The complete set of dependency licenses and notices is available in
+the APK's META-INF metadata when present and in each upstream distribution.

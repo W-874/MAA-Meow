@@ -1,18 +1,18 @@
 <div align="center">
 <img alt="LOGO" src="/docs/zh-cn/develop/Logo.png" width="256" height="256" />
 
-# MAA Meow 
+# MaaNyan
 
 **在 Android 设备上原生运行 [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights)**
 
 基于图像识别技术，一键完成全部日常任务
 
-[![GitHub Release](https://img.shields.io/github/v/release/Aliothmoon/MAA-Meow?style=flat-square&label=Latest)](https://github.com/Aliothmoon/MAA-Meow/releases/latest)
-[![License](https://img.shields.io/github/license/Aliothmoon/MAA-Meow?style=flat-square)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/Aliothmoon/MAA-Meow?style=flat-square)](https://github.com/Aliothmoon/MAA-Meow/stargazers)
-[![GitHub Downloads](https://img.shields.io/github/downloads/Aliothmoon/MAA-Meow/total?style=flat-square&label=Downloads)](https://github.com/Aliothmoon/MAA-Meow/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/W-874/MAA-Meow?style=flat-square&label=Latest)](https://github.com/W-874/MAA-Meow/releases/latest)
+[![License](https://img.shields.io/github/license/W-874/MAA-Meow?style=flat-square)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/W-874/MAA-Meow?style=flat-square)](https://github.com/W-874/MAA-Meow/stargazers)
+[![GitHub Downloads](https://img.shields.io/github/downloads/W-874/MAA-Meow/total?style=flat-square&label=Downloads)](https://github.com/W-874/MAA-Meow/releases)
 
-[下载最新版](https://github.com/Aliothmoon/MAA-Meow/releases/latest) · [问题反馈](https://github.com/Aliothmoon/MAA-Meow/issues) · [QQ 交流群](https://join.maameow.com/)
+[下载最新版](https://github.com/W-874/MAA-Meow/releases/latest) · [问题反馈](https://github.com/W-874/MAA-Meow/issues) · [QQ 交流群](https://join.maameow.com/)
 
 **[English](README_EN.md)** | **中文**
 

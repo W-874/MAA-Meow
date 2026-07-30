@@ -1,54 +1,26 @@
 # Third-Party Notices
 
-This project includes code from the following open-source projects, distributed under their respective original licenses.
+MaaNyan is based on the upstream [Aliothmoon/MAA-Meow](https://github.com/Aliothmoon/MAA-Meow), created by Aliothmoon.
 
-## scrcpy
+The following projects are distributed with or used by MaaNyan under their original licenses:
 
-- **Project**: [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy)
-- **Copyright**: Copyright 2018 Genymobile
-- **License**: [Apache License 2.0](../../../LICENSE-Apache-2.0)
-- **Original source**: [server/src/main/java/com/genymobile/scrcpy](https://github.com/Genymobile/scrcpy/tree/master/server/src/main/java/com/genymobile/scrcpy)
-- **Location in this project**: [`app/src/main/java/com/aliothmoon/maameow/third/`](../../../app/src/main/java/com/aliothmoon/maameow/third/)
+| Project | License | Use in MaaNyan |
+| --- | --- | --- |
+| [MaaCore / MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights) | AGPL-3.0 | Task-execution core; the native library and resources are obtained by the setup flow and loaded at runtime through JNA. |
+| [scrcpy](https://github.com/Genymobile/scrcpy) | Apache License 2.0 | Adapted Android system-service, virtual-display, and input reflection wrappers in `app/src/main/java/com/aliothmoon/maameow/third/`. |
+| [Shizuku](https://github.com/RikkaApps/Shizuku) | Apache License 2.0 | Privileged user-service API and provider. |
+| [JNA](https://github.com/java-native-access/jna) | Apache License 2.0 | Java/Kotlin bridge to the MaaCore native interface. |
+| [AndroidX / Jetpack Compose](https://developer.android.com/jetpack) | Apache License 2.0 | Android compatibility, lifecycle, navigation, UI, and Material components. |
+| [Kotlin](https://github.com/JetBrains/kotlin) | Apache License 2.0 | Application language and Kotlin runtime libraries. |
+| [Koin](https://github.com/InsertKoinIO/koin) | Apache License 2.0 | Dependency injection for Android and Compose. |
+| [OkHttp](https://github.com/square/okhttp) | Apache License 2.0 | Network downloads and HTTP requests. |
+| [Timber](https://github.com/JakeWharton/timber) | Apache License 2.0 | Android logging. |
+| [fastjson2](https://github.com/alibaba/fastjson2) | See upstream license | JSON parsing. |
+| Focus API (`com.xzakota.hyper.notification:focus-api`) | See upstream license | Notification focus API. |
+| [DeviceCompat](https://github.com/getActivity/DeviceCompat) / [XXPermissions](https://github.com/getActivity/XXPermissions) | See upstream license | Device compatibility and runtime permissions. |
+| [FloatingX](https://github.com/petterp/floatingx) / [Sonner](https://github.com/dokar3/sonner) | See upstream license | Floating-window and toast UI. |
+| [Eclipse Angus](https://eclipse-ee4j.github.io/angus-mail/) / Jakarta Activation API | See upstream license | SMTP mail and attachment handling. |
+| [Compose Markdown](https://github.com/Jeziellago/compose-markdown) / [Reorderable](https://github.com/Calvin-LL/Reorderable) | See upstream license | Markdown rendering and reorderable UI. |
+| [Sora Editor](https://github.com/Rosemoe/sora-editor) / [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) | See upstream license | Text editing and serialization. |
 
-### Purpose
-
-This code is used to construct an Android `Context` inside the Shizuku user-service process, and to access Android Hidden APIs via reflection, enabling virtual-display management, input-event injection, screen-information retrieval, and other features.
-
-### Included files
-
-| File | Description |
-|------|------|
-| `third/FakeContext.java` | A fake Android Context used to obtain system services in a process without an Activity |
-| `third/Ln.java` | Logging utility that writes to both Android Logger and standard output |
-| `third/Workarounds.java` | Android compatibility handling that sets up ActivityThread and Looper |
-| `third/Command.java` | Shell command execution utility |
-| `third/IO.java` | I/O utility class |
-| `third/Size.java` | Size data class |
-| `third/DisplayInfo.java` | Display information data class |
-| `third/wrappers/ServiceManager.java` | Reflection wrapper around Android ServiceManager to obtain system service instances |
-| `third/wrappers/DisplayManager.java` | Reflection wrapper around DisplayManagerGlobal to manage display info and virtual displays |
-| `third/wrappers/InputManager.java` | Reflection wrapper around InputManager to inject input events |
-| `third/wrappers/WindowManager.java` | Reflection wrapper around IWindowManager to manage rotation, display size, IME policy, etc. |
-| `third/wrappers/ActivityManager.java` | Reflection wrapper around ActivityManagerNative to obtain ContentProviders and start activities |
-| `third/wrappers/PowerManager.java` | Reflection wrapper around IPowerManager to query screen state |
-| `third/wrappers/StatusBarManager.java` | Reflection wrapper around IStatusBarService to control the notification shade and quick settings panel |
-| `third/wrappers/SurfaceControl.java` | Reflection wrapper around SurfaceControl to manage physical display tokens and power modes |
-
-### Notable changes
-
-The following are the main changes relative to the original scrcpy source:
-
-- Renamed the package from `com.genymobile.scrcpy` to `com.aliothmoon.maameow.third`
-- Removed code related to screen recording, video encoding, and audio capture, keeping only the system-service reflection wrappers
-- Added `ActivityManager`, `SurfaceControl`, `StatusBarManager`, `PowerManager`, and other wrappers
-- Added `createNewVirtualDisplay()` to `DisplayManager` to create an independent virtual display
-- Added `captureDisplay()`, `setForcedDisplaySize()`, `clearForcedDisplaySize()`, and other methods to `WindowManager`
-- Changed the log TAG and prefix in `Ln` to this project's identifier
-
----
-
-## MaaAssistantArknights
-
-- **Project**: [MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)
-- **License**: [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
-- **Usage**: The prebuilt artifacts (`libMaaCore.so` and resource files) are downloaded via `scripts/setup_maa_core.py` and dynamically loaded through JNA at runtime.
+This page is an offline summary and does not replace upstream license texts or add copyright claims. The complete set of dependency licenses and notices, including transitive dependencies, is authoritative in the APK's `META-INF` metadata (when included by the build) and in each upstream distribution.

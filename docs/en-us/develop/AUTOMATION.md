@@ -1,19 +1,19 @@
 # External Automation Integration
 
-This document describes how to trigger MaaMeow to run a specific task profile from external apps (such as MacroDroid or Tasker) via an Intent / `am` command.
+This document describes how to trigger MaaNyan to run a specific task profile from external apps (such as MacroDroid or Tasker) via an Intent / `am` command.
 
 ## Use Cases
 
 The built-in scheduled task is skipped while the screen is locked. If you need more flexible scheduling, you can combine it with an external automation tool:
 
 - Pair it with unlock/lock actions to build a fully unattended idle-farming flow
-- Time-share a single device between MaaMeow and other automation tasks (e.g. OA check-in)
+- Time-share a single device between MaaNyan and other automation tasks (e.g. OA check-in)
 - Control the exact task start time through a third-party scheduler
 
 Typical flow:
 
 ```
-Timer fires -> Unlock screen -> am start launches the target profile -> MaaMeow runs the task -> Webhook callback -> Lock screen
+Timer fires -> Unlock screen -> am start launches the target profile -> MaaNyan runs the task -> Webhook callback -> Lock screen
 ```
 
 ## Prerequisites
@@ -28,7 +28,7 @@ Timer fires -> Unlock screen -> am start launches the target profile -> MaaMeow 
 
 Each task profile has a unique ID, which is used to specify the target profile when triggering externally.
 
-1. Open MaaMeow and go to the **Background Task** page
+1. Open MaaNyan and go to the **Background Task** page
 2. Switch to **Profile management** mode (tap the Profile icon to open the management panel)
 3. Find the target profile and tap the **edit (pencil) icon**
 4. The bottom of the expanded section shows the profile ID. Tap the copy icon on the right to copy the full ID
@@ -73,7 +73,7 @@ am start \
    ```
 
 3. Enable **Use Root**
-4. To auto-lock the screen after the task finishes, combine it with MaaMeow's **Webhook**: set the Webhook URL in MaaMeow settings, and have MacroDroid listen for that callback to perform the lock action
+4. To auto-lock the screen after the task finishes, combine it with MaaNyan's **Webhook**: set the Webhook URL in MaaNyan settings, and have MacroDroid listen for that callback to perform the lock action
 
 ## Tasker Example
 

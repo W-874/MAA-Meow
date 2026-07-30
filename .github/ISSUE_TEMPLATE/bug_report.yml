@@ -29,7 +29,7 @@ body:
   - type: input
     id: app-version
     attributes:
-      label: MAA Meow 版本
+      label: MaaNyan 版本
       description: "当前使用的 App 版本号"
       placeholder: "v0.1.1"
     validations:
