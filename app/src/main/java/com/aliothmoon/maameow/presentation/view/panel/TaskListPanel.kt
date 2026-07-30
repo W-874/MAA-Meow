@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -40,7 +39,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,6 +99,10 @@ fun TaskListPanel(
             colors = CardDefaults.cardColors(
                 containerColor = if (isProfileMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow
             ),
+            border = BorderStroke(
+                1.dp,
+                if (isProfileMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            ),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isProfileMode) 2.dp else 0.dp)
         ) {
             Row(
@@ -117,7 +119,9 @@ fun TaskListPanel(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (isProfileMode) stringResource(R.string.common_done) else stringResource(R.string.panel_task_list_edit_config),
+                    text = if (isProfileMode) stringResource(R.string.common_done) else stringResource(
+                        R.string.panel_task_list_edit_config
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isProfileMode) FontWeight.Bold else FontWeight.Normal,
                     color = if (isProfileMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
@@ -154,7 +158,9 @@ fun TaskListPanel(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (isEditMode) stringResource(R.string.common_done) else stringResource(R.string.panel_task_list_edit_tasks),
+                    text = if (isEditMode) stringResource(R.string.common_done) else stringResource(
+                        R.string.panel_task_list_edit_tasks
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isEditMode) FontWeight.Bold else FontWeight.Normal,
                     color = if (isEditMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -176,9 +182,17 @@ fun TaskListPanel(
                         .clickable { onToggleAddingTask() },
                     shape = RoundedCornerShape(4.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isAddingTask) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+                        containerColor = if (isAddingTask) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        }
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    border = if (isAddingTask) {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    } else {
+                        null
+                    }
                 ) {
                     Row(
                         modifier = Modifier
@@ -190,13 +204,22 @@ fun TaskListPanel(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.secondary
+                            tint = if (isAddingTask) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             stringResource(R.string.panel_task_list_add),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (isAddingTask) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            fontWeight = if (isAddingTask) FontWeight.Medium else FontWeight.Normal
                         )
                     }
                 }

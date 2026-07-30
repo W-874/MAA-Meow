@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +31,7 @@ import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
 import com.aliothmoon.maameow.theme.MaaMeowTheme
 import com.aliothmoon.maameow.utils.Misc
+import com.aliothmoon.maameow.utils.UiScale
 import com.petterp.floatingx.FloatingX
 import com.petterp.floatingx.assist.FxDisplayMode
 import com.petterp.floatingx.assist.FxGravity
@@ -70,7 +72,6 @@ class OverlayController(
     val isActive: StateFlow<Boolean> = overlayStateStore.active
     private var calculatedPanelLayout: Pair<Int, Int>? = null
     private var orientation = context.resources.configuration.orientation
-
 
     private val _signal = MutableSharedFlow<MaaExecutionState>(extraBufferCapacity = 1)
     val signal: SharedFlow<MaaExecutionState> = _signal.asSharedFlow()
@@ -161,8 +162,13 @@ class OverlayController(
         if (!isActive.value) return
 
         val wasActive =
-            previous == MaaExecutionState.RUNNING || previous == MaaExecutionState.STARTING || previous == MaaExecutionState.STOPPING
-        val isActive = current == MaaExecutionState.RUNNING || current == MaaExecutionState.STARTING || current == MaaExecutionState.STOPPING
+            previous == MaaExecutionState.RUNNING
+                    || previous == MaaExecutionState.STARTING
+                    || previous == MaaExecutionState.STOPPING
+        val isActive =
+            current == MaaExecutionState.RUNNING
+                    || current == MaaExecutionState.STARTING
+                    || current == MaaExecutionState.STOPPING
 
         when {
             // 进入运行态：隐藏主面板，显示悬浮控件
@@ -217,14 +223,22 @@ class OverlayController(
             }
             setContent {
                 val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
+                val fontSizeScale by appSettings.fontSizeScale.collectAsStateWithLifecycle()
 
                 MaaMeowTheme(themeMode = themeMode) {
                     val baseDensity = LocalDensity.current
+                    val configuration = LocalConfiguration.current
+                    // 浮窗跟随主界面页面缩放；fontScale 钳制保持历史行为
+                    val effectiveScale = AppSettingsManager.resolveFontSizeScale(
+                        stored = fontSizeScale,
+                        smallestWidthDp = configuration.smallestScreenWidthDp,
+                        fontScale = baseDensity.fontScale,
+                    )
                     CompositionLocalProvider(
                         LocalFloatingWindowContext provides true,
                         LocalDensity provides Density(
-                            density = baseDensity.density,
-                            fontScale = baseDensity.fontScale.coerceIn(0.85f, 1.3f)
+                            density = baseDensity.density * effectiveScale / 100f,
+                            fontScale = UiScale.clampOverlayFontScale(baseDensity.fontScale),
                         )
                     ) {
                         ProvideInputFocusManager {
@@ -313,6 +327,7 @@ class OverlayController(
                 setEnableKeyBoardAdapt(true)
                 setKeyBackListener(object : IKeyBackListener {
                     override fun onBackPressed(): Boolean {
+                        // 消费返回，避免落到底层 Activity；关闭走面板「隐藏」按钮
                         return true
                     }
                 })

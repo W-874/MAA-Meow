@@ -260,8 +260,24 @@
     <string name="settings_theme_dark">暗色</string>
     <string name="settings_theme_pure_dark">纯黑</string>
     <string name="settings_font_size_title">页面缩放</string>
-    <string name="settings_font_size_summary">调整页面内容大小 (80-110)</string>
+    <string name="settings_font_size_summary">调整界面整体大小（含间距）。默认按屏幕自动推荐；系统字体大小仍单独生效。主界面与悬浮窗均跟随此设置。</string>
     <string name="settings_font_size_preview_text">你是谁？请支持牛牛！(\'- \' )</string>
+    <string name="settings_font_size_auto_value">自动 · %1$d</string>
+    <string name="settings_font_size_use_recommended">使用自动（推荐）</string>
+    <string name="settings_background_title">自定义背景</string>
+    <string name="settings_background_desc">为主界面四个标签页设置图片背景</string>
+    <string name="settings_background_pick">选择图片</string>
+    <string name="settings_background_replace">更换图片</string>
+    <string name="settings_background_remove">移除</string>
+    <string name="settings_background_image_alpha">图片不透明度</string>
+    <string name="settings_background_scrim">遮罩强度</string>
+    <string name="settings_background_blur">模糊</string>
+    <string name="settings_background_import_failed">背景图片导入失败</string>
+    <string name="settings_background_crop_reset">复位</string>
+    <string name="settings_background_crop_rotate">旋转 90°</string>
+    <string name="settings_background_crop_save">保存背景</string>
+    <string name="settings_background_crop_zoom_in">放大背景图</string>
+    <string name="settings_background_crop_zoom_out">缩小背景图</string>
     <string name="settings_language_title">语言</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_zh">中文</string>
@@ -966,8 +982,37 @@
     <string name="panel_tab_tools">小工具</string>
     <string name="panel_tab_log">日志</string>
     <string name="panel_cd_go_home">回到主界面</string>
-    <string name="toolbox_tab_mini_game">小游戏</string>
+    <string name="toolbox_tab_mini_game">牛杂</string>
+    <string name="toolbox_tab_gacha">牛牛抽卡</string>
     <string name="toolbox_tab_recruit_calc">公招识别</string>
+    <string name="toolbox_status_starting_gacha">正在启动牛牛抽卡…</string>
+    <string name="toolbox_status_gacha_started">牛牛抽卡已启动</string>
+    <string name="gacha_once">寻访一次</string>
+    <string name="gacha_ten_times">寻访十次</string>
+    <string name="gacha_init_tip">在罗德岛竟然有这么多志同道合的志士。是的，诗歌！战争！自由！能在历史的洪流中汇集众人的力量，为这片大地的改变而奋斗。真是令人振奋！这些悲壮又非凡的故事，是应当被传颂下去的。</string>
+    <string name="gacha_tip_1">保佑胜利的英雄，我将领受你们的祝福。</string>
+    <string name="gacha_tip_2">伟大的战士们啊，我会在你们身边，与你们一同奋勇搏杀。</string>
+    <string name="gacha_tip_3">再转身回头的时候，我们将带着胜利归来。</string>
+    <string name="gacha_tip_4">不需畏惧，我们会战胜那些鲁莽的家伙！</string>
+    <string name="gacha_tip_5">欢呼吧！</string>
+    <string name="gacha_tip_6">来吧——</string>
+    <string name="gacha_tip_7">现在可没有后悔的余地了。</string>
+    <string name="gacha_tip_8">无需退路。</string>
+    <string name="gacha_tip_9">英雄们啊，为这最强大的信念，请站在我们这边。</string>
+    <string name="gacha_tip_10">颤抖吧，在真正的勇敢面前。</string>
+    <string name="gacha_tip_11">哭嚎吧，为你们不堪一击的信念。</string>
+    <string name="gacha_tip_12">你将在此跪拜。</string>
+    <string name="gacha_tip_13">是吗，我们做到了吗……我现在，正体会至高的荣誉和幸福。</string>
+    <string name="gacha_tip_14">转身吧，勇士们。我们已经获得了完美的胜利，现在是该回去享受庆祝的盛典了。</string>
+    <string name="gacha_tip_15">听啊，悲鸣停止了。这是幸福的和平到来前的宁静。</string>
+    <string name="gacha_tip_16">纵使人类的战争没尽头……在这一刻，我们守护住了自己生的尊严。离开吧。但要昂首挺胸。</string>
+    <string name="gacha_tip_17">这对角可能会不小心撞倒些家具，我会尽量小心。</string>
+    <string name="gacha_disclaimer_head">请注意，这是</string>
+    <string name="gacha_disclaimer_emphasize">真正的抽卡</string>
+    <string name="gacha_agree_disclaimer">知道了</string>
+    <string name="gacha_warning">该功能属于危险功能，可能会造成误抽\n按下「确认」即视为你了解并愿意承担可能出现的风险</string>
+    <string name="gacha_warning_title">警告</string>
+    <string name="gacha_need_disclaimer">请先阅读并同意抽卡风险提示</string>
     <string name="toolbox_dialog_start_warning_title">启动警告</string>
     <string name="toolbox_dialog_start_anyway">仍然启动</string>
     <string name="toolbox_status_stopping">正在停止…</string>
@@ -996,7 +1041,7 @@
     <string name="panel_depot_hint_results">识别完成后支持导出企鹅物流刷图规划 / 明日方舟工具箱格式。</string>
 
     <!-- panel: mini game -->
-    <string name="panel_mini_game_title">小游戏</string>
+    <string name="panel_mini_game_title">牛杂</string>
     <string name="panel_mini_game_name">小游戏名称</string>
     <string name="panel_mini_game_ending">结局</string>
     <string name="panel_mini_game_preferred_events">优先系列事件</string>
@@ -1098,6 +1143,7 @@
     <string name="panel_userdata_interval_every_time">每次</string>
     <string name="panel_userdata_interval_daily">每天</string>
     <string name="panel_userdata_interval_weekly">每周</string>
+    <string name="panel_userdata_profile_tip">干员与仓库库存会按当前配置分别保存。若小工具中的干员或仓库数据与预期不符，请先确认是否已切换配置。</string>
 
     <!-- panel: depot maintain -->
     <string name="panel_depot_update_before_start">任务开始前更新库存数据</string>
@@ -1949,6 +1995,16 @@
     <string name="achievement_PallasStarter_title">牛牛厨</string>
     <string name="achievement_PallasStarter_desc">伟大的战士们啊，我会在你们身边，与你们一同奋勇搏杀。</string>
     <string name="achievement_PallasStarter_condition">使用帕拉斯作为肉鸽 ｢开局核心干员｣</string>
+    <string name="achievement_PallasCheers_title">给牛牛喝酒</string>
+    <string name="achievement_PallasCheers_desc">下次不能喝，喝这么多了……</string>
+    <string name="achievement_PallasCheers_condition">点击设置「成就」区域的帕拉斯头像</string>
+    <string name="achievement_RealGacha_title">真正的抽卡</string>
+    <string name="achievement_RealGacha_desc">不是模拟抽卡吗？怎么真抽了???</string>
+    <string name="achievement_RealGacha_condition">使用一次牛牛抽卡</string>
+    <string name="settings_pallas_burping">呃……咳嗯</string>
+    <string name="settings_pallas_drunk_hint">呀，博士。你今天走起路来，怎么看着摇摇晃晃的？</string>
+    <!-- 对齐 WPF Hangover：再点头像退出 Debug 时弹出 -->
+    <string name="settings_pallas_hangover">下次不能喝、喝这么多了……</string>
     <string name="achievement_SlackingOff_title">不务正业</string>
     <string name="achievement_SlackingOff_desc">正事做累了，玩点别的。</string>
     <string name="achievement_SlackingOff_condition">启动一次小游戏</string>

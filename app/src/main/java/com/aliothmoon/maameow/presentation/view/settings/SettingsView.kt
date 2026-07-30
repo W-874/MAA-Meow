@@ -6,6 +6,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +61,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -77,14 +84,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.aliothmoon.maameow.BuildConfig
@@ -100,6 +112,8 @@ import com.aliothmoon.maameow.domain.service.ResourceInitService
 import com.aliothmoon.maameow.domain.state.ResourceInitState
 import com.aliothmoon.maameow.manager.ShizukuInstallHelper
 import com.aliothmoon.maameow.manager.PermissionManager
+import com.aliothmoon.maameow.utils.UiScale
+import kotlin.math.roundToInt
 import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
 import com.aliothmoon.maameow.presentation.components.ExpressiveSwitch
 import com.aliothmoon.maameow.presentation.components.ITextField
@@ -111,6 +125,10 @@ import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.UpdateSourceSettings
+import com.aliothmoon.maameow.presentation.components.TopAppBar
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementEffect
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementEvent
+import com.aliothmoon.maameow.presentation.viewmodel.AchievementViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.SettingsViewModel
 import com.aliothmoon.maameow.presentation.viewmodel.UpdateViewModel
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -124,7 +142,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import kotlin.math.roundToInt
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -132,6 +149,7 @@ fun SettingsView(
     navController: NavController,
     viewModel: SettingsViewModel = koinViewModel(),
     updateViewModel: UpdateViewModel = koinViewModel(),
+    achievementViewModel: AchievementViewModel = koinViewModel(),
     resourceInitService: ResourceInitService = koinInject(),
     permissionManager: PermissionManager = koinInject(),
     appSettingsManager: AppSettingsManager = koinInject(),
@@ -146,8 +164,55 @@ fun SettingsView(
     val miIslandBypass by appSettingsManager.miIslandBypassRestriction.collectAsStateWithLifecycle()
     val backupMessage by viewModel.backupMessage.collectAsStateWithLifecycle()
     val showRestartDialog by viewModel.showRestartDialog.collectAsStateWithLifecycle()
+    val achievementUiState by achievementViewModel.uiState.collectAsStateWithLifecycle()
+    // 对齐 WPF：进入 Debug 弹 DrunkAndStaggering，再点退出弹 Hangover
+    var pallasFlavorDialog by remember { mutableStateOf<PallasFlavorDialog?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    LaunchedEffect(achievementViewModel) {
+        achievementViewModel.effects.collect { effect ->
+            when (effect) {
+                AchievementEffect.PallasEnteredDebug ->
+                    pallasFlavorDialog = PallasFlavorDialog.Drunk
+                AchievementEffect.PallasExitedDebug ->
+                    pallasFlavorDialog = PallasFlavorDialog.Hangover
+                AchievementEffect.UnlockedAll -> Toast.makeText(
+                    context,
+                    R.string.achievement_debug_unlock_all_done,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                AchievementEffect.Cleared -> Toast.makeText(
+                    context,
+                    R.string.achievement_debug_clear_done,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                AchievementEffect.Unlocked -> Unit
+            }
+        }
+    }
+
+    pallasFlavorDialog?.let { flavor ->
+        // 禁止点外部/返回立刻关掉：连点与弹窗同帧时容易穿透 dismiss
+        val bodyRes = when (flavor) {
+            PallasFlavorDialog.Drunk -> R.string.settings_pallas_drunk_hint
+            PallasFlavorDialog.Hangover -> R.string.settings_pallas_hangover
+        }
+        AlertDialog(
+            onDismissRequest = { /* 仅允许确认按钮关闭，避免点击穿透 */ },
+            title = { Text(stringResource(R.string.settings_pallas_burping)) },
+            text = { Text(stringResource(bodyRes)) },
+            confirmButton = {
+                TextButton(onClick = { pallasFlavorDialog = null }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+            ),
+        )
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -713,10 +778,18 @@ fun SettingsView(
                 }
             }
 
-            // 成就
+            // 成就（帕拉斯头像在分栏卡片内第一项）
             item {
                 SectionHeader(stringResource(R.string.settings_section_achievement))
                 SegmentedSettingsGroup {
+                    item {
+                        PallasMedal(
+                            debugActive = achievementUiState.pallasDebugActive,
+                            onClick = {
+                                achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
+                            },
+                        )
+                    }
                     item { SettingClickItem(
                         title = stringResource(R.string.settings_achievement_title),
                         description = stringResource(R.string.settings_achievement_desc),
@@ -819,8 +892,8 @@ private fun SettingClickItem(
 }
 
 /**
- * 字体大小（页面缩放）设置：整数 80~110，默认 100。
- * 松手后才提交全局缩放。滑块下方带实时预览框。
+ * 页面缩放：自动（按屏幕推荐）或手动 80~110。
+ * 拖动滑块即进入手动；可一键「使用推荐」回到自动。
  */
 @Composable
 private fun FontSizeSetting(
@@ -828,31 +901,87 @@ private fun FontSizeSetting(
     fontSizeScale: Int,
     onFontSizeScaleChanged: (Int) -> Unit,
 ) {
-    var sliderValue by remember { mutableFloatStateOf(fontSizeScale.toFloat()) }
-    LaunchedEffect(fontSizeScale) {
-        sliderValue = fontSizeScale.toFloat()
+    val configuration = LocalConfiguration.current
+    val baseDensity = LocalDensity.current
+    val isAuto = AppSettingsManager.isFontSizeScaleAuto(fontSizeScale)
+    val recommended = remember(configuration.smallestScreenWidthDp, baseDensity.fontScale) {
+        UiScale.recommendedFontSizeScale(
+            smallestWidthDp = configuration.smallestScreenWidthDp,
+            fontScale = baseDensity.fontScale,
+        )
+    }
+    val effective = AppSettingsManager.resolveFontSizeScale(
+        stored = fontSizeScale,
+        smallestWidthDp = configuration.smallestScreenWidthDp,
+        fontScale = baseDensity.fontScale,
+    )
+
+    var sliderValue by remember {
+        mutableFloatStateOf(
+            (if (isAuto) recommended else fontSizeScale).toFloat()
+        )
+    }
+    LaunchedEffect(fontSizeScale, recommended, isAuto) {
+        sliderValue = (if (isAuto) recommended else fontSizeScale).toFloat()
     }
     val current = sliderValue.roundToInt()
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
-        SettingRow(
-            title = stringResource(R.string.settings_font_size_title),
-            description = stringResource(R.string.settings_font_size_summary),
-            titleColor = contentColor,
-            descriptionColor = contentColor.copy(alpha = 0.7f),
-            icon = Icons.Rounded.Tune,
-            trailing = {
+        // 标题行 + 说明：与 SettingRow / 其它设置项一致用 rowTitleGap
+        Column(
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap),
+        ) {
+            // 数值只与标题同行，避免贴在多行说明文案右侧
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(
-                    text = current.toString(),
+                    text = stringResource(R.string.settings_font_size_title),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor.copy(alpha = 0.7f),
+                    color = contentColor,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-            },
-        )
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = if (isAuto) {
+                        stringResource(R.string.settings_font_size_auto_value, effective)
+                    } else {
+                        current.toString()
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor,
+                    modifier = Modifier.padding(start = MaaDesignTokens.Spacing.md),
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_font_size_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.7f),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (!isAuto) {
+            OutlinedButton(
+                onClick = { onFontSizeScaleChanged(AppSettingsManager.FONT_SIZE_SCALE_AUTO) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_font_size_use_recommended),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = contentColor
+                )
+            }
+        }
+        Column(modifier = Modifier.fillMaxWidth()) {
             Slider(
                 value = sliderValue,
                 onValueChange = { sliderValue = it },
@@ -885,28 +1014,29 @@ private fun FontSizeSetting(
                     )
                 }
             }
-            // 实时预览框：previewDensity 已被全局缩放（D0 * value/100），
-            // 故按 current/value 还原到 D0 * current/100，避免与全局缩放叠加造成重复缩放。
-            val previewDensity = LocalDensity.current
-            CompositionLocalProvider(
-                LocalDensity provides Density(
-                    density = previewDensity.density * current / fontSizeScale.toFloat(),
-                    fontScale = previewDensity.fontScale
-                )
+        }
+        val previewDensity = LocalDensity.current
+        val previewFactor = if (effective == 0) {
+            1f
+        } else {
+            current.toFloat() / effective.toFloat()
+        }
+        CompositionLocalProvider(
+            LocalDensity provides Density(
+                density = previewDensity.density * previewFactor,
+                fontScale = previewDensity.fontScale
+            )
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = MaaDesignTokens.Spacing.sm),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_font_size_preview_text),
-                        modifier = Modifier.padding(16.dp),
-                        color = contentColor
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.settings_font_size_preview_text),
+                    modifier = Modifier.padding(MaaDesignTokens.Spacing.lg),
+                    color = contentColor
+                )
             }
         }
     }
@@ -1105,6 +1235,67 @@ private fun SettingLanguageItem(
         onSelected = onLanguageSelected,
         icon = Icons.Rounded.Language,
     )
+}
+
+@Composable
+private fun SettingRemoteBackendItem(
+    contentColor: Color,
+    selectedBackend: RemoteBackend,
+    onBackendSelected: (RemoteBackend) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_startup_backend_desc),
+                style = MaterialTheme.typography.bodyLarge,
+                color = contentColor
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RemoteBackend.entries.forEach { backend ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .selectable(
+                            selected = backend == selectedBackend,
+                            onClick = { onBackendSelected(backend) },
+                            role = Role.RadioButton
+                        )
+                ) {
+                    RadioButton(
+                        selected = backend == selectedBackend,
+                        onClick = null
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = backend.display,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+/** 帕拉斯彩蛋弹窗：进入 Debug = Drunk，再点退出 = Hangover（对齐 WPF）。 */
+private enum class PallasFlavorDialog {
+    Drunk,
+    Hangover,
 }
 
 private data class ShizukuLaunchAppOption(
