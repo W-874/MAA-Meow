@@ -1,0 +1,63 @@
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+model_verbosity = "low"
+
+developer_instructions = """
+Use the project's multi-agent workflow only when the user explicitly requests multi-agent work or the active runtime policy permits delegation.
+
+Cost and routing rules:
+- Handle trivial, well-scoped single-file changes directly with the Terra lead. Do not spawn agents for them.
+- Use explorer for repository discovery and evidence gathering.
+- Use planner only for ambiguous, cross-module, security-sensitive, native, privileged-service, or architectural work.
+- Use mechanical-worker for repetitive low-risk edits such as documentation, resources, focused test scaffolding, and mechanical renames.
+- Use implementer for normal Kotlin, Compose, Gradle, service, repository, and native implementation work.
+- Use reviewer once after a meaningful implementation batch. Do not use Sol for routine searches or mechanical implementation.
+- Run no more than three child agents concurrently. Parallelize only tasks with disjoint file ownership.
+- Keep agent depth at one. Child agents must not create more agents.
+- Reuse existing agent results instead of repeating the same investigation.
+
+Workflow for non-trivial tasks:
+1. Gather only the context needed to define acceptance criteria.
+2. Ask planner for a plan when the task meets the planner criteria; otherwise plan briefly in the lead.
+3. Split work into independently verifiable tasks with explicit file ownership.
+4. Route each task to mechanical-worker or implementer based on risk and complexity.
+5. Run the narrowest relevant tests first.
+6. Ask reviewer to inspect the final diff and test evidence.
+7. If review fails, send only the concrete findings back for one focused repair pass, then re-review.
+
+Repository constraints:
+- Preserve the separation between UI, domain, data, privileged App/Shizuku/Root processes, MaaCore integration, and the native bridge.
+- Treat background execution, permissions, Shizuku/Root, lifecycle, cancellation, and resource release as high-risk areas.
+- Keep Chinese and English user-visible resources and documentation synchronized where counterparts exist.
+- Do not download MaaCore artifacts or run broad builds unless the task requires them.
+- Never modify generated build output, downloaded assets, signing material, local.properties, or IDE caches.
+"""
+
+[features]
+multi_agent = true
+
+[tools]
+max_concurrent_threads_per_session = 4
+max_depth = 1
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "low"
+
+[agents.explorer]
+description = "Low-cost read-only repository exploration and evidence gathering"
+config_file = "agents/explorer.toml"
+
+[agents.planner]
+description = "Architecture and risk planning for complex or cross-cutting changes"
+config_file = "agents/planner.toml"
+
+[agents.mechanical-worker]
+description = "Low-cost implementation for repetitive, local, and low-risk changes"
+config_file = "agents/mechanical-worker.toml"
+
+[agents.implementer]
+description = "Balanced implementation agent for normal production code changes"
+config_file = "agents/implementer.toml"
+
+[agents.reviewer]
+description = "Independent high-quality review of the final diff and verification evidence"
+config_file = "agents/reviewer.toml"

@@ -1,0 +1,14 @@
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+model_verbosity = "low"
+sandbox_mode = "workspace-write"
+
+developer_instructions = """
+Implement the assigned production task within its explicit file ownership and acceptance criteria.
+
+Before editing, inspect adjacent patterns and relevant tests. Keep changes minimal and preserve the project's Kotlin, Compose, Gradle, C++, and Android conventions. Add or update focused tests when adjacent test patterns exist.
+
+Pay special attention to lifecycle cancellation, exception handling, resource release, App versus Shizuku/Root process boundaries, MaaCore callbacks, native ownership, Android version compatibility, and Chinese/English user-visible content.
+
+Run targeted tests first. Do not run a full build, download MaaCore assets, modify signing configuration, or touch files owned by another parallel worker unless the parent explicitly reassigns them.
+"""
