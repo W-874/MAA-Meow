@@ -2,19 +2,18 @@ package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,17 +24,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
+import com.aliothmoon.maameow.presentation.components.AdaptiveTaskPromptDialog
+import com.aliothmoon.maameow.presentation.components.InfoCard
 import com.aliothmoon.maameow.presentation.components.RainbowFlowText
+import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 
 /**
  * 牛牛抽卡内容区（对齐 MaaWpfGui Toolbox Gacha）。
- * 寻访一次/十次在底部任务栏（与「开始任务」同级），此处仅免责声明 / 台词 / 状态。
+ * 寻访次数在此选择，仍由后台任务页的圆形主按钮统一启动。
  */
 @Composable
 fun GachaPanel(
@@ -43,114 +44,139 @@ fun GachaPanel(
     viewModel: ToolboxViewModel,
 ) {
     val disclaimerAccepted by viewModel.gachaDisclaimerAccepted.collectAsStateWithLifecycle()
+    val gachaOnce by viewModel.gachaOnce.collectAsStateWithLifecycle()
     val tip by viewModel.gachaTip.collectAsStateWithLifecycle()
     val status by viewModel.statusMessage.collectAsStateWithLifecycle()
+    val mainBottomBarPadding = LocalMainBottomBarPadding.current
+    val statusText = status.asString()
     var showWarning by remember { mutableStateOf(false) }
 
-    if (showWarning) {
-        AlertDialog(
-            onDismissRequest = { showWarning = false },
-            title = { Text(stringResource(R.string.gacha_warning_title)) },
-            text = { Text(stringResource(R.string.gacha_warning)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showWarning = false
-                        viewModel.onGachaAgreeDisclaimer()
-                    },
-                ) {
-                    Text(stringResource(R.string.common_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWarning = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
-    }
+    AdaptiveTaskPromptDialog(
+        visible = showWarning,
+        title = stringResource(R.string.gacha_warning_title),
+        message = stringResource(R.string.gacha_warning),
+        onDismissRequest = {
+            showWarning = false
+            viewModel.onGachaCancel()
+        },
+        onConfirm = {
+            showWarning = false
+            viewModel.onGachaAgreeDisclaimer()
+        },
+        dismissText = stringResource(R.string.common_cancel),
+    )
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = MaaDesignTokens.Spacing.listHorizontal,
+            top = MaaDesignTokens.Spacing.xs,
+            end = MaaDesignTokens.Spacing.listHorizontal,
+            bottom = mainBottomBarPadding + MaaDesignTokens.Spacing.xs,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
-        Text(
-            text = stringResource(R.string.toolbox_tab_gacha),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-        )
+        item {
+            Text(
+                text = stringResource(R.string.toolbox_tab_gacha),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
 
         if (!disclaimerAccepted) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                // 两行：引导语 + 大号炫彩「真正的抽卡」（对齐 WPF 分行 + 大字）
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth(),
+            item {
+                InfoCard(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 ) {
-                    Text(
-                        text = stringResource(R.string.gacha_disclaimer_head),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    RainbowFlowText(
-                        text = stringResource(R.string.gacha_disclaimer_emphasize),
-                        style = MaterialTheme.typography.displaySmall.copy(fontSize = 40.sp),
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(
-                    onClick = { showWarning = true },
-                    modifier = Modifier
-                        .fillMaxWidth(0.55f)
-                        .height(48.dp),
-                    // 与底部「开始任务 / 寻访」等统一 8dp 圆角
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.gacha_agree_disclaimer),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.lg),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.gacha_disclaimer_head),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center,
+                            )
+                            RainbowFlowText(
+                                text = stringResource(R.string.gacha_disclaimer_emphasize),
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        Button(
+                            onClick = { showWarning = true },
+                            shape = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.gacha_agree_disclaimer),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                    }
                 }
             }
         } else {
-            Text(
-                text = tip.asString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(vertical = 16.dp),
-            )
-            val statusText = status.asString()
+            item {
+                InfoCard(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    Text(
+                        text = tip.asString(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
             if (statusText.isNotBlank()) {
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                )
+                item {
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = MaaDesignTokens.Spacing.md),
+                    )
+                }
+            }
+
+            item {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    GachaMode.entries.forEachIndexed { index, mode ->
+                        SegmentedButton(
+                            selected = gachaOnce == mode.once,
+                            onClick = { viewModel.onGachaModeChange(mode.once) },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = GachaMode.entries.size,
+                                baseShape = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
+                            ),
+                        ) {
+                            Text(stringResource(mode.labelRes))
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+private enum class GachaMode(val once: Boolean, val labelRes: Int) {
+    ONCE(once = true, labelRes = R.string.gacha_once),
+    TEN_TIMES(once = false, labelRes = R.string.gacha_ten_times),
 }

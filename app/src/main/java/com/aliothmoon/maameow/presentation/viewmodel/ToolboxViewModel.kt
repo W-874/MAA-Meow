@@ -16,6 +16,7 @@ import com.aliothmoon.maameow.data.resource.ActivityManager
 import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.domain.models.RunMode
 import com.aliothmoon.maameow.domain.service.MaaCompositionService
+import com.aliothmoon.maameow.domain.state.MaaExecutionState
 import com.aliothmoon.maameow.domain.usecase.CheckGameReadinessUseCase
 import com.aliothmoon.maameow.domain.usecase.GameReadiness
 import com.aliothmoon.maameow.domain.usecase.TaskStartContext
@@ -29,6 +30,7 @@ import com.aliothmoon.maameow.presentation.view.panel.PanelDialogConfirmAction
 import com.aliothmoon.maameow.presentation.view.panel.PanelDialogUiState
 import com.aliothmoon.maameow.utils.i18n.UiText
 import com.aliothmoon.maameow.utils.i18n.uiTextOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,8 +39,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -64,6 +68,11 @@ enum class ToolboxTab(@field:StringRes val labelRes: Int) {
             }
     }
 }
+
+internal fun gachaTaskName(once: Boolean): String = if (once) "GachaOnce" else "GachaTenTimes"
+
+internal fun canStopToolboxExecution(executionState: MaaExecutionState): Boolean =
+    executionState == MaaExecutionState.RUNNING
 
 data class RecruitCalcConfig(
     val chooseLevel3: Boolean = true,
@@ -92,44 +101,56 @@ class ToolboxViewModel(
 
     val miniGame = MiniGameDelegate(appContext, activityManager, compositionService, viewModelScope, achievementRepository)
 
-    private val _currentTab = MutableStateFlow(ToolboxTab.MINI_GAME)
-    val currentTab: StateFlow<ToolboxTab> = _currentTab.asStateFlow()
+    private val _uiState = MutableStateFlow(
+        ToolboxUiState(visibleTabs = ToolboxTab.visibleFor(appSettingsManager.runMode.value))
+    )
+    val uiState: StateFlow<ToolboxUiState> = _uiState.asStateFlow()
 
-    /** 可见子 Tab：前台模式隐藏牛牛抽卡。 */
-    val visibleTabs: StateFlow<List<ToolboxTab>> = appSettingsManager.runMode
-        .map { ToolboxTab.visibleFor(it) }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            ToolboxTab.visibleFor(appSettingsManager.runMode.value),
-        )
-
-    private val _statusMessage = MutableStateFlow<UiText>(UiText.Empty)
-    val statusMessage: StateFlow<UiText> = _statusMessage.asStateFlow()
-
-    private val _dialog = MutableStateFlow<PanelDialogUiState?>(null)
-    val dialog: StateFlow<PanelDialogUiState?> = _dialog.asStateFlow()
-
-    private var pendingStartContext: TaskStartContext? = null
-    /** 牛牛抽卡：底部「开始任务」或面板按钮共用；null = 非 gacha 启动。 */
-    private var pendingGachaOnce: Boolean? = null
+    /** Compatibility projections for panels migrating to [uiState]. */
+    val currentTab: StateFlow<ToolboxTab> = uiState.map { it.currentTab }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, _uiState.value.currentTab)
+    val visibleTabs: StateFlow<List<ToolboxTab>> = uiState.map { it.visibleTabs }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, _uiState.value.visibleTabs)
+    val statusMessage: StateFlow<UiText> = uiState.map { it.statusMessage }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, UiText.Empty)
+    val dialog: StateFlow<PanelDialogUiState?> = uiState.map { it.dialog }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val gachaOnce: StateFlow<Boolean> = uiState.map { it.gachaOnce }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
     private var gachaTipJob: Job? = null
+    private val startMutex = Mutex()
+    private var readinessInProgress = false
+    private var stopJob: Job? = null
 
     // ==================== 牛牛抽卡（对齐 WPF Toolbox Gacha）====================
 
-    private val _gachaDisclaimerAccepted = MutableStateFlow(false)
-    val gachaDisclaimerAccepted: StateFlow<Boolean> = _gachaDisclaimerAccepted.asStateFlow()
-
-    private val _gachaTip = MutableStateFlow(uiTextOf(R.string.gacha_init_tip))
-    val gachaTip: StateFlow<UiText> = _gachaTip.asStateFlow()
+    val gachaDisclaimerAccepted: StateFlow<Boolean> = uiState.map { it.gachaDisclaimerAccepted }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val gachaTip: StateFlow<UiText> = uiState.map { it.gachaTip }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, uiTextOf(R.string.gacha_init_tip))
 
     init {
         // 切到前台时若正停在抽卡 Tab，回退到牛杂
         viewModelScope.launch {
             appSettingsManager.runMode.collect { mode ->
-                if (mode == RunMode.FOREGROUND && _currentTab.value == ToolboxTab.GACHA) {
-                    _currentTab.value = ToolboxTab.MINI_GAME
-                    pendingGachaOnce = null
+                if (mode == RunMode.FOREGROUND && _uiState.value.currentTab == ToolboxTab.GACHA) {
+                    _uiState.update {
+                        it.copy(
+                            visibleTabs = ToolboxTab.visibleFor(mode),
+                            currentTab = ToolboxTab.MINI_GAME,
+                            dialog = null,
+                            pendingStartRequest = null,
+                        ).clearGachaTransientState()
+                    }
+                } else {
+                    _uiState.update { it.copy(visibleTabs = ToolboxTab.visibleFor(mode)) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            compositionService.state.collect { state ->
+                updateExecutionControls(state)
+                if (state == MaaExecutionState.IDLE || state == MaaExecutionState.ERROR) {
                     stopGachaTipRotation()
                 }
             }
@@ -139,20 +160,21 @@ class ToolboxViewModel(
     fun onGachaAgreeDisclaimer() {
         viewModelScope.launch {
             achievementRepository.unlock(AchievementIds.REAL_GACHA)
-            _gachaDisclaimerAccepted.value = true
-            _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
+            _uiState.update {
+                it.copy(
+                    gachaDisclaimerAccepted = true,
+                    gachaTip = uiTextOf(R.string.gacha_init_tip),
+                )
+            }
         }
     }
 
-    /** 面板「寻访一次 / 十次」入口。 */
-    fun onStartGacha(once: Boolean) {
-        if (appSettingsManager.runMode.value == RunMode.FOREGROUND) return
-        if (!_gachaDisclaimerAccepted.value) {
-            _statusMessage.value = uiTextOf(R.string.gacha_need_disclaimer)
-            return
-        }
-        pendingGachaOnce = once
-        onStart(TaskStartContext(TaskStartMode.MANUAL))
+    fun onGachaModeChange(once: Boolean) {
+        _uiState.update { it.copy(gachaOnce = once) }
+    }
+
+    fun onGachaCancel() {
+        clearGachaUiState()
     }
 
     // ==================== 公招识别配置 ====================
@@ -170,91 +192,134 @@ class ToolboxViewModel(
         ) {
             return
         }
-        _currentTab.value = tab
+        if (_uiState.value.currentTab == ToolboxTab.GACHA || tab == ToolboxTab.GACHA) {
+            clearGachaUiState()
+        }
+        _uiState.update { it.copy(currentTab = tab) }
     }
 
     // ==================== 统一启动/停止 ====================
 
-    fun onStart() = onStart(TaskStartContext(TaskStartMode.MANUAL))
-
-    private fun onStart(context: TaskStartContext) {
-        viewModelScope.launch {
-            when (val readiness = checkGameReadiness(
-                clientType = chainState.clientType,
-                launchesGame = false,
-                context = context,
-            )) {
-                is GameReadiness.RequiresConfirmation -> {
-                    pendingStartContext = context.acknowledged(readiness.acknowledgement)
-                    _dialog.value = appContext.createStartWarningDialog(
-                        appContext.resolveTaskStartConfirmationMessage(readiness.acknowledgement)
-                    )
-                    return@launch
-                }
-
-                is GameReadiness.Blocked -> {
-                    pendingStartContext = null
-                    pendingGachaOnce = null
-                    _dialog.value = appContext.createStartBlockedDialog(
-                        appContext.resolveTaskStartBlockedMessage(readiness.reason)
-                    )
-                    return@launch
-                }
-
-                is GameReadiness.Ready -> pendingStartContext = null
-            }
-            doStart()
+    fun onAction(action: ToolboxAction) {
+        when (action) {
+            is ToolboxAction.SelectTab -> onTabChange(action.tab)
+            is ToolboxAction.SelectGachaMode -> onGachaModeChange(action.once)
+            ToolboxAction.AgreeGachaDisclaimer -> onGachaAgreeDisclaimer()
+            ToolboxAction.CancelGacha -> onGachaCancel()
+            ToolboxAction.Start -> onStart()
+            ToolboxAction.Stop -> onStop()
+            ToolboxAction.ConfirmDialog -> onDialogConfirm()
+            ToolboxAction.DismissDialog -> onDialogDismiss()
         }
     }
 
-    private fun doStart() {
-        when (_currentTab.value) {
+    fun onStart() {
+        val snapshot = _uiState.value
+        if (!snapshot.canStart || !startMutex.tryLock()) return
+        val request = ToolboxStartRequest(
+            tab = snapshot.currentTab,
+            gachaOnce = snapshot.gachaOnce,
+            context = TaskStartContext(TaskStartMode.MANUAL),
+        )
+        if (request.tab == ToolboxTab.GACHA && !snapshot.gachaDisclaimerAccepted) {
+            _uiState.update { it.copy(statusMessage = uiTextOf(R.string.gacha_need_disclaimer)) }
+            startMutex.unlock()
+            return
+        }
+        onStart(request)
+    }
+
+    private fun onStart(request: ToolboxStartRequest) {
+        viewModelScope.launch {
+            setReadinessInProgress(true)
+            try {
+                when (val readiness = checkGameReadiness(
+                    clientType = chainState.clientType,
+                    launchesGame = false,
+                    context = request.context,
+                )) {
+                    is GameReadiness.RequiresConfirmation -> {
+                        val pending = request.copy(
+                            context = request.context.acknowledged(readiness.acknowledgement)
+                        )
+                        _uiState.update {
+                            it.copy(
+                                pendingStartRequest = pending,
+                                dialog = appContext.createStartWarningDialog(
+                                    appContext.resolveTaskStartConfirmationMessage(readiness.acknowledgement)
+                                ),
+                            )
+                        }
+                        return@launch
+                    }
+
+                    is GameReadiness.Blocked -> {
+                        _uiState.update {
+                            it.copy(
+                                pendingStartRequest = null,
+                                dialog = appContext.createStartBlockedDialog(
+                                    appContext.resolveTaskStartBlockedMessage(readiness.reason)
+                                ),
+                            )
+                        }
+                        return@launch
+                    }
+
+                    is GameReadiness.Ready -> _uiState.update { it.copy(pendingStartRequest = null) }
+                }
+                if (request.tab == ToolboxTab.GACHA &&
+                    appSettingsManager.runMode.value == RunMode.FOREGROUND
+                ) {
+                    return@launch
+                }
+                doStart(request)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        pendingStartRequest = null,
+                        statusMessage = uiTextOf(R.string.task_start_error_start_failed),
+                    )
+                }
+            } finally {
+                setReadinessInProgress(false)
+                startMutex.unlock()
+            }
+        }
+    }
+
+    private suspend fun doStart(request: ToolboxStartRequest) {
+        when (request.tab) {
             ToolboxTab.MINI_GAME -> {
-                pendingGachaOnce = null
                 miniGame.onStart()
             }
             ToolboxTab.GACHA -> {
-                if (appSettingsManager.runMode.value == RunMode.FOREGROUND) {
-                    pendingGachaOnce = null
-                    return
-                }
-                val once = pendingGachaOnce ?: true
-                pendingGachaOnce = null
-                doStartGacha(once)
+                doStartGacha(request.gachaOnce)
             }
             ToolboxTab.RECRUIT_CALC -> {
-                pendingGachaOnce = null
                 onStartRecruitCalc()
             }
             ToolboxTab.DEPOT -> {
-                pendingGachaOnce = null
                 onStartDepot()
             }
             ToolboxTab.OPER_BOX -> {
-                pendingGachaOnce = null
                 onStartOperBox()
             }
         }
     }
 
-    private fun doStartGacha(once: Boolean) {
-        viewModelScope.launch {
-            if (!_gachaDisclaimerAccepted.value) {
-                _statusMessage.value = uiTextOf(R.string.gacha_need_disclaimer)
-                return@launch
-            }
-            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_gacha)
-            val taskName = if (once) "GachaOnce" else "GachaTenTimes"
-            val params = buildJsonObject {
-                put("task_names", buildJsonArray { add(JsonPrimitive(taskName)) })
-            }.toString()
-            val result = compositionService.startCopilot(
-                listOf(MaaTaskParams(MaaTaskType.CUSTOM, params)),
-            )
-            handleStartResult(result, uiTextOf(R.string.toolbox_status_gacha_started))
-            if (result is MaaCompositionService.StartResult.Success) {
-                startGachaTipRotation()
-            }
+    private suspend fun doStartGacha(once: Boolean) {
+        _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting_gacha)) }
+        val params = buildJsonObject {
+            put("task_names", buildJsonArray { add(JsonPrimitive(gachaTaskName(once))) })
+        }.toString()
+        val result = compositionService.startCopilot(
+            listOf(MaaTaskParams(MaaTaskType.CUSTOM, params)),
+        )
+        handleStartResult(result, uiTextOf(R.string.toolbox_status_gacha_started))
+        if (result is MaaCompositionService.StartResult.Success) {
+            startGachaTipRotation()
         }
     }
 
@@ -263,7 +328,7 @@ class ToolboxViewModel(
         gachaTipJob = viewModelScope.launch {
             while (isActive) {
                 val tipRes = GACHA_TIP_RES_IDS[Random.nextInt(GACHA_TIP_RES_IDS.size)]
-                _gachaTip.value = uiTextOf(tipRes)
+                _uiState.update { it.copy(gachaTip = uiTextOf(tipRes)) }
                 delay(5_000)
             }
         }
@@ -272,99 +337,96 @@ class ToolboxViewModel(
     private fun stopGachaTipRotation() {
         gachaTipJob?.cancel()
         gachaTipJob = null
-        _gachaTip.value = uiTextOf(R.string.gacha_init_tip)
+        _uiState.update { it.copy(gachaTip = uiTextOf(R.string.gacha_init_tip)) }
+    }
+
+    private fun clearGachaUiState() {
+        _uiState.update { it.clearGachaTransientState() }
+        stopGachaTipRotation()
     }
 
     fun onDialogConfirm() {
-        when (_dialog.value?.confirmAction) {
+        when (_uiState.value.dialog?.confirmAction) {
             PanelDialogConfirmAction.CONFIRM_PENDING_START -> {
-                val pending = pendingStartContext
-                _dialog.value = null
-                pendingStartContext = null
-                if (pending != null) onStart(pending)
+                val pending = _uiState.value.pendingStartRequest
+                _uiState.update { it.copy(dialog = null, pendingStartRequest = null) }
+                if (pending != null && startMutex.tryLock()) onStart(pending)
             }
 
-            else -> _dialog.value = null
+            else -> _uiState.update { it.copy(dialog = null) }
         }
     }
 
     fun onDialogDismiss() {
-        pendingStartContext = null
-        pendingGachaOnce = null
-        _dialog.value = null
+        val pending = _uiState.value.pendingStartRequest
+        _uiState.update { it.copy(dialog = null, pendingStartRequest = null) }
+        if (pending?.tab == ToolboxTab.GACHA) clearGachaUiState()
     }
 
     fun onStop() {
-        when (_currentTab.value) {
-            ToolboxTab.MINI_GAME -> miniGame.onStop()
-            ToolboxTab.GACHA -> viewModelScope.launch {
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
+        if (!_uiState.value.canStop || stopJob?.isActive == true) return
+        stopGachaTipRotation()
+        stopJob = viewModelScope.launch {
+            _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopping)) }
+            try {
                 compositionService.stop()
-                stopGachaTipRotation()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
-            }
-            else -> viewModelScope.launch {
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopping)
-                compositionService.stop()
-                _statusMessage.value = uiTextOf(R.string.toolbox_status_stopped)
+                _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_stopped)) }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                _uiState.update { it.copy(statusMessage = uiTextOf(R.string.task_start_error_start_failed)) }
             }
         }
     }
 
     // ==================== 公招识别 ====================
 
-    private fun onStartRecruitCalc() {
-        viewModelScope.launch {
-            collector.clearRecruit()
-            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_recruit_calc)
-            val cfg = _recruitConfig.value
-            val selectList = buildJsonArray {
-                if (cfg.chooseLevel3) add(3)
-                if (cfg.chooseLevel4) add(4)
-                if (cfg.chooseLevel5) add(5)
-                if (cfg.chooseLevel6) add(6)
-            }
-            val params = buildJsonObject {
-                put("select", selectList)
-                put("confirm", buildJsonArray { add(JsonPrimitive(-1)) })
-                put("times", 0)
-                put("set_time", cfg.autoSetTime)
-                put("expedite", false)
-                if (cfg.autoSetTime) {
-                    put("recruitment_time", buildJsonObject {
-                        put("3", cfg.level3Time)
-                        put("4", cfg.level4Time)
-                        put("5", cfg.level5Time)
-                    })
-                }
-            }.toString()
-            handleStartResult(
-                compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.RECRUIT, params)))
-            )
+    private suspend fun onStartRecruitCalc() {
+        collector.clearRecruit()
+        _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting_recruit_calc)) }
+        val cfg = _recruitConfig.value
+        val selectList = buildJsonArray {
+            if (cfg.chooseLevel3) add(3)
+            if (cfg.chooseLevel4) add(4)
+            if (cfg.chooseLevel5) add(5)
+            if (cfg.chooseLevel6) add(6)
         }
+        val params = buildJsonObject {
+            put("select", selectList)
+            put("confirm", buildJsonArray { add(JsonPrimitive(-1)) })
+            put("times", 0)
+            put("set_time", cfg.autoSetTime)
+            put("expedite", false)
+            if (cfg.autoSetTime) {
+                put("recruitment_time", buildJsonObject {
+                    put("3", cfg.level3Time)
+                    put("4", cfg.level4Time)
+                    put("5", cfg.level5Time)
+                })
+            }
+        }
+        handleStartResult(
+            compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.RECRUIT, params.toString())))
+        )
     }
 
     // ==================== 仓库识别 ====================
 
-    private fun onStartDepot() {
-        viewModelScope.launch {
-            // 不 clear 持久化快照：识别失败时仍可看历史；成功 set 后自动刷新
-            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_depot)
-            handleStartResult(
-                compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
-            )
-        }
+    private suspend fun onStartDepot() {
+        // 不 clear 持久化快照：识别失败时仍可看历史；成功 set 后自动刷新
+        _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting_depot)) }
+        handleStartResult(
+            compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.DEPOT, "{}")))
+        )
     }
 
     // ==================== 干员识别 ====================
 
-    private fun onStartOperBox() {
-        viewModelScope.launch {
-            _statusMessage.value = uiTextOf(R.string.toolbox_status_starting_oper_box)
-            handleStartResult(
-                compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.OPER_BOX, "{}")))
-            )
-        }
+    private suspend fun onStartOperBox() {
+        _uiState.update { it.copy(statusMessage = uiTextOf(R.string.toolbox_status_starting_oper_box)) }
+        handleStartResult(
+            compositionService.startCopilot(listOf(MaaTaskParams(MaaTaskType.OPER_BOX, "{}")))
+        )
     }
 
     // ==================== 导出（与屏幕同源：Repository 快照）====================
@@ -394,7 +456,23 @@ class ToolboxViewModel(
         result: MaaCompositionService.StartResult,
         successMessage: UiText = uiTextOf(R.string.toolbox_status_started),
     ) {
-        _statusMessage.value = appContext.formatStartResult(result, successMessage)
+        _uiState.update { it.copy(statusMessage = appContext.formatStartResult(result, successMessage)) }
+    }
+
+    private fun setReadinessInProgress(inProgress: Boolean) {
+        readinessInProgress = inProgress
+        updateExecutionControls(compositionService.state.value)
+    }
+
+    private fun updateExecutionControls(executionState: MaaExecutionState) {
+        _uiState.update {
+            it.copy(
+                isStarting = readinessInProgress || executionState == MaaExecutionState.STARTING,
+                canStart = !readinessInProgress &&
+                    (executionState == MaaExecutionState.IDLE || executionState == MaaExecutionState.ERROR),
+                canStop = canStopToolboxExecution(executionState),
+            )
+        }
     }
 
     companion object {
