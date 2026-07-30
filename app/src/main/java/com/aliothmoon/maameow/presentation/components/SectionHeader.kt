@@ -20,7 +20,6 @@ fun SectionHeader(
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(
-            start = 16.dp,
             top = 8.dp,
             bottom = 16.dp,
         ),

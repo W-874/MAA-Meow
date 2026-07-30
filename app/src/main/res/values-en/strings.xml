@@ -54,6 +54,8 @@
 
     <string name="settings_achievement_title">Achievements</string>
     <string name="settings_achievement_desc">View MaaMeow milestones and hidden easter eggs</string>
+    <string name="settings_pallas_title">Buy Pallas a Drink</string>
+    <string name="settings_pallas_desc">Share a drink with Pallas and see what happens</string>
     <string name="settings_achievement_debug_title">Achievement Debug</string>
     <string name="settings_achievement_debug_desc">Manually unlock, unlock all, or clear achievement records</string>
     <string name="settings_theme_title">Theme</string>

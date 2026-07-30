@@ -778,13 +778,20 @@ fun SettingsView(
                 }
             }
 
-            // 成就（帕拉斯头像在分栏卡片内第一项）
+            // 成就
             item {
                 SectionHeader(stringResource(R.string.settings_section_achievement))
                 SegmentedSettingsGroup {
                     item {
-                        PallasMedal(
-                            debugActive = achievementUiState.pallasDebugActive,
+                        SettingRow(
+                            title = stringResource(R.string.settings_pallas_title),
+                            description = stringResource(R.string.settings_pallas_desc),
+                            titleColor = contentColor,
+                            descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            icon = Icons.Rounded.EmojiEvents,
+                            trailing = {
+                                PallasMedal(debugActive = achievementUiState.pallasDebugActive)
+                            },
                             onClick = {
                                 achievementViewModel.onEvent(AchievementEvent.PallasAvatarClicked)
                             },
@@ -879,7 +886,7 @@ private fun SettingClickItem(
         title = title,
         description = description.ifEmpty { null },
         titleColor = contentColor,
-        descriptionColor = contentColor.copy(alpha = 0.7f),
+        descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
         icon = icon,
         trailing = {
             Icon(
@@ -927,28 +934,14 @@ private fun FontSizeSetting(
     val current = sliderValue.roundToInt()
         .coerceIn(AppSettingsManager.FONT_SIZE_SCALE_MIN, AppSettingsManager.FONT_SIZE_SCALE_MAX)
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = MaaDesignTokens.Spacing.listItemVertical),
-        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
-    ) {
-        // 标题行 + 说明：与 SettingRow / 其它设置项一致用 rowTitleGap
-        Column(
-            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.rowTitleGap),
-        ) {
-            // 数值只与标题同行，避免贴在多行说明文案右侧
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_font_size_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = contentColor,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SettingRow(
+            title = stringResource(R.string.settings_font_size_title),
+            description = stringResource(R.string.settings_font_size_summary),
+            titleColor = contentColor,
+            descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            icon = Icons.Rounded.AspectRatio,
+            trailing = {
                 Text(
                     text = if (isAuto) {
                         stringResource(R.string.settings_font_size_auto_value, effective)
@@ -957,16 +950,17 @@ private fun FontSizeSetting(
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = contentColor,
-                    modifier = Modifier.padding(start = MaaDesignTokens.Spacing.md),
                 )
-            }
-            Text(
-                text = stringResource(R.string.settings_font_size_summary),
-                style = MaterialTheme.typography.bodySmall,
-                color = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+            },
+        )
+        Column(
+            modifier = Modifier.padding(
+                start = MaaDesignTokens.Spacing.listHorizontal,
+                end = MaaDesignTokens.Spacing.listHorizontal,
+                bottom = MaaDesignTokens.Spacing.listItemVertical,
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+        ) {
         if (!isAuto) {
             OutlinedButton(
                 onClick = { onFontSizeScaleChanged(AppSettingsManager.FONT_SIZE_SCALE_AUTO) },
@@ -1010,7 +1004,7 @@ private fun FontSizeSetting(
                     Text(
                         text = kp.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -1030,7 +1024,7 @@ private fun FontSizeSetting(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Text(
                     text = stringResource(R.string.settings_font_size_preview_text),
@@ -1038,6 +1032,7 @@ private fun FontSizeSetting(
                     color = contentColor
                 )
             }
+        }
         }
     }
 }
@@ -1056,7 +1051,7 @@ private fun SettingSwitchItem(
         title = title,
         description = description,
         titleColor = contentColor,
-        descriptionColor = contentColor.copy(alpha = 0.7f),
+        descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant,
         icon = icon,
         enabled = enabled,
         trailing = {

@@ -252,6 +252,8 @@
 
     <string name="settings_achievement_title">成就</string>
     <string name="settings_achievement_desc">查看 MaaMeow 使用记录与隐藏彩蛋</string>
+    <string name="settings_pallas_title">给牛牛喝酒</string>
+    <string name="settings_pallas_desc">请牛牛喝一杯，看看会发生什么</string>
     <string name="settings_achievement_debug_title">成就调试</string>
     <string name="settings_achievement_debug_desc">手动解锁、全解锁或清空成就记录</string>
     <string name="settings_theme_title">主题模式</string>
