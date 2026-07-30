@@ -23,7 +23,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * 仓库自身的语义：全量覆盖、掉落累加、排除集、缺口查询、分片隔离。
+ * 仓库自身的语义：识别基线、掉落增量、排除集、缺口查询、分片隔离。
  *
  * 分片装载、写回队列等共享机制在 [ProfileShardStoreTest] 里测。
  */
@@ -85,6 +85,20 @@ class DepotRepositoryTest {
         repository.set(listOf(DepotItem("30012", 5)))
 
         assertEquals(mapOf("30012" to 5), repository.snapshot.value.items)
+    }
+
+    @Test
+    fun replaceRecognition_replacesBaselineAndClearsFightDropDeltas() {
+        repository.recordFightDrops(listOf("30011" to 7))
+
+        repository.replaceRecognition(listOf(DepotItem("30011", 100)))
+
+        val snapshot = repository.snapshot.value
+        assertEquals(mapOf("30011" to 100), snapshot.baselineItems)
+        assertTrue(snapshot.fightDropDeltas.isEmpty())
+        assertEquals(100, repository.estimatedCountOf("30011"))
+        assertEquals(100, repository.effectiveCountOf("30011"))
+        assertTrue(repository.hasRecognition)
     }
 
     @Test
@@ -156,10 +170,12 @@ class DepotRepositoryTest {
     }
 
     @Test
-    fun merge_accumulatesAcrossRepeatedCalls() {
+    fun fightDropsRemainEstimatedUntilRecognition() {
         repeat(5) { repository.merge(listOf("30011" to 1)) }
 
-        assertEquals(5, repository.countOf("30011"))
+        assertEquals(5, repository.estimatedCountOf("30011"))
+        assertEquals(0, repository.effectiveCountOf("30011"))
+        assertFalse(repository.hasRecognition)
     }
 
     /**
@@ -169,7 +185,7 @@ class DepotRepositoryTest {
     fun merge_neverLosesUpdates_acrossManyWrites() {
         repeat(50) { repository.merge(listOf("30011" to 1)) }
 
-        assertEquals(50, repository.countOf("30011"))
+        assertEquals(50, repository.estimatedCountOf("30011"))
     }
 
     @Test
@@ -183,14 +199,14 @@ class DepotRepositoryTest {
         }
         withTimeout(AWAIT_TIMEOUT_MS) { repeat(50) { yield() } }
 
-        assertEquals("已加载的分片不得被磁盘值覆盖", 7, repository.countOf("30011"))
+        assertEquals("已加载的分片不得被磁盘值覆盖", 7, repository.estimatedCountOf("30011"))
     }
 
     @Test
     fun concurrentMerge_doNotLoseUpdates() = runBlocking {
         (1..20).map { async { repository.merge(listOf("30011" to 1)) } }.awaitAll()
 
-        assertEquals(20, repository.countOf("30011"))
+        assertEquals(20, repository.estimatedCountOf("30011"))
     }
 
     @Test
@@ -198,6 +214,41 @@ class DepotRepositoryTest {
         awaitSnapshot { true }
 
         assertEquals(0, repository.countOf("30011"))
+    }
+
+    @Test
+    fun legacySnapshotWithSync_migratesItemsToRecognitionBaseline() = runBlocking {
+        val freshStore = FakePreferencesDataStore()
+        freshStore.edit {
+            it[stringPreferencesKey("depot_$PROFILE_A")] = JsonUtils.common.encodeToString(
+                DepotSnapshot(items = mapOf("30011" to 12), syncTimeMillis = 1L),
+            )
+        }
+
+        val freshRepository = DepotRepository(freshStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { freshRepository.isLoaded.first { it } }
+
+        assertEquals(mapOf("30011" to 12), freshRepository.snapshot.value.baselineItems)
+        assertTrue(freshRepository.snapshot.value.fightDropDeltas.isEmpty())
+        assertEquals(12, freshRepository.effectiveCountOf("30011"))
+    }
+
+    @Test
+    fun legacySnapshotWithoutSync_migratesItemsToFightDropDeltas() = runBlocking {
+        val freshStore = FakePreferencesDataStore()
+        freshStore.edit {
+            it[stringPreferencesKey("depot_$PROFILE_A")] = JsonUtils.common.encodeToString(
+                DepotSnapshot(items = mapOf("30011" to 12)),
+            )
+        }
+
+        val freshRepository = DepotRepository(freshStore, fakeChainState())
+        withTimeout(AWAIT_TIMEOUT_MS) { freshRepository.isLoaded.first { it } }
+
+        assertTrue(freshRepository.snapshot.value.baselineItems.isEmpty())
+        assertEquals(mapOf("30011" to 12), freshRepository.snapshot.value.fightDropDeltas)
+        assertEquals(12, freshRepository.estimatedCountOf("30011"))
+        assertEquals(0, freshRepository.effectiveCountOf("30011"))
     }
 
     @Test

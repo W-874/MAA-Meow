@@ -11,17 +11,25 @@ import com.aliothmoon.maameow.data.preferences.TaskChainState
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.Serializable
 
-/** @param syncTimeMillis 上次全量识别；0=从未识别。merge 不更新。 */
+/**
+ * 仓库快照 v2：全量识别是基线，战斗掉落是识别后的增量估算。
+ *
+ * [items] 保留为 v1 读取方的估算数量镜像；新代码应使用 [baselineItems]、
+ * [fightDropDeltas] 或 [estimatedItems]。
+ */
 @Serializable
 data class DepotSnapshot(
+    val baselineItems: Map<String, Int> = emptyMap(),
+    val fightDropDeltas: Map<String, Int> = emptyMap(),
     val items: Map<String, Int> = emptyMap(),
     val syncTimeMillis: Long = 0L,
+    val formatVersion: Int = 1,
 )
 
 /** 仓库分片：内存权威，set/merge 同步写内存并排队落盘。 */
 class DepotRepository(
     store: DataStore<Preferences>,
-    taskChainState: TaskChainState,
+    private val taskChainState: TaskChainState,
 ) {
     private val shards = ProfileShardStore(
         store = store,
@@ -29,6 +37,7 @@ class DepotRepository(
         keyPrefix = KEY_PREFIX,
         serializer = DepotSnapshot.serializer(),
         empty = ::DepotSnapshot,
+        normalize = DepotSnapshot::migrateToV2,
     )
 
     val snapshot: StateFlow<DepotSnapshot> get() = shards.snapshot
@@ -37,33 +46,66 @@ class DepotRepository(
 
     fun start() = shards.start()
 
-    fun set(items: List<DepotItem>) {
-        shards.mutate {
+    /** 用本次全量仓库识别替换基线，并丢弃此前的战斗掉落估算。 */
+    fun replaceRecognition(profileId: String, items: List<DepotItem>) {
+        val baseline = items.associate { it.id to it.count }
+        shards.mutate(profileId) {
             DepotSnapshot(
-                items = items.associate { it.id to it.count },
+                baselineItems = baseline,
+                items = baseline,
                 syncTimeMillis = System.currentTimeMillis(),
+                formatVersion = FORMAT_VERSION,
             )
         }
     }
 
-    fun merge(drops: List<Pair<String, Int>>) {
+    /** 以调用时的活跃配置档写入全量仓库识别。 */
+    fun replaceRecognition(items: List<DepotItem>) =
+        replaceRecognition(taskChainState.profileId.value, items)
+
+    /** 记录本次战斗掉落；仅累加估算增量，不改变全量识别时间。 */
+    fun recordFightDrops(profileId: String, drops: List<Pair<String, Int>>) {
         val valid = drops.filter { (itemId, add) -> add > 0 && !shouldExclude(itemId) }
         if (valid.isEmpty()) return
-        shards.mutate { current ->
-            val merged = current.items.toMutableMap()
+        shards.mutate(profileId) { current ->
+            val merged = current.fightDropDeltas.toMutableMap()
             for ((itemId, add) in valid) {
                 merged[itemId] = (merged[itemId] ?: 0) + add
             }
-            current.copy(items = merged)
+            current.copy(
+                fightDropDeltas = merged,
+                items = current.estimatedItemsWith(merged),
+                formatVersion = FORMAT_VERSION,
+            )
         }
     }
 
-    fun countOf(itemId: String): Int = snapshot.value.items[itemId] ?: 0
+    /** 以调用时的活跃配置档记录战斗掉落。 */
+    fun recordFightDrops(drops: List<Pair<String, Int>>) =
+        recordFightDrops(taskChainState.profileId.value, drops)
+
+    /** 包含战斗掉落估算的数量；未全量识别时仍可用于展示。 */
+    fun estimatedCountOf(itemId: String): Int = snapshot.value.estimatedCountOf(itemId)
+
+    /** 可用于库存目标的数量；未全量识别时返回 0。 */
+    fun effectiveCountOf(itemId: String): Int = snapshot.value.effectiveCountOf(itemId)
+
+    val hasRecognition: Boolean get() = snapshot.value.hasRecognition
+
+    @Deprecated("Use replaceRecognition")
+    fun set(items: List<DepotItem>) = replaceRecognition(items)
+
+    @Deprecated("Use recordFightDrops")
+    fun merge(drops: List<Pair<String, Int>>) = recordFightDrops(drops)
+
+    @Deprecated("Use effectiveCountOf")
+    fun countOf(itemId: String): Int = effectiveCountOf(itemId)
 
     private fun shouldExclude(itemId: String): Boolean =
         itemId.isEmpty() || !itemId.all { it in '0'..'9' } || itemId in EXCLUDED_ITEM_IDS
 
     companion object {
+        internal const val FORMAT_VERSION = 2
         private const val KEY_PREFIX = "depot_"
 
         private val Context.depotStore: DataStore<Preferences> by preferencesDataStore(
