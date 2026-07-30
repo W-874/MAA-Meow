@@ -142,11 +142,12 @@ class MaaSessionLoggerTest {
 
         repeat(3) { round ->
             (1..max).forEach { logger.append(item("r$round-$it")) }
-            kotlinx.coroutines.delay(LogConfig.LOG_FLUSH_INTERVAL_MS * 2)
-            assertTrue("UI 缓冲越界: ${logger.logs.value.size}", logger.logs.value.size <= max)
+            val logs = awaitLogs { it.lastOrNull()?.content == "r$round-$max" }
+            assertEquals(max, logs.size)
+            assertTrue("UI 缓冲越界: ${logs.size}", logs.size <= max)
         }
 
-        val logs = awaitLogs { it.isNotEmpty() }
+        val logs = awaitLogs { it.lastOrNull()?.content == "r2-$max" }
         assertEquals(max, logs.size)
         assertEquals("r2-$max", logs.last().content)
     }
