@@ -78,26 +78,28 @@ class AppDownloader(
             }
             return 0
         }
+
+        private val APK_PREFIXES = listOf("MaaNyan-", "MaaMeow-")
     }
 
     /**
      * 查找已缓存的完整 APK（仅 .apk 后缀表示下载完成）
      */
     fun getCachedApk(version: String): File? {
-        val file = File(context.cacheDir, apkFileName(version))
-        return file.takeIf { it.exists() && it.length() > 0 }
+        return apkFileNames(version)
+            .asSequence()
+            .map { File(context.cacheDir, it) }
+            .firstOrNull { it.exists() && it.length() > 0 }
     }
 
     /**
      * 清理其他版本的缓存 APK 和残留的 .dl 文件
      */
     fun cleanOldApks(keepVersion: String) {
-        val keepName = apkFileName(keepVersion)
+        val keepNames = apkFileNames(keepVersion).toSet()
         context.cacheDir.listFiles()?.filter {
-            it.name.startsWith("MaaMeow-") && (it.name.endsWith(".apk") || it.name.endsWith(
-                ".apk.dl"
-            ))
-        }?.filter { it.name != keepName }?.forEach { it.delete() }
+            isManagedApkFile(it.name) || isManagedDownloadFile(it.name)
+        }?.filter { it.name !in keepNames }?.forEach { it.delete() }
     }
 
 
@@ -105,10 +107,7 @@ class AppDownloader(
         val current = BuildConfig.VERSION_NAME
         context.cacheDir.listFiles()
             ?.filter {
-                if (!it.name.startsWith("MaaMeow-") || !it.name.endsWith(".apk")) {
-                    return@filter false
-                }
-                val version = it.name.removePrefix("MaaMeow-").removeSuffix(".apk")
+                val version = apkVersion(it.name) ?: return@filter false
                 compareVersions(version, current) <= 0
             }
             ?.forEach { it.delete() }
@@ -186,5 +185,22 @@ class AppDownloader(
         }
     }
 
-    private fun apkFileName(version: String): String = "MaaMeow-${version}.apk"
+    private fun apkFileName(version: String): String = "MaaNyan-${version}.apk"
+
+    private fun apkFileNames(version: String): List<String> = listOf(
+        apkFileName(version),
+        "MaaMeow-${version}.apk"
+    )
+
+    private fun isManagedApkFile(name: String): Boolean = apkVersion(name) != null
+
+    private fun isManagedDownloadFile(name: String): Boolean = name.removeSuffix(".dl") != name &&
+        isManagedApkFile(name.removeSuffix(".dl"))
+
+    private fun apkVersion(name: String): String? = APK_PREFIXES.firstNotNullOfOrNull { prefix ->
+        name.takeIf { it.startsWith(prefix) && it.endsWith(".apk") }
+            ?.removePrefix(prefix)
+            ?.removeSuffix(".apk")
+    }
+
 }

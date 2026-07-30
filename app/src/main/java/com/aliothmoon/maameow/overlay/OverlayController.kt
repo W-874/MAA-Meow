@@ -29,7 +29,7 @@ import com.aliothmoon.maameow.presentation.view.panel.ExpandedControlPanel
 import com.aliothmoon.maameow.schedule.model.CountdownState
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.service.AccessibilityHelperService
-import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.theme.MaaNyanTheme
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.UiScale
 import com.petterp.floatingx.FloatingX
@@ -225,7 +225,7 @@ class OverlayController(
                 val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
                 val fontSizeScale by appSettings.fontSizeScale.collectAsStateWithLifecycle()
 
-                MaaMeowTheme(themeMode = themeMode) {
+                MaaNyanTheme(themeMode = themeMode) {
                     val baseDensity = LocalDensity.current
                     val configuration = LocalConfiguration.current
                     // 浮窗跟随主界面页面缩放；fontScale 钳制保持历史行为

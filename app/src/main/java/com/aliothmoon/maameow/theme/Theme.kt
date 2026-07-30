@@ -58,7 +58,7 @@ fun OpaqueTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun MaaMeowTheme(
+fun MaaNyanTheme(
     themeMode: AppSettingsManager.ThemeMode = AppSettingsManager.ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {

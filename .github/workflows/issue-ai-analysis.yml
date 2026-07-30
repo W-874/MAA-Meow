@@ -45,11 +45,11 @@ jobs:
           api-base-url: ${{ secrets.BOT_AI_API_BASE_URL }}
           model: ${{ secrets.BOT_AI_MODEL }}
           # 先用 GITHUB_TOKEN：评论身份为 github-actions[bot]，无需单独 bot 账号
-          # 若以后要用 @MaaMeowBot 品牌号，换成 PAT secret 并改 bot-name / if 条件
+          # 若以后要用 @MaaNyanBot 品牌号，换成 PAT secret 并改 bot-name / if 条件
           github-token: ${{ secrets.GITHUB_TOKEN }}
           bot-name: "@github-actions"
           initial-comment-body: |
-            🤖 **MaaMeow Bot 正在分析此 Issue...**
+            🤖 **MaaNyan Bot 正在分析此 Issue...**
 
             感谢你的反馈。AI 将自动下载日志并对照代码排查，预计约 10 分钟。
           prompt-template: |

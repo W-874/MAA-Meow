@@ -228,10 +228,10 @@ class LogExportService(
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/octet-stream"
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, "MaaMeow 日志导出")
+            putExtra(Intent.EXTRA_SUBJECT, "MaaNyan 日志导出")
             putExtra(
                 Intent.EXTRA_TEXT,
-                "MaaMeow 日志文件导出于 ${
+                "MaaNyan 日志文件导出于 ${
                     ZonedDateTime.now()
                         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss (Z)"))
                 }"

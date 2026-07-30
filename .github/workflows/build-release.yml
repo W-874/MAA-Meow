@@ -135,13 +135,13 @@ jobs:
           cd app/build/outputs/apk/release
           TAG="${GITHUB_REF_NAME:-dev}"
           for f in *.apk; do
-            mv "$f" "MaaMeow-${TAG}-${{ matrix.label }}.apk"
+            mv "$f" "MaaNyan-${TAG}-${{ matrix.label }}.apk"
           done
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk-${{ matrix.label }}
+          name: MaaNyan-release-apk-${{ matrix.label }}
           path: app/build/outputs/apk/release/*.apk
 
   release:
@@ -178,7 +178,7 @@ jobs:
       - name: Download all APK artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: release-apk-*
+          pattern: MaaNyan-release-apk-*
           merge-multiple: true
           path: apks
 

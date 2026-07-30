@@ -25,7 +25,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MaaMeow"
+rootProject.name = "MaaNyan"
 include(":app")
 include(":benchmark")
 include(":hidden-api")

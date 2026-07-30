@@ -139,8 +139,8 @@ public final class StartupBenchmark {
                 new FrameTimingMetric(),
                 memoryMetric(),
                 new ArtMetric(),
-                new TraceSectionMetric("MaaMeow.firstFrame"),
-                new TraceSectionMetric("MaaMeow.firstInteractive"));
+                new TraceSectionMetric("MaaNyan.firstFrame"),
+                new TraceSectionMetric("MaaNyan.firstInteractive"));
     }
 
     private static List<Metric> interactionMetrics() {

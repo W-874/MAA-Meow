@@ -31,7 +31,7 @@ import com.aliothmoon.maameow.presentation.ProvideInputFocusManager
 import com.aliothmoon.maameow.presentation.navigation.AppNavigation
 import com.aliothmoon.maameow.schedule.model.ScheduledExecutionRequest
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
-import com.aliothmoon.maameow.theme.MaaMeowTheme
+import com.aliothmoon.maameow.theme.MaaNyanTheme
 import com.aliothmoon.maameow.utils.PerformanceTrace
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
     private val scheduledLaunchInbox: ScheduledLaunchInbox by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val firstFrameTrace = PerformanceTrace.beginAsync("MaaMeow.firstFrame")
+        val firstFrameTrace = PerformanceTrace.beginAsync("MaaNyan.firstFrame")
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !isContentInstalled || !isUiReady }
         super.onCreate(savedInstanceState)
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
             val themeMode by appSettingsManager.themeMode.collectAsStateWithLifecycle()
             val fontSizeScale by appSettingsManager.fontSizeScale.collectAsStateWithLifecycle()
 
-            MaaMeowTheme(themeMode = themeMode) {
+            MaaNyanTheme(themeMode = themeMode) {
                 val baseDensity = LocalDensity.current
                 val configuration = LocalConfiguration.current
                 val effectiveScale = AppSettingsManager.resolveFontSizeScale(
@@ -113,8 +113,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onFirstFrameCommitted(firstFrameTrace: Int) {
-        PerformanceTrace.endAsync("MaaMeow.firstFrame", firstFrameTrace)
-        PerformanceTrace.section("MaaMeow.firstInteractive") {
+        PerformanceTrace.endAsync("MaaNyan.firstFrame", firstFrameTrace)
+        PerformanceTrace.section("MaaNyan.firstInteractive") {
             (application as MaaApplication).startDeferredServices()
         }
         doObserveKeepScreenOn()

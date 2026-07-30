@@ -163,6 +163,24 @@ fun AboutView(
                     }
                     item {
                         AboutNavigationItem(
+                            icon = Icons.Rounded.Code,
+                            title = stringResource(R.string.about_upstream_title),
+                            description = stringResource(R.string.about_upstream_desc),
+                        ) {
+                            Misc.openUriSafely(context, "https://github.com/Aliothmoon/MAA-Meow")
+                        }
+                    }
+                    item {
+                        AboutNavigationItem(
+                            icon = Icons.Rounded.Code,
+                            title = stringResource(R.string.about_license_title),
+                            description = stringResource(R.string.about_license_desc),
+                        ) {
+                            Misc.openUriSafely(context, "https://github.com/W-874/MAA-Meow/blob/main/LICENSE")
+                        }
+                    }
+                    item {
+                        AboutNavigationItem(
                             icon = Icons.Rounded.Forum,
                             title = stringResource(R.string.settings_about_qq_group_title),
                             description = stringResource(R.string.settings_about_qq_group_desc),
