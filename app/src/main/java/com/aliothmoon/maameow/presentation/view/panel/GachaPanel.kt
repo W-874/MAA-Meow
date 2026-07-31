@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -76,14 +77,6 @@ fun GachaPanel(
         ),
         verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.toolbox_tab_gacha),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
         if (!disclaimerAccepted) {
             item {
                 InfoCard(
@@ -130,44 +123,44 @@ fun GachaPanel(
                 InfoCard(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
-                    Text(
-                        text = tip.asString(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            if (statusText.isNotBlank()) {
-                item {
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = MaaDesignTokens.Spacing.md),
-                    )
-                }
-            }
-
-            item {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    GachaMode.entries.forEachIndexed { index, mode ->
-                        SegmentedButton(
-                            selected = gachaOnce == mode.once,
-                            onClick = { viewModel.onGachaModeChange(mode.once) },
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = GachaMode.entries.size,
-                                baseShape = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
-                            ),
-                        ) {
-                            Text(stringResource(mode.labelRes))
+                        verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
+                    ) {
+                        Text(
+                            text = tip.asString(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (statusText.isNotBlank()) {
+                            Text(
+                                text = statusText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = MaaDesignTokens.Spacing.md),
+                            )
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            GachaMode.entries.forEachIndexed { index, mode ->
+                                SegmentedButton(
+                                    selected = gachaOnce == mode.once,
+                                    onClick = { viewModel.onGachaModeChange(mode.once) },
+                                    shape = SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = GachaMode.entries.size,
+                                        baseShape = RoundedCornerShape(MaaDesignTokens.CornerRadius.button),
+                                    ),
+                                ) {
+                                    Text(stringResource(mode.labelRes))
+                                }
+                            }
                         }
                     }
                 }
