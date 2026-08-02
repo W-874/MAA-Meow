@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aliothmoon.maameow.announcement.AnnouncementConfig
 import com.aliothmoon.maameow.BuildConfig
@@ -49,6 +48,7 @@ import com.aliothmoon.maameow.presentation.view.settings.LogHistoryView
 import com.aliothmoon.maameow.presentation.view.settings.TaskOverrideEditorView
 import com.aliothmoon.maameow.presentation.viewmodel.AppEventsViewModel
 import com.aliothmoon.maameow.schedule.model.CountdownState
+import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchUiState
 import com.aliothmoon.maameow.schedule.ui.CountdownDialog
 import com.aliothmoon.maameow.schedule.ui.ScheduleEditView
@@ -64,20 +64,16 @@ import kotlinx.coroutines.flow.map
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
-/** 主 Tab 路由集合（与 [BottomNavTab.all] 单一真源），用于判断是否处于主界面。 */
-private val MAIN_TAB_ROUTES: Set<String> = BottomNavTab.all.mapTo(HashSet()) { it.route }
-
 @Composable
 fun AppNavigation(
     appSettings: AppSettingsManager = koinInject(),
     appEventsViewModel: AppEventsViewModel = koinViewModel(),
     backgroundChromeState: BackgroundChromeState = koinInject(),
+    scheduledLaunchInbox: ScheduledLaunchInbox = koinInject(),
     scheduledLaunchUiState: ScheduledLaunchUiState = koinInject(),
     resourceInitService: ResourceInitService = koinInject(),
 ) {
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentNavRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
     val toaster = rememberToasterState()
     val isFullscreen by backgroundChromeState.fullscreen.collectAsStateWithLifecycle()
@@ -95,9 +91,6 @@ fun AppNavigation(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
 
-    // 判断是否处于主 Tab 页面
-    val isOnMainTab = currentNavRoute == null || currentNavRoute in MAIN_TAB_ROUTES
-
     LaunchedEffect(scheduledLaunchUiState) {
         scheduledLaunchUiState.feedbackMessages.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -113,6 +106,13 @@ fun AppNavigation(
             }
         }
     }
+    LaunchedEffect(scheduledLaunchInbox) {
+        scheduledLaunchInbox.pending.collect { request ->
+            if (request != null && navController.currentDestination?.route != Routes.HOME) {
+                navController.popBackStack(Routes.HOME, false)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -121,15 +121,7 @@ fun AppNavigation(
             .clearFocusOnBlankTap()
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        // MainScreen with HorizontalPager for smooth tab switching
-        MainScreen(
-            navController = navController,
-            onViewAnnouncement = { forceShowAnnouncement = true },
-            visible = isOnMainTab,
-            fullscreen = isFullscreen,
-        )
-
-        // NavHost 只承载子页面；主 Tab 切换完全由 MainScreen 的 HorizontalPager 处理。
+        // NavHost 以 MainScreen 为根页面，子页面压入其上以保证预测返回能恢复主界面。
         // 在此统一下发 LocalToaster，使所有子页面都能弹出顶部提示。
         CompositionLocalProvider(LocalToaster provides toaster) {
             NavHost(
@@ -140,8 +132,13 @@ fun AppNavigation(
                 popEnterTransition = { MaaAnimations.sharedAxisPopEnter },
                 popExitTransition = { MaaAnimations.sharedAxisPopExit },
             ) {
-                // 主 Tab 路由仅作占位，真实内容由 MainScreen 的 HorizontalPager 渲染
-                BottomNavTab.all.forEach { tab -> composable(tab.route) {} }
+                composable(Routes.HOME) {
+                    MainScreen(
+                        navController = navController,
+                        onViewAnnouncement = { forceShowAnnouncement = true },
+                        fullscreen = isFullscreen,
+                    )
+                }
 
                 composable(Routes.NOTIFICATION) {
                     NotificationSettingsView(navController = navController)

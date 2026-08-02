@@ -3,7 +3,6 @@ package com.aliothmoon.maameow.presentation.navigation
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
@@ -13,13 +12,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,7 +32,10 @@ import com.aliothmoon.maameow.presentation.view.settings.SettingsView
 import com.aliothmoon.maameow.schedule.service.ScheduledLaunchInbox
 import com.aliothmoon.maameow.schedule.ui.ScheduleListView
 import com.aliothmoon.maameow.theme.MaaAnimations
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import kotlin.math.abs
 
@@ -43,14 +46,31 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
     onViewAnnouncement: () -> Unit = {},
-    visible: Boolean = true,
     fullscreen: Boolean = false,
 ) {
     val scheduledLaunchInbox: ScheduledLaunchInbox = koinInject()
     val pagerState = rememberPagerState(pageCount = { BottomNavTab.all.size })
     val tabStateHolder = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
-    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    var predictiveBackActive by remember { mutableStateOf(false) }
+    var backgroundPageActivated by remember { mutableStateOf(false) }
+    val backgroundPageIndex = BottomNavTab.all.indexOf(BottomNavTab.BACKGROUND)
+    val backgroundPageVisible = pagerState.layoutInfo.visiblePagesInfo.any {
+        it.index == backgroundPageIndex
+    }
+    val shouldComposeBackground = backgroundPageActivated ||
+        backgroundPageVisible ||
+        pagerState.currentPage == backgroundPageIndex ||
+        pagerState.targetPage == backgroundPageIndex
+    val latestOnViewAnnouncement by rememberUpdatedState(onViewAnnouncement)
+    val homeContent = remember(navController) {
+        movableContentOf {
+            HomeView(
+                navController = navController,
+                onViewAnnouncement = latestOnViewAnnouncement,
+            )
+        }
+    }
 
     // targetPage：点击/滑动一旦确定目标即生效，停稳后等于 currentPage。
     // animateScrollToPage 内部走 MutatorMutex，连续调用时后者自动接管，无需手动取消。
@@ -69,13 +89,36 @@ fun MainScreen(
     }
 
     // 非首页 Tab 按返回键先回到首页；全屏由 BackgroundTaskView 自行处理。
-    PredictiveBackHandler(enabled = visible && !fullscreen && pagerState.targetPage != 0) { events ->
+    PredictiveBackHandler(
+        enabled = !fullscreen && (predictiveBackActive || pagerState.targetPage != 0),
+    ) { events ->
+        val startPage = pagerState.currentPage
+        val startPageOffset = pagerState.currentPageOffsetFraction
+        val pageSize = pagerState.layoutInfo.pageSize.toFloat()
+        val startPosition = startPage + startPageOffset
+        var appliedOffset = 0f
         try {
-            events.collect { event -> predictiveBackProgress = event.progress }
-            goToPage(0)
+            events.collect { event ->
+                predictiveBackActive = true
+                val targetOffset = -startPosition * pageSize * event.progress
+                val delta = targetOffset - appliedOffset
+                pagerState.scroll {
+                    appliedOffset += scrollBy(delta)
+                }
+            }
+            pagerState.scrollToPage(0)
+        } catch (exception: CancellationException) {
+            withContext(NonCancellable) {
+                pagerState.scrollToPage(startPage, startPageOffset)
+            }
+            throw exception
         } finally {
-            predictiveBackProgress = 0f
+            predictiveBackActive = false
         }
+    }
+
+    LaunchedEffect(shouldComposeBackground) {
+        if (shouldComposeBackground) backgroundPageActivated = true
     }
 
     // 定时任务触发时：若正处于子页面，先弹回主 Tab 浮出主界面，再滑到后台任务页
@@ -88,17 +131,10 @@ fun MainScreen(
         }
     }
 
-    if (!visible) return
-
     Scaffold(
         modifier = modifier
-            .enableBenchmarkTestTags()
-            .graphicsLayer {
-                translationX = size.width * predictiveBackProgress * 0.12f
-                val predictiveScale = 1f - predictiveBackProgress * 0.015f
-                scaleX = predictiveScale
-                scaleY = predictiveScale
-            },
+            .fillMaxSize()
+            .enableBenchmarkTestTags(),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         bottomBar = {
             if (!fullscreen) {
@@ -114,6 +150,7 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize(),
             key = { BottomNavTab.all[it].route },
             userScrollEnabled = !fullscreen,
+            beyondViewportPageCount = 1,
         ) { page ->
             val tab = BottomNavTab.all[page]
             tabStateHolder.SaveableStateProvider(tab.route) {
@@ -122,12 +159,10 @@ fun MainScreen(
                         paddingValues.calculateBottomPadding(),
                 ) {
                     when (BottomNavTab.all[page]) {
-                        BottomNavTab.HOME -> HomeView(
-                            navController = navController,
-                            onViewAnnouncement = onViewAnnouncement,
-                        )
+                        BottomNavTab.HOME -> homeContent()
+
                         BottomNavTab.BACKGROUND -> {
-                            if (page == pagerState.currentPage || page == pagerState.targetPage) {
+                            if (shouldComposeBackground) {
                                 BackgroundTaskView(navController = navController)
                             }
                         }
