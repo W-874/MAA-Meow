@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,10 +30,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -58,10 +62,12 @@ import com.aliothmoon.maameow.presentation.components.LocalSettingItemShape
 import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
 import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
 import com.aliothmoon.maameow.presentation.components.RecruitConfirmationSettingRow
+import com.aliothmoon.maameow.presentation.components.RecruitTimeBadge
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.ToolboxViewModel
+import com.aliothmoon.maameow.presentation.viewmodel.RecruitCalcConfig
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 import com.aliothmoon.maameow.utils.i18n.asString
 import org.koin.compose.koinInject
@@ -90,54 +96,38 @@ fun RecruitCalcPanel(
         verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm)
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                RecruitCalcSwitchSetting(
-                    index = 0,
-                    itemCount = 5,
-                    title = stringResource(R.string.panel_recruit_calc_auto_time),
-                    checked = config.autoSetTime,
-                    onCheckedChange = {
-                        viewModel.onRecruitConfigChange(config.copy(autoSetTime = it))
-                    },
-                )
-                listOf(3, 4, 5, 6).forEachIndexed { index, level ->
-                    val checked = when (level) {
-                        3 -> config.chooseLevel3
-                        4 -> config.chooseLevel4
-                        5 -> config.chooseLevel5
-                        else -> config.chooseLevel6
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val useTwoColumns = maxWidth >= 600.dp
+                if (useTwoColumns) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        maxItemsInEachRow = 2,
+                    ) {
+                        repeat(5) { index ->
+                            RecruitCalcSettingContent(
+                                index = index,
+                                config = config,
+                                onConfigChange = viewModel::onRecruitConfigChange,
+                                modifier = Modifier.weight(1f),
+                                compact = true,
+                            )
+                        }
                     }
-                    val time = when (level) {
-                        3 -> config.level3Time
-                        4 -> config.level4Time
-                        else -> 540
+                } else {
+                    SegmentedSettingsGroup {
+                        repeat(5) { index ->
+                            item {
+                                RecruitCalcSettingContent(
+                                    index = index,
+                                    config = config,
+                                    onConfigChange = viewModel::onRecruitConfigChange,
+                                    withinSegmentedGroup = true,
+                                )
+                            }
+                        }
                     }
-                    RecruitCalcSwitchSetting(
-                        index = index + 1,
-                        itemCount = 5,
-                        title = stringResource(R.string.panel_recruit_calc_auto_select_tags, level),
-                        checked = checked,
-                        onCheckedChange = { nextChecked ->
-                            val nextConfig = when (level) {
-                                3 -> config.copy(chooseLevel3 = nextChecked)
-                                4 -> config.copy(chooseLevel4 = nextChecked)
-                                5 -> config.copy(chooseLevel5 = nextChecked)
-                                else -> config.copy(chooseLevel6 = nextChecked)
-                            }
-                            viewModel.onRecruitConfigChange(nextConfig)
-                        },
-                        showTime = config.autoSetTime,
-                        timeEditable = level < 5,
-                        totalMinutes = time,
-                        onTimeChange = { totalMinutes ->
-                            val nextConfig = when (level) {
-                                3 -> config.copy(level3Time = totalMinutes)
-                                4 -> config.copy(level4Time = totalMinutes)
-                                else -> config
-                            }
-                            viewModel.onRecruitConfigChange(nextConfig)
-                        },
-                    )
                 }
             }
         }
@@ -196,6 +186,72 @@ fun RecruitCalcPanel(
 }
 
 @Composable
+private fun RecruitCalcSettingContent(
+    index: Int,
+    config: RecruitCalcConfig,
+    onConfigChange: (RecruitCalcConfig) -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    withinSegmentedGroup: Boolean = false,
+) {
+    if (index == 0) {
+        RecruitCalcSwitchSetting(
+            index = index,
+            itemCount = 5,
+            title = stringResource(R.string.panel_recruit_calc_auto_time),
+            checked = config.autoSetTime,
+            onCheckedChange = { onConfigChange(config.copy(autoSetTime = it)) },
+            modifier = modifier,
+            compact = compact,
+            withinSegmentedGroup = withinSegmentedGroup,
+        )
+        return
+    }
+
+    val level = index + 2
+    val checked = when (level) {
+        3 -> config.chooseLevel3
+        4 -> config.chooseLevel4
+        5 -> config.chooseLevel5
+        else -> config.chooseLevel6
+    }
+    val time = when (level) {
+        3 -> config.level3Time
+        4 -> config.level4Time
+        else -> 540
+    }
+    RecruitCalcSwitchSetting(
+        index = index,
+        itemCount = 5,
+        title = stringResource(R.string.panel_recruit_calc_auto_select_tags, level),
+        checked = checked,
+        onCheckedChange = { nextChecked ->
+            val nextConfig = when (level) {
+                3 -> config.copy(chooseLevel3 = nextChecked)
+                4 -> config.copy(chooseLevel4 = nextChecked)
+                5 -> config.copy(chooseLevel5 = nextChecked)
+                else -> config.copy(chooseLevel6 = nextChecked)
+            }
+            onConfigChange(nextConfig)
+        },
+        showTime = config.autoSetTime,
+        timeEditable = level < 5,
+        totalMinutes = time,
+        onTimeChange = { totalMinutes ->
+            val nextConfig = when (level) {
+                3 -> config.copy(level3Time = totalMinutes)
+                4 -> config.copy(level4Time = totalMinutes)
+                else -> config
+            }
+            onConfigChange(nextConfig)
+        },
+        modifier = modifier,
+        compact = compact,
+        withinSegmentedGroup = withinSegmentedGroup,
+    )
+}
+
+@Composable
 private fun RecruitCalcSwitchSetting(
     index: Int,
     itemCount: Int,
@@ -206,25 +262,53 @@ private fun RecruitCalcSwitchSetting(
     timeEditable: Boolean = false,
     totalMinutes: Int = 540,
     onTimeChange: (Int) -> Unit = {},
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    withinSegmentedGroup: Boolean = false,
 ) {
     val normalizedMinutes = totalMinutes.coerceIn(60, 540)
     val hour = normalizedMinutes / 60
     val minute = normalizedMinutes % 60
     var durationExpanded by remember(checked, showTime, timeEditable) { mutableStateOf(false) }
-    val shape = animatedSegmentedItemShape(
-        index = index,
-        itemCount = itemCount,
-        expanded = checked && timeEditable && durationExpanded,
-    )
-
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            color = MaterialTheme.colorScheme.surfaceBright,
-        ) {
-            CompositionLocalProvider(LocalSettingItemShape provides shape) {
-                RecruitConfirmationSettingRow(
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(if (compact) MaaDesignTokens.Spacing.xs else 2.dp),
+    ) {
+        if (compact) {
+            RecruitCompactSwitchSetting(
+                title = title,
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                totalMinutes = normalizedMinutes,
+                showTime = showTime,
+                timeEditable = timeEditable,
+                editing = durationExpanded,
+                onEditingChange = { durationExpanded = it },
+            )
+        } else if (withinSegmentedGroup) {
+            RecruitConfirmationSettingRow(
+                title = title,
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                totalMinutes = normalizedMinutes,
+                showTime = showTime,
+                timeEditable = timeEditable,
+                editing = durationExpanded,
+                onEditingChange = { durationExpanded = it },
+            )
+        } else {
+            val shape = animatedSegmentedItemShape(
+                index = index,
+                itemCount = itemCount,
+                expanded = checked && timeEditable && durationExpanded,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = shape,
+                color = MaterialTheme.colorScheme.surfaceBright,
+            ) {
+                CompositionLocalProvider(LocalSettingItemShape provides shape) {
+                    RecruitConfirmationSettingRow(
                         title = title,
                         checked = checked,
                         onCheckedChange = onCheckedChange,
@@ -234,6 +318,7 @@ private fun RecruitCalcSwitchSetting(
                         editing = durationExpanded,
                         onEditingChange = { durationExpanded = it },
                     )
+                }
             }
         }
         AnimatedVisibility(
@@ -241,7 +326,7 @@ private fun RecruitCalcSwitchSetting(
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {
-            SegmentedSettingsGroup(modifier = Modifier.padding(start = 12.dp)) {
+            SegmentedSettingsGroup {
                 item {
                     NumberStepperSettingRow(
                         title = stringResource(R.string.panel_recruit_duration_hours),
@@ -265,6 +350,67 @@ private fun RecruitCalcSwitchSetting(
                             onTimeChange(hour * 60 + nextMinute)
                         },
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecruitCompactSwitchSetting(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    totalMinutes: Int,
+    showTime: Boolean,
+    timeEditable: Boolean,
+    editing: Boolean,
+    onEditingChange: (Boolean) -> Unit,
+) {
+    Surface(
+        onClick = { onCheckedChange(!checked) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .sizeIn(minHeight = MaaDesignTokens.ListItem.minimumTouchTarget),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceBright,
+    ) {
+        Column(
+            modifier = Modifier.padding(MaaDesignTokens.Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                ExpressiveSwitch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                )
+            }
+            if (checked && showTime) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.xs),
+                ) {
+                    RecruitTimeBadge(totalMinutes = totalMinutes)
+                    if (timeEditable) {
+                        IconButton(
+                            onClick = { onEditingChange(!editing) },
+                            modifier = Modifier.sizeIn(
+                                minWidth = MaaDesignTokens.ListItem.minimumTouchTarget,
+                                minHeight = MaaDesignTokens.ListItem.minimumTouchTarget,
+                            ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = stringResource(
+                                    R.string.panel_recruit_edit_confirm_time,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
         }

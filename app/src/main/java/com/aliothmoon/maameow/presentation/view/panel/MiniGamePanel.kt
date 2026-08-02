@@ -1,30 +1,32 @@
 package com.aliothmoon.maameow.presentation.view.panel
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aliothmoon.maameow.R
 import com.aliothmoon.maameow.data.resource.MiniGameTextRegistry
 import com.aliothmoon.maameow.presentation.components.InfoCard
-import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
-import com.aliothmoon.maameow.presentation.components.SettingRow
 import com.aliothmoon.maameow.presentation.navigation.LocalMainBottomBarPadding
 import com.aliothmoon.maameow.presentation.viewmodel.MiniGameDelegate
 import com.aliothmoon.maameow.theme.MaaDesignTokens
@@ -55,18 +57,16 @@ fun MiniGamePanel(
         verticalArrangement = Arrangement.spacedBy(MaaDesignTokens.Spacing.sm),
     ) {
         item {
-            Text(
-                text = stringResource(R.string.panel_mini_game_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        item {
-            SegmentedSettingsGroup {
-                miniGames.forEach { game ->
-                    val selected = state.selectedTaskName == game.value
-                    item {
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val useTwoColumns = maxWidth >= 288.dp
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    maxItemsInEachRow = if (useTwoColumns) 2 else 1,
+                ) {
+                    miniGames.forEachIndexed { index, game ->
+                        val selected = state.selectedTaskName == game.value
                         val containerColor = when {
                             game.isUnsupported -> MaterialTheme.colorScheme.errorContainer
                             selected -> MaterialTheme.colorScheme.primaryContainer
@@ -77,19 +77,37 @@ fun MiniGamePanel(
                             selected -> MaterialTheme.colorScheme.onPrimaryContainer
                             else -> MaterialTheme.colorScheme.onSurface
                         }
-                        SettingRow(
-                            title = game.display.asString(),
-                            titleColor = contentColor,
-                            containerColor = containerColor,
-                            icon = null,
+                        Surface(
                             onClick = { delegate.onTaskSelected(game.value) },
-                            trailing = {
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = MaaDesignTokens.ListItem.minimumTouchTarget),
+                            shape = miniGameOptionShape(
+                                index = index,
+                                itemCount = miniGames.size,
+                                columns = if (useTwoColumns) 2 else 1,
+                            ),
+                            color = containerColor,
+                            contentColor = contentColor,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    horizontal = MaaDesignTokens.Spacing.md,
+                                    vertical = MaaDesignTokens.Spacing.xs,
+                                ),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = game.display.asString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.weight(1f),
+                                )
                                 RadioButton(
                                     selected = selected,
                                     onClick = { delegate.onTaskSelected(game.value) },
                                 )
-                            },
-                        )
+                            }
+                        }
                     }
                 }
             }
@@ -168,4 +186,33 @@ fun MiniGamePanel(
             }
         }
     }
+}
+
+private fun miniGameOptionShape(
+    index: Int,
+    itemCount: Int,
+    columns: Int,
+): RoundedCornerShape {
+    val firstRow = index < columns
+    val lastRowStart = ((itemCount - 1) / columns) * columns
+    val lastRow = index >= lastRowStart
+    val column = index % columns
+    val isOnlyItemInLastRow = lastRow && itemCount % columns == 1
+    val outerRadius = 16.dp
+    val innerRadius = 5.dp
+
+    return RoundedCornerShape(
+        topStart = if (firstRow && column == 0) outerRadius else innerRadius,
+        topEnd = if (firstRow && (column == columns - 1 || itemCount == 1)) {
+            outerRadius
+        } else {
+            innerRadius
+        },
+        bottomStart = if (lastRow && column == 0) outerRadius else innerRadius,
+        bottomEnd = if (lastRow && (column == columns - 1 || isOnlyItemInLastRow)) {
+            outerRadius
+        } else {
+            innerRadius
+        },
+    )
 }

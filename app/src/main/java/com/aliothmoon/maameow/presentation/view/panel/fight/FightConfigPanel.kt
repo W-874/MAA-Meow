@@ -61,7 +61,6 @@ import com.aliothmoon.maameow.data.resource.ItemHelper
 import com.aliothmoon.maameow.data.resource.StageAliasMapper
 import com.aliothmoon.maameow.data.resource.StageGroup
 import com.aliothmoon.maameow.domain.enums.UiUsageConstants
-import com.aliothmoon.maameow.domain.models.SeriesLock
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithExpandableTip
 import com.aliothmoon.maameow.presentation.components.CheckBoxWithLabel
 import com.aliothmoon.maameow.presentation.view.panel.TaskSettingsSectionTitle
@@ -140,7 +139,7 @@ fun FightConfigPanel(
                         // 代理倍率（HideSeries=false 时显示）
                         if (!config.hideSeries) {
                             item {
-                                SeriesSection(config, clientType, onConfigChange)
+                                SeriesSection(config, onConfigChange)
                             }
                         }
                         item {
@@ -304,17 +303,13 @@ fun FightConfigPanel(
 @Composable
 private fun SeriesSection(
     config: FightConfig,
-    clientType: String,
     onConfigChange: (FightConfig) -> Unit
 ) {
-    val locked = remember(clientType) { SeriesLock.isLocked(clientType) }
-    val displayedSeries = if (locked) -1 else config.series
-
     SegmentedSettingsGroup {
         item {
             SettingDropdown(
                 title = stringResource(R.string.panel_fight_series_title),
-                selected = displayedSeries,
+                selected = config.series,
                 options = UiUsageConstants.seriesOptions.map { it.first },
                 optionLabel = { value ->
                     if (value == -1) {
@@ -326,18 +321,7 @@ private fun SeriesSection(
                 },
                 onSelected = { onConfigChange(config.copy(series = it)) },
                 icon = null,
-                enabled = !locked,
             )
-        }
-        if (locked) {
-            item {
-                Text(
-                    text = stringResource(R.string.panel_fight_series_locked_tip),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
         }
     }
 }

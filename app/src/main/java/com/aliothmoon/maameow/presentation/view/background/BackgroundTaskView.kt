@@ -200,6 +200,7 @@ fun BackgroundTaskView(
     val inputFocusManager = LocalInputFocusManager.current
     val serviceDiedMessage = stringResource(R.string.bg_toast_service_died)
     val appDiedMessage = stringResource(R.string.bg_toast_app_died)
+    val displayDriftMessage = stringResource(R.string.bg_toast_display_drift)
     val foregroundBlocked = runMode == RunMode.FOREGROUND
     val backendBlocked =
         !permissionState.isStartupBackendAvailable(permissionState.startupBackend)
@@ -256,6 +257,12 @@ fun BackgroundTaskView(
             Toast.makeText(
                 context, appDiedMessage, Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        appWatchdog.displayDriftEvent.collect {
+            Toast.makeText(context, displayDriftMessage, Toast.LENGTH_LONG).show()
         }
     }
 

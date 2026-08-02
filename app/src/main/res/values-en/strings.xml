@@ -104,6 +104,11 @@
     <string name="settings_deployment_with_pause">Deploy operators while paused</string>
     <string name="settings_deployment_with_pause_tip">Hold ESC to pause the game while deploying operators for higher precision. Disable if ESC injection misbehaves or some operators are not placed correctly; deployment will fall back to plain swipe</string>
     <string name="settings_force_fullscreen_on_virtual_display">Force FULLSCREEN mode</string>
+    <string name="settings_drift_auto_repin_enabled">Move game back automatically</string>
+    <string name="settings_drift_auto_repin_enabled_desc">In background mode, some systems (e.g. Samsung One UI) or channel-login SDKs may move the game back to the main screen, breaking recognition. When enabled, the game is moved back to the virtual display once it has been away longer than the configured delay</string>
+    <string name="settings_drift_auto_repin_delay_sec">Move-back delay</string>
+    <string name="settings_drift_auto_repin_delay_sec_desc">Wait %1$d seconds after the game leaves the virtual display before moving it back, to avoid interrupting login or verification pop-ups</string>
+    <string name="settings_drift_auto_repin_delay_hint">Unit: seconds, range 1~60</string>
     <string name="settings_allow_foreground_scheduled_task">Allow scheduled tasks in foreground</string>
     <string name="settings_run_schedule_when_locked">Skip lock screen check for scheduled tasks</string>
     <string name="dialog_run_schedule_when_locked_title">Experimental feature</string>
@@ -317,7 +322,7 @@
     <string name="copilot_status_parsing">Parsing…</string>
     <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
-    <string name="copilot_import_file">Import</string>
+    <string name="copilot_import_file">Import File</string>
     <string name="copilot_builtin_picker">Built-in</string>
     <string name="copilot_builtin_picker_empty">No built-in resources (initialize resources first)</string>
     <string name="copilot_import_float_hint">Please import files from the Background Task page</string>
@@ -349,7 +354,7 @@
     <string name="copilot_mixed_list">Using \";Battle list\";, mixing different Copilot types is not supported</string>
     <string name="copilot_task_name_empty">Copilot jobs with empty names exist</string>
     <string name="copilot_single_list_warning">You\'re using \";Battle list\"; to execute a single task, which is not recommended. For single tasks, run them directly instead.</string>
-    <string name="copilot_unsupported_stage">Unsupported stage %1$s. Try updating resources</string>
+    <string name="copilot_unsupported_stage">Unsupported stage %1$s. If this is a stage from a new event, please wait for the map resource update before using auto-combat</string>
     <string name="copilot_invalid_operator">Invalid operator: %1$s</string>
     <string name="copilot_status_completed">Completed: %1$s</string>
     <string name="copilot_rate_failed">An error occurred, the like failed: &lt;</string>
@@ -370,6 +375,7 @@
     <!-- background task: toast -->
     <string name="bg_toast_service_died">MaaService terminated unexpectedly. Please try restarting</string>
     <string name="bg_toast_app_died">Game process is not running or was killed unexpectedly</string>
+    <string name="bg_toast_display_drift">Game left the virtual display and could not be moved back. Try enabling \"Force FULLSCREEN mode\"</string>
 
     <!-- task action buttons -->
     <string name="task_btn_start">Start Task</string>
@@ -815,10 +821,8 @@
     <string name="panel_fight_auto_restart_on_drop">Restart when game disconnects</string>
     <string name="panel_fight_auto_restart_on_drop_tip">When the game disconnects, MAA will try to reconnect automatically and continue the battle.</string>
     <string name="panel_fight_series_title">Series</string>
-    <string name="panel_fight_series_tip">• AUTO:\nAutomatically detect the maximum proxy multiplier for the stage while keeping sanity potion usage from overflowing sanity.\n\n• Numeric (1~6):\nExecute with the configured multiplier.\nIf current sanity is insufficient to complete the configured multiplier (for example, only enough for 5 runs but set to 6), battle cannot start.\nLikewise, if remaining run count is insufficient for the configured multiplier, battle cannot start.\n\n• Do not switch:\nDo not change the in-game proxy multiplier setting.</string>
+    <string name="panel_fight_series_tip">• AUTO:\nAutomatically identify the maximum proxy multiplier of the level, maintain the maximum proxy multiplier and do not overflow sanity after using sanity potion\n\n• Value (1~10):\nExecute proxy according to the set multiplier\nIf the current sanity is not enough to complete the set multiplier (such as only enough for 5 times but set to 6 times), you cannot enter the battle\nOr\nIf the number of battles is not enough to complete the set multiplier (such as only enough for 5 times but set to 6 times), you will not be able to enter the battle\n\n• Do not switch:\nDo not adjust the proxy multiplier setting in the game</string>
     <string name="panel_fight_series_no_switch">Don\'t Switch</string>
-    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
-    <string name="panel_fight_series_locked_tip">Not yet adapted after game update. Please set the proxy multiplier manually in the game.</string>
     <string name="panel_fight_stage_reset_current">Cur/Last</string>
     <string name="panel_fight_stage_reset_ignore">Don\'t Switch</string>
     <string name="panel_fight_stage_reset_title">When activity stage is closed, reset to</string>
@@ -1957,8 +1961,6 @@
     <!-- runtime session log (shown in log panel / history) -->
     <string name="runlog_task_start">Starting tasks (%1$d total)</string>
     <string name="runlog_task_started">Tasks started</string>
-    <!-- TODO: remove after MaaCore adapts proxy multipliers 7~10 -->
-    <string name="runlog_series_locked">Proxy multiplier not yet adapted after game update; using \"Don\'t Switch\". Please set it manually in the game.</string>
     <string name="runlog_depot_plan_invalid_drop">Plan %1$d: no drop item specified.</string>
     <string name="runlog_depot_plan_zero_count">Plan %1$d: target inventory is 0.</string>
     <string name="runlog_depot_plan_no_stage">Plan %1$d: stage not specified or is \"Current/Last\".</string>
@@ -1985,6 +1987,7 @@
     <string name="runlog_task_stopped">Tasks stopped, status: %1$s</string>
     <string name="runlog_service_terminated">MAA service terminated unexpectedly</string>
     <string name="runlog_game_process_gone">Game process not started or closed unexpectedly (%1$s)</string>
+    <string name="runlog_game_left_virtual_display">Game window left the virtual display and could not be moved back (%1$s). Try enabling \"Force FULLSCREEN mode\" or switch to foreground mode</string>
     <string name="notification_task_style">Task live notification style</string>
     <string name="notification_task_style_android">Android native</string>
     <string name="notification_task_style_mi_island">Xiaomi Super Island</string>
