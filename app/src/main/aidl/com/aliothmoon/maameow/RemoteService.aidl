@@ -70,4 +70,7 @@ interface RemoteService {
     String captureFramePng(String dirPath) = 31;
 
     boolean setPackageNetworkingEnabled(String packageName, boolean enabled) = 32;
+
+    // 把漂移到其它 display 的应用任务拉回虚拟显示器，成功返回 true
+    boolean moveAppToVirtualDisplay(String packageName) = 33;
 }

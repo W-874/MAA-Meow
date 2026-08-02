@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -92,6 +93,8 @@ import androidx.compose.ui.platform.LocalDensity
 import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Density
@@ -157,6 +160,8 @@ fun SettingsView(
     val mainBottomBarPadding = LocalMainBottomBarPadding.current
     val resourceInitState by resourceInitService.state.collectAsStateWithLifecycle()
     val startupBackend by viewModel.startupBackend.collectAsStateWithLifecycle()
+    val driftAutoRepinEnabled by viewModel.driftAutoRepinEnabled.collectAsStateWithLifecycle()
+    val driftAutoRepinDelaySec by viewModel.driftAutoRepinDelaySec.collectAsStateWithLifecycle()
     val shizukuShortcutEnabled by viewModel.shizukuShortcutEnabled.collectAsStateWithLifecycle()
     val shizukuLaunchPackage by viewModel.shizukuLaunchPackage.collectAsStateWithLifecycle()
     val tasksOverrideEnabled by viewModel.tasksOverrideEnabled.collectAsStateWithLifecycle()
@@ -229,6 +234,7 @@ fun SettingsView(
     }
 
     var showShizukuAppPicker by remember { mutableStateOf(false) }
+    var showDriftDelayDialog by remember { mutableStateOf(false) }
     var shizukuAppPickerLoadKey by remember { mutableIntStateOf(0) }
     var shizukuAppSearch by remember { mutableStateOf("") }
     var shizukuAppOptions by remember { mutableStateOf<List<ShizukuLaunchAppOption>?>(null) }
@@ -249,6 +255,52 @@ fun SettingsView(
             shizukuAppLoadFailed = true
             emptyList()
         }
+    }
+
+    if (showDriftDelayDialog) {
+        var delayInput by remember(showDriftDelayDialog) {
+            mutableStateOf(driftAutoRepinDelaySec.toString())
+        }
+        AlertDialog(
+            onDismissRequest = { showDriftDelayDialog = false },
+            title = { Text(stringResource(R.string.settings_drift_auto_repin_delay_sec)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.settings_drift_auto_repin_delay_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = delayInput,
+                        onValueChange = { input ->
+                            delayInput = input.filter { it.isDigit() }.take(2)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = delayInput.toIntOrNull() in 1..60,
+                    onClick = {
+                        delayInput.toIntOrNull()?.let(viewModel::setDriftAutoRepinDelaySec)
+                        showDriftDelayDialog = false
+                    },
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDriftDelayDialog = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
     }
 
     backupMessage?.let { msg ->
@@ -657,6 +709,31 @@ fun SettingsView(
                         icon = Icons.Rounded.AspectRatio,
                         onCheckedChange = { viewModel.setForceFullscreenOnVirtualDisplay(it) }
                     ) }
+                    item {
+                        SettingSwitchItem(
+                            title = stringResource(R.string.settings_drift_auto_repin_enabled),
+                            description = stringResource(R.string.settings_drift_auto_repin_enabled_desc),
+                            contentColor = contentColor,
+                            checked = driftAutoRepinEnabled,
+                            icon = Icons.Rounded.AspectRatio,
+                            onCheckedChange = viewModel::setDriftAutoRepinEnabled,
+                        )
+                    }
+                    if (driftAutoRepinEnabled) {
+                        item {
+                            SettingClickItem(
+                                title = stringResource(R.string.settings_drift_auto_repin_delay_sec),
+                                description = stringResource(
+                                    R.string.settings_drift_auto_repin_delay_sec_desc,
+                                    driftAutoRepinDelaySec,
+                                ),
+                                contentColor = contentColor,
+                                icon = Icons.Rounded.Schedule,
+                            ) {
+                                showDriftDelayDialog = true
+                            }
+                        }
+                    }
                     item {
                         val allowForegroundScheduledTask by viewModel.allowForegroundScheduledTask.collectAsStateWithLifecycle()
                         SettingSwitchItem(
