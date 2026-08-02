@@ -226,15 +226,11 @@ class CopilotViewModel(
             return
         }
         onInputChanged(text)
-        onParseSingleInput()
+        onParseInput()
     }
 
-    fun onParseSingleInput() {
-        parseInput(forceSet = false)
-    }
-
-    fun onParseSetInput() {
-        parseInput(forceSet = true)
+    fun onParseInput() {
+        parseInput()
     }
 
     /**
@@ -373,20 +369,16 @@ class CopilotViewModel(
         }
     }
 
-    private fun parseInput(forceSet: Boolean) {
+    private fun parseInput() {
         val input = _state.value.inputText.trim()
         if (input.isEmpty()) return
 
         viewModelScope.launch {
             _state.update { it.startingParse() }
-            // 新格式神秘代码（prts://、prts://s、s 前缀）自带类型信息，无论点的是哪个按钮都按解析结果路由；
-            // 旧格式（maa://、纯数字）类型不明确，沿用按钮上下文
+            // 显式作业集代码（prts://s、s 前缀，以及带 list 参数的旧格式）按作业集解析；
+            // 旧的 maa:// 和纯数字格式仍无法区分，默认按单个作业处理。
             val code = copilotManager.parseCopilotCode(input)
-            val asSet = if (code != null && !code.ambiguous) {
-                code.type == CopilotCodeType.COPILOT_SET
-            } else {
-                forceSet
-            }
+            val asSet = code?.type == CopilotCodeType.COPILOT_SET
             if (asSet) {
                 val tabIndex = _state.value.tabIndex
                 if (!supportsCopilotSetImport(tabIndex)) {
@@ -395,8 +387,8 @@ class CopilotViewModel(
                             isLoading = false,
                             statusMessage = text(
                                 R.string.copilot_set_import_unsupported,
-                                currentTabDisplayName(tabIndex)
-                            )
+                                currentTabDisplayName(tabIndex),
+                            ),
                         )
                     }
                     return@launch

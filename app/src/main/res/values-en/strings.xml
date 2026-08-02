@@ -313,7 +313,6 @@
     <string name="panel_task_list_edit_hint">Long-press and drag tasks to change their order</string>
 
     <!-- panel: auto battle (Copilot) -->
-    <string name="panel_autobattle_read_set">Load Copilot Set</string>
     <string name="panel_autobattle_station">Open Copilot Hub</string>
     <string name="panel_autobattle_clear_unchecked">Remove Unchecked</string>
     <string name="panel_autobattle_clear_list">Clear List</string>
@@ -323,7 +322,7 @@
     <string name="copilot_set_import_unsupported">%1$s does not support Copilot set import</string>
     <string name="copilot_local_path_unsupported">Local file paths are not supported yet. Please enter a Copilot code</string>
     <string name="copilot_import_file">Import File</string>
-    <string name="copilot_builtin_picker">Built-in</string>
+    <string name="copilot_builtin_picker">Expand built-in Copilots</string>
     <string name="copilot_builtin_picker_empty">No built-in resources (initialize resources first)</string>
     <string name="copilot_import_float_hint">Please import files from the Background Task page</string>
     <string name="copilot_import_failed">Import failed: unable to parse file</string>
@@ -747,7 +746,7 @@
     <string name="panel_autobattle_station_code_placeholder">Enter prts://1234, prts://s1234 or 1234</string>
     <string name="panel_autobattle_waiting">Waiting for input…</string>
     <string name="panel_autobattle_loading">Loading…</string>
-    <string name="panel_autobattle_read_single">Load Copilot</string>
+    <string name="panel_autobattle_read_single">Load</string>
     <string name="panel_autobattle_operator_header">Operators</string>
     <string name="panel_autobattle_group_header">Group: %1$s</string>
     <string name="panel_autobattle_summary_count">Total %1$d operators / groups</string>
@@ -769,7 +768,7 @@
     <string name="panel_autobattle_empty_entries">No entries yet</string>
     <string name="panel_autobattle_raid_suffix"> (Challenge)</string>
     <string name="panel_autobattle_tips_title">Tips</string>
-    <string name="panel_autobattle_tips_body">1. Make sure the loaded homework matches the selected stage type before starting.\n2. Main Theme, Story Collection, Side Story: start from the screen with the blue \"Start\" button in the bottom right.\n3. SSS: multiple built-in homework files are in resource/copilot. Form your squad manually first, then start from the screen with the \"Start Deployment\" button in the bottom right. It can be used together with \"Loop Times\".\n4. Paradox Simulation: after selecting skills, start from the skill selection screen with the \"Start Simulation\" button. For ½-star operators without skills, start from the screen with the bottom-right \"Start Simulation\" button. If using \"Battle list\", start from the operator list page.\n5. Other Activities: only single homework and regular Copilot settings are supported. Start directly from the target stage screen. Set import and battle list are not supported.\n6. When using support units, turn off \"Auto Squad\" and \"Battle list\". Select operators manually, then start from the squad screen with the \"Mission Start\" button.\n7. Operators marked as \"Favorite\" may affect \"Auto Squad\" recognition and selection. Consider removing favorites before using Auto Squad, or turn it off and add missing operators manually if prompted.\n8. Copilot codes can be entered in the input box:\n• Tap \"Read Homework\" to load a single homework.\n• Tap \"Read Set\" to import a homework set (Main Theme / Story Collection / Side Story, Paradox Simulation).\n9. Battle list:\n• After loading homework, check that the stage name below is correct (for example, CV-EX-1).\n• The add normal / add challenge buttons can be used to append tasks (challenge is only for Main Theme).\n• Use \"Clear List\" / \"Clear Unchecked\" to tidy the queue quickly.\n• Start from a screen where the target stage name is visible. Cross-chapter navigation is not supported.\n• The queue stops automatically if sanity is insufficient, battle fails, or the clear is not 3-star.</string>
+    <string name="panel_autobattle_tips_body">1. Make sure the loaded homework matches the selected stage type before starting.\n2. Main Theme, Story Collection, Side Story: start from the screen with the blue \"Start\" button in the bottom right.\n3. SSS: multiple built-in homework files are in resource/copilot. Form your squad manually first, then start from the screen with the \"Start Deployment\" button in the bottom right. It can be used together with \"Loop Times\".\n4. Paradox Simulation: after selecting skills, start from the skill selection screen with the \"Start Simulation\" button. For ½-star operators without skills, start from the screen with the bottom-right \"Start Simulation\" button. If using \"Battle list\", start from the operator list page.\n5. Other Activities: only single homework and regular Copilot settings are supported. Start directly from the target stage screen. Set import and battle list are not supported.\n6. When using support units, turn off \"Auto Squad\" and \"Battle list\". Select operators manually, then start from the squad screen with the \"Mission Start\" button.\n7. Operators marked as \"Favorite\" may affect \"Auto Squad\" recognition and selection. Consider removing favorites before using Auto Squad, or turn it off and add missing operators manually if prompted.\n8. Enter a Copilot code, then tap \"Load\":\n• The code type determines whether a single Copilot loads or a Copilot set imports.\n• Copilot set import is available only on Main Theme / Story Collection / Side Story, SSS, and Paradox Simulation tabs.\n• Tap the expand arrow at the end of the input field to browse built-in Copilots.\n9. Battle list:\n• After loading homework, check that the stage name below is correct (for example, CV-EX-1).\n• The add normal / add challenge buttons can be used to append tasks (challenge is only for Main Theme).\n• Use \"Clear List\" / \"Clear Unchecked\" to tidy the queue quickly.\n• Start from a screen where the target stage name is visible. Cross-chapter navigation is not supported.\n• The queue stops automatically if sanity is insufficient, battle fails, or the clear is not 3-star.</string>
 
     <!-- panel: mall -->
     <string name="panel_mall_visit_friends">Visit Friends</string>

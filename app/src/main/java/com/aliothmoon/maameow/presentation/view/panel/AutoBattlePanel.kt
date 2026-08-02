@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,7 +39,6 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
@@ -87,7 +87,6 @@ import com.aliothmoon.maameow.presentation.components.NumberStepperSettingRow
 import com.aliothmoon.maameow.presentation.components.SegmentedSettingsGroup
 import com.aliothmoon.maameow.presentation.components.SettingDropdown
 import com.aliothmoon.maameow.presentation.components.SettingRow
-import com.aliothmoon.maameow.presentation.components.animatedSegmentedItemShape
 import com.aliothmoon.maameow.presentation.viewmodel.CopilotViewModel
 import com.aliothmoon.maameow.utils.Misc
 import com.aliothmoon.maameow.utils.i18n.asString
@@ -103,7 +102,6 @@ private data class CopilotTabUiSpec(
     @param:StringRes val titleRes: Int,
     @param:StringRes val subtitleRes: Int? = null,
     val supportsBattleList: Boolean,
-    val supportsSetImport: Boolean,
     val supportsRegularOptions: Boolean,
 )
 
@@ -155,28 +153,24 @@ fun AutoBattlePanel(
             titleRes = R.string.panel_autobattle_tab_mainline,
             subtitleRes = R.string.panel_autobattle_tab_mainline_subtitle,
             supportsBattleList = true,
-            supportsSetImport = true,
             supportsRegularOptions = true,
         ),
         CopilotTabUiSpec(
             index = 1,
             titleRes = R.string.panel_autobattle_tab_security,
             supportsBattleList = false,
-            supportsSetImport = false,
             supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
             index = 2,
             titleRes = R.string.panel_autobattle_tab_paradox,
             supportsBattleList = true,
-            supportsSetImport = true,
             supportsRegularOptions = false,
         ),
         CopilotTabUiSpec(
             index = 3,
             titleRes = R.string.panel_autobattle_tab_other,
             supportsBattleList = false,
-            supportsSetImport = false,
             supportsRegularOptions = true,
         )
     )
@@ -191,7 +185,6 @@ fun AutoBattlePanel(
     val regularCopilotTab = current.supportsRegularOptions
     val loopCountSupportedTab = current.index == 1 || current.index == 3
     val battleListSupportedTab = current.supportsBattleList
-    val setImportSupported = current.supportsSetImport
 
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -235,24 +228,11 @@ fun AutoBattlePanel(
                             enabled = controlsEnabled,
                             shape = RoundedCornerShape(
                                 topStart = 16.dp,
-                                topEnd = 5.dp,
-                                bottomStart = 5.dp,
-                                bottomEnd = 5.dp,
-                            ),
-                            onClick = viewModel::onParseSingleInput,
-                        )
-                        CopilotActionButton(
-                            text = stringResource(R.string.panel_autobattle_read_set),
-                            icon = Icons.Default.GridView,
-                            filled = true,
-                            enabled = controlsEnabled && setImportSupported,
-                            shape = RoundedCornerShape(
-                                topStart = 5.dp,
                                 topEnd = 16.dp,
                                 bottomStart = 5.dp,
                                 bottomEnd = 5.dp,
                             ),
-                            onClick = viewModel::onParseSetInput,
+                            onClick = viewModel::onParseInput,
                         )
                     }
                     Row(
@@ -302,11 +282,6 @@ fun AutoBattlePanel(
             }
 
             item {
-                val pickerShape = animatedSegmentedItemShape(
-                    index = 1,
-                    itemCount = 3,
-                    expanded = state.builtinPickerExpanded,
-                )
                 SegmentedSettingsGroup {
                     item {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -319,32 +294,52 @@ fun AutoBattlePanel(
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 trailingIcon = {
-                                    IconButton(
-                                        onClick = viewModel::onPasteAndParse,
-                                        enabled = controlsEnabled,
-                                        modifier = Modifier.size(32.dp),
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.offset(x = (-4).dp),
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ContentPaste,
-                                            contentDescription = stringResource(
-                                                R.string.copilot_paste_parse,
-                                            ),
-                                            modifier = Modifier.size(18.dp),
-                                        )
+                                        IconButton(
+                                            onClick = viewModel::onPasteAndParse,
+                                            enabled = controlsEnabled,
+                                            modifier = Modifier.size(32.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentPaste,
+                                                contentDescription = stringResource(
+                                                    R.string.copilot_paste_parse,
+                                                ),
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = viewModel::onToggleBuiltinPicker,
+                                            enabled = controlsEnabled,
+                                            modifier = Modifier.size(32.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = if (state.builtinPickerExpanded) {
+                                                    Icons.Default.ExpandLess
+                                                } else {
+                                                    Icons.Default.ExpandMore
+                                                },
+                                                contentDescription = stringResource(
+                                                    R.string.copilot_builtin_picker,
+                                                ),
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
                                     }
                                 },
                             )
                         }
                     }
-                    item(shape = pickerShape) {
-                        CompositionLocalProvider(LocalSettingItemShape provides pickerShape) {
-                            BuiltinCopilotPicker(
-                                expanded = state.builtinPickerExpanded,
+                    if (state.builtinPickerExpanded) {
+                        item {
+                            BuiltinCopilotTree(
                                 loaded = state.builtinLoaded,
                                 tree = state.builtinTree,
                                 expandedFolders = state.builtinExpandedFolders,
                                 enabled = controlsEnabled,
-                                onToggle = viewModel::onToggleBuiltinPicker,
                                 onToggleFolder = viewModel::onToggleBuiltinFolder,
                                 onSelectFile = viewModel::onSelectBuiltinFile,
                             )
@@ -1015,86 +1010,59 @@ private fun CopilotSwitchRow(
 }
 
 @Composable
-private fun BuiltinCopilotPicker(
-    expanded: Boolean,
+private fun BuiltinCopilotTree(
     loaded: Boolean,
     tree: List<CopilotResourceProvider.Node>,
     expandedFolders: Set<String>,
     enabled: Boolean,
-    onToggle: () -> Unit,
     onToggleFolder: (String) -> Unit,
     onSelectFile: (CopilotResourceProvider.Node) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        SettingRow(
-            title = stringResource(R.string.copilot_builtin_picker),
-            icon = null,
-            enabled = enabled,
-            onClick = onToggle,
-            trailing = {
-                Icon(
-                    imageVector = if (expanded) {
-                        Icons.Default.ExpandLess
-                    } else {
-                        Icons.Default.ExpandMore
-                    },
-                    contentDescription = null,
-                )
-            },
-        )
-
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut(),
-        ) {
-            val visibleNodes = remember(tree, expandedFolders) {
-                flattenVisibleNodes(tree, expandedFolders)
-            }
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    val visibleNodes = remember(tree, expandedFolders) {
+        flattenVisibleNodes(tree, expandedFolders)
+    }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+            .heightIn(max = 320.dp)
+            .animateContentSize()
+    ) {
+        when {
+            !loaded -> CircularProgressIndicator(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .heightIn(max = 320.dp)
-                    .animateContentSize()
+                    .padding(12.dp)
+                    .size(16.dp),
+                strokeWidth = 2.dp
+            )
+
+            visibleNodes.isEmpty() -> Text(
+                text = stringResource(R.string.copilot_builtin_picker_empty),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
+            )
+
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                when {
-                    !loaded -> CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-
-                    visibleNodes.isEmpty() -> Text(
-                        text = stringResource(R.string.copilot_builtin_picker_empty),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(12.dp)
-                    )
-
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(vertical = 4.dp)
-                    ) {
-                        items(visibleNodes, key = { it.node.relativePath }) { entry ->
-                            BuiltinNodeRow(
-                                entry = entry,
-                                expanded = entry.node.relativePath in expandedFolders,
-                                enabled = enabled,
-                                onClick = {
-                                    if (entry.node.isFolder) {
-                                        onToggleFolder(entry.node.relativePath)
-                                    } else {
-                                        onSelectFile(entry.node)
-                                    }
-                                }
-                            )
+                items(visibleNodes, key = { it.node.relativePath }) { entry ->
+                    BuiltinNodeRow(
+                        entry = entry,
+                        expanded = entry.node.relativePath in expandedFolders,
+                        enabled = enabled,
+                        onClick = {
+                            if (entry.node.isFolder) {
+                                onToggleFolder(entry.node.relativePath)
+                            } else {
+                                onSelectFile(entry.node)
+                            }
                         }
-                    }
+                    )
                 }
             }
         }

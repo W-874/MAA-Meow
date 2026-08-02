@@ -36,7 +36,8 @@ enum class CopilotCodeType {
 
 /**
  * 解析后的作业站神秘代码
- * @param ambiguous 旧格式（maa://、纯数字）无法区分作业/作业集，type 仅为默认值，实际类型由调用方上下文决定
+ * @param ambiguous 旧格式（maa://、纯数字）无法区分作业/作业集；合并入口后默认当单个作业处理，
+ * 仅保留此标记供未来迁移参考
  */
 data class CopilotCode(
     val type: CopilotCodeType,
