@@ -39,15 +39,15 @@ object MaaApi {
     // ==================== App 更新 ====================
 
     // GitHub 仓库
-    const val APP_GITHUB_OWNER = "Aliothmoon"
+    const val APP_GITHUB_OWNER = "W-874"
     const val APP_GITHUB_REPO = "MAA-Meow"
 
-    // GitHub Release API (包含 prerelease)
+    // GitHub Release API
     const val APP_GITHUB_RELEASES =
-        "https://api.github.com/repos/$APP_GITHUB_OWNER/$APP_GITHUB_REPO/releases?per_page=1"
+        "https://api.github.com/repos/$APP_GITHUB_OWNER/$APP_GITHUB_REPO/releases?per_page=100"
 
     const val APP_GITHUB_RELEASES_BETA =
-        "https://api.github.com/repos/$APP_GITHUB_OWNER/$APP_GITHUB_REPO/releases?per_page=5"
+        "https://api.github.com/repos/$APP_GITHUB_OWNER/$APP_GITHUB_REPO/releases?per_page=100"
 
     fun appGitHubReleaseByTag(tag: String): String =
         "https://api.github.com/repos/$APP_GITHUB_OWNER/$APP_GITHUB_REPO/releases/tags/$tag"

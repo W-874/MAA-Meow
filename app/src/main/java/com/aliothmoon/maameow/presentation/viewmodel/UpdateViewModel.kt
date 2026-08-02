@@ -273,7 +273,7 @@ class UpdateViewModel(
         }
         viewModelScope.launch {
             _appChecking.value = true
-            Timber.i("检查 App 更新 (MirrorChyan)")
+            Timber.i("Checking app updates (GitHub Release)")
             val result = getUpdateService().checkAppUpdate(channel = updateChannel.value)
             saveAppChangelog((result as? UpdateCheckResult.Available)?.info)
             _appCheckResult.value = result
