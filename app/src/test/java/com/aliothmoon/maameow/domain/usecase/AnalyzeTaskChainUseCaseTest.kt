@@ -179,6 +179,22 @@ class AnalyzeTaskChainUseCaseTest {
     }
 
     @Test
+    fun fightTask_doesNotAddMultiplierPreflightWarning() = runBlocking {
+        val result = useCase(
+            listOf(
+                TaskChainNode(
+                    name = "理智作战",
+                    enabled = true,
+                    config = FightConfig(stage1 = "1-7", series = 10),
+                )
+            )
+        )
+
+        val ready = result as AnalyzeTaskChainResult.Ready
+        assertTrue(ready.plan.logs.isEmpty())
+    }
+
+    @Test
     fun roguelikeCoreChar_normalizedToSimplifiedChinese_beforeDispatch() = runBlocking {
         // 繁中服选了繁中名,下发前须反查归一化为简中名(MaaCore core_char 仅认简中名)
         every { resourceDataManager.getCharacterByNameOrAlias("維什戴爾") } returns
