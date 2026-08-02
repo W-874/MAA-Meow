@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +35,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,6 +82,7 @@ fun ErrorLogView(
     }
 
     var showExportSheet by remember { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
 
     LogExportController(
         sheetVisible = showExportSheet,
@@ -88,24 +94,58 @@ fun ErrorLogView(
         viewModel.clearSelectedLog()
     }
 
-    // 根据是否选中日志显示不同页面
-    if (selectedContent != null) {
-        ErrorLogDetailView(
-            fileName = selectedFileName ?: "",
-            content = selectedContent!!,
-            onBack = { viewModel.clearSelectedLog() }
-        )
-    } else {
+    PredictiveBackHandler(enabled = selectedContent != null) { events ->
+        try {
+            events.collect { event -> predictiveBackProgress = event.progress }
+            viewModel.clearSelectedLog()
+        } finally {
+            predictiveBackProgress = 0f
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
         ErrorLogFileListView(
             logFiles = logFiles,
             isLoading = isLoading,
             onFileClick = { viewModel.loadLogContent(it) },
             onCleanup = { viewModel.cleanupAll() },
             onExport = { showExportSheet = true },
-            onBack = { navController.navigateUp() }
+            onBack = { navController.navigateUp() },
+            modifier = Modifier
+                .fillMaxSize()
+                .blockInputWhen(selectedContent != null),
         )
+
+        selectedContent?.let { content ->
+            ErrorLogDetailView(
+                fileName = selectedFileName ?: "",
+                content = content,
+                onBack = { viewModel.clearSelectedLog() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = size.width * predictiveBackProgress / 3f
+                        val scale = 1f - predictiveBackProgress * 0.05f
+                        scaleX = scale
+                        scaleY = scale
+                    },
+            )
+        }
     }
 }
+
+private fun Modifier.blockInputWhen(blocked: Boolean): Modifier =
+    if (blocked) {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                }
+            }
+        }
+    } else {
+        this
+    }
 
 @Composable
 private fun ErrorLogFileListView(
@@ -114,7 +154,8 @@ private fun ErrorLogFileListView(
     onFileClick: (ErrorLogViewModel.ErrorLogFile) -> Unit,
     onCleanup: () -> Unit,
     onExport: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showCleanupConfirm by remember { mutableStateOf(false) }
 
@@ -137,6 +178,7 @@ private fun ErrorLogFileListView(
     }
 
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
@@ -250,9 +292,11 @@ private fun ErrorLogFileItem(
 private fun ErrorLogDetailView(
     fileName: String,
     content: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(

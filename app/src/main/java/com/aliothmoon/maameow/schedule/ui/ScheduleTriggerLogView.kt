@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.schedule.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,10 +38,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,19 +71,83 @@ fun ScheduleTriggerLogView(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     var showClearConfirm by remember { mutableStateOf(false) }
     var deleteConfirmFileName by remember { mutableStateOf<String?>(null) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    val detailVisible = detail.isNotEmpty()
 
-    // 详情模式
-    if (detail.isNotEmpty()) {
-        BackHandler { viewModel.clearDetail() }
-        DetailView(
-            entries = detail,
-            onBack = { viewModel.clearDetail() }
-        )
-        return
+    BackHandler(enabled = detailVisible) { viewModel.clearDetail() }
+
+    PredictiveBackHandler(enabled = detailVisible) { events ->
+        try {
+            events.collect { event -> predictiveBackProgress = event.progress }
+            viewModel.clearDetail()
+        } finally {
+            predictiveBackProgress = 0f
+        }
     }
 
-    // 列表模式
+    Box(Modifier.fillMaxSize()) {
+        ScheduleTriggerLogListContent(
+            navController = navController,
+            summaries = summaries,
+            isLoading = isLoading,
+            showClearConfirm = showClearConfirm,
+            onShowClearConfirmChange = { showClearConfirm = it },
+            deleteConfirmFileName = deleteConfirmFileName,
+            onDeleteConfirmFileNameChange = { deleteConfirmFileName = it },
+            onLoadDetail = viewModel::loadDetail,
+            onClearAll = viewModel::clearAll,
+            onDeleteLog = viewModel::deleteLog,
+            modifier = Modifier
+                .fillMaxSize()
+                .blockInputWhen(detailVisible),
+        )
+
+        if (detailVisible) {
+            DetailView(
+                entries = detail,
+                onBack = viewModel::clearDetail,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = size.width * predictiveBackProgress / 3f
+                        val scale = 1f - predictiveBackProgress * 0.05f
+                        scaleX = scale
+                        scaleY = scale
+                    },
+            )
+        }
+    }
+}
+
+private fun Modifier.blockInputWhen(blocked: Boolean): Modifier =
+    if (blocked) {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                }
+            }
+        }
+    } else {
+        this
+    }
+
+@Composable
+private fun ScheduleTriggerLogListContent(
+    navController: NavController,
+    summaries: List<TriggerLogSummary>,
+    isLoading: Boolean,
+    showClearConfirm: Boolean,
+    onShowClearConfirmChange: (Boolean) -> Unit,
+    deleteConfirmFileName: String?,
+    onDeleteConfirmFileNameChange: (String?) -> Unit,
+    onLoadDetail: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onDeleteLog: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
@@ -87,7 +156,7 @@ fun ScheduleTriggerLogView(
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
                     if (summaries.isNotEmpty()) {
-                        IconButton(onClick = { showClearConfirm = true }) {
+                        IconButton(onClick = { onShowClearConfirmChange(true) }) {
                             Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.schedule_log_clear_title))
                         }
                     }
@@ -142,8 +211,8 @@ fun ScheduleTriggerLogView(
                     items(summaries, key = { it.fileName }, contentType = { "summary" }) { summary ->
                         SummaryCard(
                             summary = summary,
-                            onClick = { viewModel.loadDetail(summary.fileName) },
-                            onDelete = { deleteConfirmFileName = summary.fileName }
+                            onClick = { onLoadDetail(summary.fileName) },
+                            onDelete = { onDeleteConfirmFileNameChange(summary.fileName) }
                         )
                     }
                 }
@@ -152,17 +221,17 @@ fun ScheduleTriggerLogView(
 
         if (showClearConfirm) {
             AlertDialog(
-                onDismissRequest = { showClearConfirm = false },
+                onDismissRequest = { onShowClearConfirmChange(false) },
                 title = { Text(stringResource(R.string.schedule_log_clear_title)) },
                 text = { Text(stringResource(R.string.schedule_log_clear_message)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        viewModel.clearAll()
-                        showClearConfirm = false
+                        onClearAll()
+                        onShowClearConfirmChange(false)
                     }) { Text(stringResource(R.string.schedule_log_clear_title), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                    TextButton(onClick = { onShowClearConfirmChange(false) }) { Text(stringResource(R.string.common_cancel)) }
                 },
                 shape = MaterialTheme.shapes.extraLarge,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -172,17 +241,17 @@ fun ScheduleTriggerLogView(
 
         if (deleteConfirmFileName != null) {
             AlertDialog(
-                onDismissRequest = { deleteConfirmFileName = null },
+                onDismissRequest = { onDeleteConfirmFileNameChange(null) },
                 title = { Text(stringResource(R.string.schedule_log_delete_title)) },
                 text = { Text(stringResource(R.string.schedule_log_delete_message)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        viewModel.deleteLog(deleteConfirmFileName!!)
-                        deleteConfirmFileName = null
+                        onDeleteLog(deleteConfirmFileName)
+                        onDeleteConfirmFileNameChange(null)
                     }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteConfirmFileName = null }) { Text(stringResource(R.string.common_cancel)) }
+                    TextButton(onClick = { onDeleteConfirmFileNameChange(null) }) { Text(stringResource(R.string.common_cancel)) }
                 },
                 shape = MaterialTheme.shapes.extraLarge,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -280,10 +349,12 @@ private fun SummaryCard(
 private fun DetailView(
     entries: List<TriggerLogEntry>,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val header = entries.firstOrNull() as? TriggerLogEntry.Header
 
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(

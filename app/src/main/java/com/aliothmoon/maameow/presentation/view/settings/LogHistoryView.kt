@@ -1,6 +1,7 @@
 package com.aliothmoon.maameow.presentation.view.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,11 +33,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +72,7 @@ fun LogHistoryView(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     var showExportSheet by remember { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
 
     LogExportController(
         sheetVisible = showExportSheet,
@@ -78,14 +84,16 @@ fun LogHistoryView(
         viewModel.clearSelectedLog()
     }
 
-    // 根据是否选中日志显示不同页面
-    if (selectedLogEntries != null) {
-        LogDetailView(
-            fileName = selectedFileName ?: "",
-            entries = selectedLogEntries!!,
-            onBack = { viewModel.clearSelectedLog() }
-        )
-    } else {
+    PredictiveBackHandler(enabled = selectedLogEntries != null) { events ->
+        try {
+            events.collect { event -> predictiveBackProgress = event.progress }
+            viewModel.clearSelectedLog()
+        } finally {
+            predictiveBackProgress = 0f
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
         LogFileListView(
             logFiles = logFiles,
             isLoading = isLoading,
@@ -93,10 +101,42 @@ fun LogHistoryView(
             onFileDelete = { viewModel.deleteLogFile(it) },
             onCleanup = { viewModel.cleanupOldLogs() },
             onExport = { showExportSheet = true },
-            onBack = { navController.navigateUp() }
+            onBack = { navController.navigateUp() },
+            modifier = Modifier
+                .fillMaxSize()
+                .blockInputWhen(selectedLogEntries != null),
         )
+
+        selectedLogEntries?.let { entries ->
+            LogDetailView(
+                fileName = selectedFileName ?: "",
+                entries = entries,
+                onBack = { viewModel.clearSelectedLog() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = size.width * predictiveBackProgress / 3f
+                        val scale = 1f - predictiveBackProgress * 0.05f
+                        scaleX = scale
+                        scaleY = scale
+                    },
+            )
+        }
     }
 }
+
+private fun Modifier.blockInputWhen(blocked: Boolean): Modifier =
+    if (blocked) {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                }
+            }
+        }
+    } else {
+        this
+    }
 
 @Composable
 private fun LogFileListView(
@@ -106,7 +146,8 @@ private fun LogFileListView(
     onFileDelete: (LogFileInfo) -> Unit,
     onCleanup: () -> Unit,
     onExport: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showDeleteConfirm by remember { mutableStateOf<LogFileInfo?>(null) }
 
@@ -129,6 +170,7 @@ private fun LogFileListView(
     }
 
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
@@ -242,9 +284,11 @@ private fun LogFileItem(
 private fun LogDetailView(
     fileName: String,
     entries: List<LogEntry>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(

@@ -57,6 +57,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.aliothmoon.maameow.presentation.benchmarkTestTag
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +77,7 @@ import com.aliothmoon.maameow.presentation.view.panel.taskTypeLabel
 import com.aliothmoon.maameow.presentation.view.panel.taskTypeDescription
 import com.aliothmoon.maameow.presentation.view.panel.taskTypeIcon
 import com.aliothmoon.maameow.presentation.viewmodel.BackgroundTaskViewModel
+import com.aliothmoon.maameow.theme.MaaAnimations
 import com.aliothmoon.maameow.theme.MaaDesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -273,55 +276,12 @@ fun TaskProfileEditorView(
         },
     ) { paddingValues ->
         val bottomContentPadding = paddingValues.calculateBottomPadding() + 16.dp
-        if (detailVisible) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = MaaDesignTokens.Spacing.listHorizontal,
-                        top = paddingValues.calculateTopPadding() + MaaDesignTokens.Spacing.sm,
-                        end = MaaDesignTokens.Spacing.listHorizontal,
-                    )
-                    .graphicsLayer {
-                        translationX = size.width * (
-                            pageEnterProgress.value * 0.2f + predictiveBackProgress
-                        )
-                        alpha = (1f - pageEnterProgress.value * 0.2f) *
-                            (1f - predictiveBackProgress * 0.15f)
-                    },
-            ) {
-                CompositionLocalProvider(
-                    LocalTaskPanelBottomPadding provides bottomContentPadding,
-                ) {
-                    TaskConfigPanel(
-                        selectedNode = selectedNode,
-                        isEditMode = false,
-                        isAddingTask = false,
-                        isProfileMode = false,
-                        profiles = profiles,
-                        activeProfileId = activeProfileId,
-                        clientType = clientType,
-                        onConfigChange = { config ->
-                            selectedNode?.id?.let { viewModel.onNodeConfigChange(it, config) }
-                        },
-                        onAddNode = viewModel::onAddNode,
-                        onRemoveNode = { nodeId ->
-                            viewModel.onRemoveNode(nodeId)
-                            closeDetail()
-                        },
-                        onDuplicateNode = viewModel::onDuplicateNode,
-                        onRenameNode = viewModel::onRenameNode,
-                        onSwitchProfile = viewModel::onSwitchProfile,
-                        onRenameProfile = viewModel::onRenameProfile,
-                        onDuplicateProfile = viewModel::onDuplicateProfile,
-                        onDeleteProfile = viewModel::onDeleteProfile,
-                        onCreateProfile = viewModel::onCreateProfile,
-                        onReorderProfile = viewModel::onReorderProfile,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
+        val listRevealProgress = if (detailVisible) {
+            predictiveBackProgress
         } else {
+            1f - pageEnterProgress.value
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -331,9 +291,11 @@ fun TaskProfileEditorView(
                         end = MaaDesignTokens.Spacing.listHorizontal,
                     )
                     .graphicsLayer {
-                        translationX = -size.width * pageEnterProgress.value / 12f
-                        alpha = 1f - pageEnterProgress.value * 0.2f
-                    },
+                        translationX = -size.width * (1f - listRevealProgress) /
+                            MaaAnimations.SHARED_AXIS_SLIDE_DIVISOR
+                        alpha = listRevealProgress
+                    }
+                    .blockInputWhen(detailVisible),
             ) {
                 Spacer(modifier = Modifier.height(MaaDesignTokens.Spacing.sm))
 
@@ -377,6 +339,56 @@ fun TaskProfileEditorView(
                 Spacer(
                     modifier = Modifier.height(bottomContentPadding),
                 )
+            }
+
+            if (detailVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = MaaDesignTokens.Spacing.listHorizontal,
+                            top = paddingValues.calculateTopPadding() + MaaDesignTokens.Spacing.sm,
+                            end = MaaDesignTokens.Spacing.listHorizontal,
+                        )
+                        .graphicsLayer {
+                            translationX = size.width * (
+                                pageEnterProgress.value + predictiveBackProgress
+                            ) / MaaAnimations.SHARED_AXIS_SLIDE_DIVISOR
+                            alpha = (1f - pageEnterProgress.value) *
+                                (1f - predictiveBackProgress)
+                        },
+                ) {
+                    CompositionLocalProvider(
+                        LocalTaskPanelBottomPadding provides bottomContentPadding,
+                    ) {
+                        TaskConfigPanel(
+                            selectedNode = selectedNode,
+                            isEditMode = false,
+                            isAddingTask = false,
+                            isProfileMode = false,
+                            profiles = profiles,
+                            activeProfileId = activeProfileId,
+                            clientType = clientType,
+                            onConfigChange = { config ->
+                                selectedNode?.id?.let { viewModel.onNodeConfigChange(it, config) }
+                            },
+                            onAddNode = viewModel::onAddNode,
+                            onRemoveNode = { nodeId ->
+                                viewModel.onRemoveNode(nodeId)
+                                closeDetail()
+                            },
+                            onDuplicateNode = viewModel::onDuplicateNode,
+                            onRenameNode = viewModel::onRenameNode,
+                            onSwitchProfile = viewModel::onSwitchProfile,
+                            onRenameProfile = viewModel::onRenameProfile,
+                            onDuplicateProfile = viewModel::onDuplicateProfile,
+                            onDeleteProfile = viewModel::onDeleteProfile,
+                            onCreateProfile = viewModel::onCreateProfile,
+                            onReorderProfile = viewModel::onReorderProfile,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
             }
         }
     }
@@ -469,6 +481,19 @@ fun TaskProfileEditorView(
         },
     )
 }
+
+private fun Modifier.blockInputWhen(blocked: Boolean): Modifier =
+    if (blocked) {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                }
+            }
+        }
+    } else {
+        this
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
