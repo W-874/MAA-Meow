@@ -34,10 +34,11 @@ Compared with upstream, this fork currently focuses on:
 - Toolbox and profile data reliability improvements
 
 <p align="center">
-  <img src="docs/zh-cn/manual/screenshots/home.png" width="200" />
-  <img src="docs/zh-cn/manual/screenshots/background_task.png" width="200" />
-  <img src="docs/zh-cn/manual/screenshots/schedule.png" width="200" />
-  <img src="docs/zh-cn/manual/screenshots/auto_controls.png" width="200" />
+  <img src="docs/zh-cn/manual/screenshots/home.jpg" width="200" />
+  <img src="docs/zh-cn/manual/screenshots/background_task.jpg" width="200" />
+  <img src="docs/zh-cn/manual/screenshots/task_detail.jpg" width="200" />
+  <img src="docs/zh-cn/manual/screenshots/schedule.jpg" width="200" />
+  <img src="docs/zh-cn/manual/screenshots/auto_controls.jpg" width="200" />
 </p>
 
 ## Features
